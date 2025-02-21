@@ -52,9 +52,6 @@ static void FinishAetButCopyTarget(PVGameArcade* data, PvGameTarget* target, Tar
 
 static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex)
 {
-	if (IsLongNote(target->target_type) && ex == nullptr)
-		return HitState_None;
-
 	bool hit = false;
 	bool wrong = false;
 	int32_t hit_state = HitState_None;
@@ -84,15 +81,15 @@ static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetSta
 		ButtonState* face = &input_state.buttons[Button_Triangle + base_index];
 		ButtonState* arrow = &input_state.buttons[Button_Up + base_index];
 
-		if (ex != nullptr && !ex->end)
+		if (!ex->long_end)
 		{
 			hit = face->tapped || arrow->tapped;
 			button = face->tapped ? face : arrow;
 		}
-		else if (ex != nullptr && ex->end)
+		else if (ex->long_end)
 		{
-			if (state.hold_button != nullptr)
-				hit = state.hold_button->released;
+			if (ex->prev->hold_button != nullptr)
+				hit = ex->prev->hold_button->released;
 		}
 	}
 	else if (target->target_type == TargetType_Star || target->target_type == TargetType_ChanceStar)
@@ -143,20 +140,17 @@ static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetSta
 			hit_state = wrong ? HitState_WrongSad : HitState_Sad;
 
 		// NOTE: Handle long note input
-		if (IsLongNote(target->target_type) && ex != nullptr)
+		if (IsLongNote(target->target_type))
 		{
-			if (CheckHit(hit_state, false, false) && !ex->end)
+			if (CheckHit(hit_state, false, false) && !ex->long_end)
 			{
-				state.start_target_ex = ex;
+				state.start_targets_ex[state.start_target_count] = ex;
+				state.start_target_count++;
 				ex->kiseki_pos = target->target_pos;
 				ex->kiseki_dir = target->delta_pos_sq;
 				ex->holding = true;
-				// NOTE: This means that there should be no targets between this and
-				//       the end target. Should I change that? I feel like there could be a better
-				//       way to do this.
-				state.end_target_ex = GetTargetStateEx(target->target_index + 1);
-				state.hold_button = button;
-				state.next_end_hit_state = HitState_None;
+				ex->hold_button = button;
+				ex->next->force_hit_state = HitState_None;
 			}
 		}
 	}
@@ -164,23 +158,25 @@ static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetSta
 	if (target->flying_time_remaining < data->sad_late_window)
 	{
 		hit_state = HitState_Worst;
-		if (IsLongNote(target->target_type) && ex != nullptr && !ex->end)
-			state.next_end_hit_state = HitState_Worst;
+		if (IsLongNote(target->target_type) && !ex->long_end)
+			ex->next->force_hit_state = HitState_Worst;
 	}
 
 	return hit_state;
 }
 
-static int32_t UpdateHitStateLongNC(TargetStateEx* target)
+static bool CheckLongNoteState(TargetStateEx* target)
 {
-	if (state.hold_button->down)
-		return HitState_None;
+	if (target->hold_button->down)
+	{
+		target->holding = true;
+		return true;
+	}
 
+	// TODO: Maybe move this somewhere else (?)
 	diva::aet::Stop(&target->target_aet);
 	target->holding = false;
-	target->se_state = SEState_FailRelease;
-	PlayUpdateSoundEffect(nullptr, target, nullptr);
-	return HitState_Worst;
+	return false;
 };
 
 HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* play_default_se, size_t* rating_count, diva::vec2* rating_pos, int32_t a5, SoundEffect* se, int32_t* multi_count, int32_t* a8, int32_t* a9, bool* a10, bool* slide, bool* slide_chain, bool* slide_chain_start, bool* slide_chain_max, bool* slide_chain_continues)
@@ -192,41 +188,38 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 	//       somewhere else...
 	GetCurrentInputState(data->ptr08, &input_state);
 
-	// NOTE: Poll input for ongoing long note
+	// NOTE: Poll input for ongoing long notes
 	//
 	if (ShouldUpdateTargets())
 	{
-		if (state.start_target_ex != nullptr && state.end_target_ex != nullptr)
+		for (int i = 0; i < state.start_target_count; i++)
 		{
-			// NOTE: Check if the next target is available
 			bool is_in_zone = false;
-			if (data->target != nullptr)
+
+			// NOTE: Check if the end target is in it's timing window
+			TargetStateEx* tgt = state.start_targets_ex[i];
+			if (tgt->next->org != nullptr)
 			{
 				is_in_zone = CheckWindow(
-					data->target->flying_time_remaining,
+					tgt->next->org->flying_time_remaining,
 					data->sad_early_window,
 					data->sad_late_window
 				);
 			}
 
-			int32_t long_state = UpdateHitStateLongNC(state.start_target_ex);
-			if (long_state == HitState_Worst && !is_in_zone)
+			// NOTE: Check if the start target button has been released;
+			//       if it's the end note is not inside it's timing zone,
+			//       automatically mark it as a fail.
+			if (!CheckLongNoteState(tgt) && !is_in_zone)
 			{
-				// NOTE: Remove references and set future data for the long end note
-				//
-				state.next_end_hit_state = HitState_Worst;
-				state.start_target_ex = nullptr;
-				state.end_target_ex = nullptr;
-
-				return HitState_None;
+				tgt->next->force_hit_state = HitState_Worst;
+				tgt->se_state = SEState_FailRelease;
+				PlayUpdateSoundEffect(nullptr, tgt, nullptr);
 			}
 		}
 	}
 
-	if (data->target == nullptr)
-		return HitState_None;
-
-	if (data->target->target_type < TargetType_Custom)
+	if (data->target != nullptr && data->target->target_type < TargetType_Custom)
 	{
 		return originalGetHitState(data, play_default_se, rating_count, rating_pos, a5, se, multi_count, a8, a9, a10, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues);
 	}
@@ -242,39 +235,42 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 	*slide_chain_max = false;
 	*slide_chain_continues = false;
 
-	if (rating_count != nullptr)
-		*rating_count = 0;
-
 	int32_t hit_state = HitState_None;
 	int32_t target_count = 0;
 	PvGameTarget* targets[4] = { };
+	TargetStateEx* extras[4] = { };
 
 	// TODO: Add support for multi notes? Is that something we wanna do?
 	if (data->target != nullptr)
 	{
 		targets[0] = data->target;
+		extras[0] = GetTargetStateEx(targets[0]->target_index, 0);
 		target_count = 1;
 	}
 
 	for (int i = 0; i < target_count; i++)
 	{
 		PvGameTarget* target = targets[i];
-		TargetStateEx* extra = GetTargetStateEx(target->target_index);
+		TargetStateEx* extra = extras[i];
 
-		if (IsLongNote(target->target_type) && extra != nullptr)
+		// TODO: Move this into DetermineTarget?
+		//
+		if (extra->org == nullptr)
+			extra->org = target;
+
+		// NOTE: First, check if this note isn't already deemed to be fail
+		//       (from missing the long note start target)...
+		if (extra->force_hit_state != HitState_None)
 		{
-			if (extra->end && state.next_end_hit_state != HitState_None)
-			{
-				hit_state = state.next_end_hit_state;
-				target->hit_state = hit_state;
+			hit_state = extra->force_hit_state;
+			target->hit_state = extra->force_hit_state;
 
-				// NOTE: Hide the combo counter
-				*rating_count = 1;
-				rating_pos[0] = { -1200.0f, 0.0f };
+			// NOTE: Hide the combo counter
+			*rating_count = 1;
+			rating_pos[0] = { -1200.0f, 0.0f };
 
-				FinishTargetAet(data, target);
-				continue;
-			}
+			FinishTargetAet(data, target);
+			continue;
 		}
 
 		hit_state = GetHitStateNC(data, target, extra);
@@ -313,10 +309,10 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 			// NOTE: Play hit sound effect
 			if (CheckHit(hit_state, true, false))
 			{
-				if (IsLongNote(target->target_type) && extra != nullptr && extra->end)
+				if (IsLongNote(target->target_type) && extra->long_end)
 				{
-					state.start_target_ex->se_state = SEState_SuccessRelease;
-					PlayUpdateSoundEffect(nullptr, state.start_target_ex, nullptr);
+					extra->prev->se_state = SEState_SuccessRelease;
+					PlayUpdateSoundEffect(nullptr, extra->prev, nullptr);
 				}
 				else
 					PlayUpdateSoundEffect(target, extra, se);
@@ -325,19 +321,15 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 
 			// NOTE: Remove target aet objects
 			//
-			if (extra != nullptr)
+			if (IsLongNote(target->target_type))
 			{
-				if (CheckHit(hit_state, false, false) && IsLongNote(target->target_type) && !extra->end)
+				if (CheckHit(target->hit_state, false, false) && !extra->long_end)
 					FinishAetButCopyTarget(data, target, extra);
-				else if (IsLongNote(target->target_type) && extra->end)
+				else if (extra->long_end)
 				{
-					FinishExtraAet(state.start_target_ex);
+					FinishExtraAet(extra->prev);
 					FinishExtraAet(extra);
-					state.start_target_ex = nullptr;
-					state.end_target_ex = nullptr;
 				}
-				else
-					FinishTargetAet(data, target);
 			}
 			else
 				FinishTargetAet(data, target);
@@ -346,6 +338,21 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 			//
 			if (rating_count != nullptr && rating_pos != nullptr)
 				rating_pos[(*rating_count)++] = target->target_pos;
+		}
+	}
+
+	// NOTE: This means long notes that start at the same time must also end at the same time
+	//       or else the program will eventually overwrite other memory inside the StateEx struct.
+	//       I don't really plan on supporting multi notes for any of the custom notes, anyway.
+	for (int i = 0; i < target_count; i++)
+	{
+		if (IsLongNote(targets[i]->target_type) && extras[i]->long_end && targets[i]->hit_state != HitState_None)
+		{
+			if (state.start_target_count > 0)
+			{
+				state.start_targets_ex[state.start_target_count - 1] = nullptr;
+				state.start_target_count--;
+			}
 		}
 	}
 
@@ -359,21 +366,6 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 	*multi_count = target_count;
 	return hit_state;
 }
-
-/*
-HOOK(int32_t, __fastcall, GetHitStateInternal, 0x14026D2E0, PVGameArcade* data, PvGameTarget* target, uint16_t keys, uint16_t a4)
-{
-	// NOTE: Call the ordinary routine for vanilla targets
-	if (target->target_type < TargetType_Custom || target->target_type >= TargetType_Max)
-		return originalGetHitStateInternal(data, target, keys, a4);
-
-	if (target->hit_state != HitState_None)
-		return target->hit_state;
-
-	// NOTE: Do our custom note's handling
-	
-};
-*/
 
 bool InstallHitStateHooks()
 {

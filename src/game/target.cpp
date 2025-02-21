@@ -74,11 +74,7 @@ const char* GetButtonLayer(int32_t target_type)
 
 int32_t PlayUpdateSoundEffect(PvGameTarget* target, TargetStateEx* ex, SoundEffect* se)
 {
-	if (ex == nullptr && target == nullptr)
-		return 0;
-
-	int32_t target_type = ex != nullptr ? ex->target_type : target->target_type;
-	switch (target_type)
+	switch (ex->target_type)
 	{
 	case TargetType_TriangleLong:
 	case TargetType_CircleLong:
@@ -96,17 +92,14 @@ int32_t PlayUpdateSoundEffect(PvGameTarget* target, TargetStateEx* ex, SoundEffe
 			else if (ex->se_state == SEState_FailRelease)
 			{
 				diva::sound::ReleaseCue(ex->se_queue, ex->se_name.c_str(), false);
-				ex->se_queue = -1;
-				ex->se_name.clear();
-				ex->se_state = SEState_Idle;
+				ex->ResetSE();
 			}
 			else if (ex->se_state == SEState_SuccessRelease)
 			{
+				int32_t queue = ex->se_queue;
 				diva::sound::ReleaseCue(ex->se_queue, ex->se_name.c_str(), true);
-				diva::sound::PlaySoundEffect(3, "800_button_l1_off", 1.0f);
-				ex->se_queue = -1;
-				ex->se_name.clear();
-				ex->se_state = SEState_Idle;
+				ex->ResetSE();
+				diva::sound::PlaySoundEffect(queue, "800_button_l1_off", 1.0f);
 			}
 		}
 
@@ -160,14 +153,6 @@ HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
 	originalPVGameReset(pv_game);
 }
 
-HOOK(uint64_t, __fastcall, InitKiseki, 0x150D50360, PVGameArcade* data, PvGameTarget* target)
-{
-	if (TargetStateEx* ex = GetTargetStateEx(target->target_index); ex != nullptr)
-		ex->target_type = target->target_type;
-
-	return originalInitKiseki(data, target);
-}
-
 HOOK(void, __fastcall, UpdateKiseki, 0x14026F050, PVGameArcade* data, PvGameTarget* target, float dt)
 {
 	if (target->target_type < TargetType_Custom)
@@ -203,13 +188,14 @@ HOOK(void, __fastcall, DrawKiseki, 0x140271030, PvGameTarget* target)
 
 HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 {
-	if (state.start_target_ex != nullptr)
+	for (int i = 0; i < state.start_target_count; i++)
 	{
-		if (state.start_target_ex->holding)
+		TargetStateEx* ex = state.start_targets_ex[i];
+		if (ex->holding)
 		{
 			if (ShouldUpdateTargets())
-				UpdateLongNoteKiseki(data, nullptr, state.start_target_ex, 1.0f / 60.0f);
-			DrawLongNoteKiseki(state.start_target_ex);
+				UpdateLongNoteKiseki(data, nullptr, ex, 1.0f / 60.0f);
+			DrawLongNoteKiseki(ex);
 		}
 	}
 
@@ -218,7 +204,6 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 
 void InstallTargetHooks()
 {
-	INSTALL_HOOK(InitKiseki);
 	INSTALL_HOOK(UpdateKiseki);
 	INSTALL_HOOK(DrawKiseki);
 	INSTALL_HOOK(DrawArcadeGame);

@@ -70,12 +70,22 @@ enum SEState : int32_t
 
 struct TargetStateEx
 {
-	// NOTE: Data from CSV file
+	// NOTE: Static data; Information about the target.
+	TargetStateEx* prev = nullptr;
+	TargetStateEx* next = nullptr;
+	int32_t target_type = -1;
 	int32_t target_index = 0;
+	int32_t sub_index = 0;
 	float length = 0.0f;
-	bool end = false;
+	bool long_end = false;
+	bool link_start = false;
+	bool link_step = false;
+	bool link_end = false;
 
 	// NOTE: Gameplay state
+	ButtonState* hold_button = nullptr;
+	PvGameTarget* org = nullptr;
+	int32_t force_hit_state = HitState_None;
 	float length_remaining = 0.0f;
 	float kiseki_time = 0.0f;
 	bool holding = false;
@@ -85,12 +95,11 @@ struct TargetStateEx
 	//       with the vanilla game structs.
 	// PS:   Button aet handle isn't needed because this is only used for when the player is
 	//       holding the button, so there isn't a button icon.
-	int32_t target_aet;
-	int32_t target_type;   // NOTE: Used for determining kiseki sprite
-	diva::vec2 kiseki_pos; // NOTE: Position where the kiseki will be updated from
-	diva::vec2 kiseki_dir; // NOTE: Direction of the note
+	int32_t target_aet = 0;
+	diva::vec2 kiseki_pos = { }; // NOTE: Position where the kiseki will be updated from
+	diva::vec2 kiseki_dir = { }; // NOTE: Direction of the note
 	std::vector<SpriteVertex> kiseki;
-	size_t vertex_count_max;
+	size_t vertex_count_max = 0;
 
 	// NOTE: Sound effect state
 	//
@@ -100,16 +109,23 @@ struct TargetStateEx
 
 	inline void ResetPlayState()
 	{
+		hold_button = nullptr;
+		org = nullptr;
+		force_hit_state = HitState_None;
 		length_remaining = length;
 		kiseki_time = 0.0f;
 		holding = false;
 		success = false;
 		diva::aet::Stop(&target_aet);
-		target_type = -1;
 		kiseki_pos = { 0.0f, 0.0f };
 		kiseki_dir = { 0.0f, 0.0f };
 		kiseki.clear();
 		vertex_count_max = 0;
+		ResetSE();
+	}
+
+	inline void ResetSE()
+	{
 		if (se_state != SEState_Idle && se_queue != -1 && !se_name.empty())
 			diva::sound::ReleaseCue(se_queue, se_name.c_str(), true);
 
@@ -121,10 +137,8 @@ struct TargetStateEx
 
 struct StateEx
 {
-	ButtonState* hold_button;       // NOTE: Button that the user tapped for the long note
-	TargetStateEx* start_target_ex; // NOTE: Long note start extra data
-	TargetStateEx* end_target_ex;   // NOTE: Long note end extra data
-	int32_t next_end_hit_state;     // NOTE: Determines if the long note was missed
+	TargetStateEx* start_targets_ex[4];
+	int32_t start_target_count;
 	FileHandler file_handler;
 	int32_t file_state;
 	bool dsc_loaded;
@@ -133,10 +147,8 @@ struct StateEx
 
 	inline void ResetPlayState()
 	{
-		hold_button = nullptr;
-		start_target_ex = nullptr;
-		end_target_ex = nullptr;
-		next_end_hit_state = HitState_None;
+		memset(start_targets_ex, 0, sizeof(start_targets_ex));
+		start_target_count = 0;
 		for (TargetStateEx& ex : target_ex)
 			ex.ResetPlayState();
 	}
@@ -165,10 +177,10 @@ static inline bool CheckWindow(float time, float early, float late)
 	return time >= late && time <= early;
 }
 
-static inline TargetStateEx* GetTargetStateEx(int32_t index)
+static inline TargetStateEx* GetTargetStateEx(int32_t index, int32_t sub_index = 0)
 {
 	for (TargetStateEx& ex : state.target_ex)
-		if (ex.target_index == index)
+		if (ex.target_index == index && ex.sub_index == sub_index)
 			return &ex;
 	return nullptr;
 }

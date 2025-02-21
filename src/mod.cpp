@@ -56,7 +56,7 @@ static bool ParseExtraCSV(const char* data, size_t size)
 		TargetStateEx& ex = state.target_ex.emplace_back();
 		ex.target_index = target_index;
 		ex.length = length / 1000.0f;
-		ex.end = end;
+		ex.long_end = end;
 		ex.ResetPlayState();
 	}
 
@@ -160,6 +160,131 @@ HOOK(bool, __fastcall, LoadDscCtrl, 0x14024E270, PVGamePvData* pv_data, prj::str
 	return state.file_state == 2;
 }
 
+HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
+{
+	// TODO: Rewrite this function to accomodate our custom note's scoring
+	//
+	int32_t ret = originalParseTargets(pv_game);
+
+	// NOTE: Initialize extra data for targets
+	int32_t index = 0;
+	for (PvDscTargetGroup& group : pv_game->pv_data.targets)
+	{
+		for (int i = 0; i < group.target_count; i++)
+		{
+			// NOTE: Patch existing extra data with new information
+			//
+			if (TargetStateEx* ex = GetTargetStateEx(index, i); ex != nullptr)
+			{
+				ex->target_type = group.targets[i].type;
+				continue;
+			}
+
+			// NOTE: Append new extra data to the list
+			//
+			TargetStateEx ex = { };
+			ex.target_index = index;
+			ex.sub_index = i;
+			ex.target_type = group.targets[i].type;
+			ex.ResetPlayState();
+			state.target_ex.push_back(ex);
+		}
+
+		index++;
+	}
+
+	// NOTE: Resolve target relations
+	//
+	auto findNextTarget = [&pv_game](size_t start_index, int32_t start_sub, int32_t type, int32_t type2, bool end)
+	{
+		for (size_t i = start_index; i < pv_game->pv_data.targets.size(); i++)
+		{
+			PvDscTargetGroup* group = &pv_game->pv_data.targets[i];
+			for (int sub = start_sub; sub < group->target_count; sub++)
+			{
+				TargetStateEx* ex = GetTargetStateEx(i, sub);
+				if (group->targets[sub].type == type || group->targets[sub].type == type2 || type == -1)
+				{
+					if (ex->long_end == end)
+						return std::pair(&group->targets[sub], ex);
+				}
+			}
+		}
+
+		return std::pair<PvDscTarget*, TargetStateEx*>(nullptr, nullptr);
+	};
+
+	TargetStateEx* previous = nullptr;
+	for (size_t i = 0; i < pv_game->pv_data.targets.size(); i++)
+	{
+		PvDscTargetGroup* group = &pv_game->pv_data.targets[i];
+		for (int sub = 0; sub < group->target_count; sub++)
+		{
+			PvDscTarget* tgt = &group->targets[sub];
+			TargetStateEx* ex = GetTargetStateEx(i, sub);
+
+			// NOTE: Link long note pieces together
+			//
+			if (IsLongNote(tgt->type) && !ex->long_end)
+			{
+				TargetStateEx* next = findNextTarget(i + 1, sub, tgt->type, -1, true).second;
+				if (next != nullptr)
+				{
+					ex->next = next;
+					next->prev = ex;
+				}
+			}
+			// NOTE: Resolve LinkStars
+			else if (tgt->type == TargetType_LinkStar || tgt->type == TargetType_LinkStarEnd)
+			{
+				if (tgt->type == TargetType_LinkStar)
+				{
+					if (ex->prev == nullptr)
+						ex->link_start = true;
+
+					TargetStateEx* next = findNextTarget(
+						i + 1, 
+						sub,
+						TargetType_LinkStar,
+						TargetType_LinkStarEnd,
+						false
+					).second;
+
+					if (next != nullptr)
+					{
+						ex->next = next;
+						next->prev = ex;
+					}
+
+					ex->link_step = true;
+				}
+				else if (tgt->type == TargetType_LinkStarEnd)
+				{
+					ex->link_step = true;
+					ex->link_end = true;
+				}
+			}
+		}
+	}
+
+	for (TargetStateEx& ex : state.target_ex)
+	{
+		if (ex.next == nullptr && ex.prev == nullptr)
+			continue;
+
+		printf("TARGET:  %d/%d  %d  %d:%.3f  <%d-%d-%d>  ", ex.target_index, ex.sub_index, ex.target_type, ex.long_end, ex.length, ex.link_start, ex.link_step, ex.link_end);
+		if (ex.next != nullptr)
+			printf("[NEXT:%d/%d]  ", ex.next->target_index, ex.next->sub_index);
+
+		if (ex.prev != nullptr)
+			printf("[PREV:%d/%d]  ", ex.prev->target_index, ex.prev->sub_index);
+
+		printf("\n");
+	}
+
+	return ret;
+}
+
 // NOTE: Important functions
 //
 HOOK(void, __fastcall, PvGameTarget_CreateAetLayers, 0x14026F910, PvGameTarget* target)
@@ -259,6 +384,7 @@ extern "C"
 		INSTALL_HOOK(TaskPvGameInit);
 		INSTALL_HOOK(TaskPvGameCtrl);
 		INSTALL_HOOK(TaskPvGameDest);
+		INSTALL_HOOK(ParseTargets);
 		INSTALL_HOOK(LoadDscCtrl);
 		INSTALL_HOOK(PvGameTarget_CreateAetLayers);
 		InstallHitStateHooks();
