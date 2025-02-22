@@ -172,6 +172,7 @@
     <ClCompile Include="src\game\hit_state.cpp" />
     <ClCompile Include="src\game\note_arrow.cpp" />
     <ClCompile Include="src\game\note_common.cpp" />
+    <ClCompile Include="src\game\note_link.cpp" />
     <ClCompile Include="src\game\note_long.cpp" />
     <ClCompile Include="src\game\target.cpp" />
     <ClCompile Include="src\input.cpp" />
@@ -183,6 +184,7 @@
     <ClInclude Include="src\game\hit_state.h" />
     <ClInclude Include="src\game\note_arrow.h" />
     <ClInclude Include="src\game\note_common.h" />
+    <ClInclude Include="src\game\note_link.h" />
     <ClInclude Include="src\game\note_long.h" />
     <ClInclude Include="src\game\target.h" />
     <ClInclude Include="src\helpers.h" />

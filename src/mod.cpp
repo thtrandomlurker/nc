@@ -287,59 +287,6 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 
 // NOTE: Important functions
 //
-HOOK(void, __fastcall, PvGameTarget_CreateAetLayers, 0x14026F910, PvGameTarget* target)
-{
-	if (target->target_type < TargetType_Custom || target->target_type >= TargetType_Max)
-		return originalPvGameTarget_CreateAetLayers(target);
-
-	// NOTE: Remove previously created aet objects, if present
-	diva::aet::Stop(&target->target_aet);
-	diva::aet::Stop(&target->button_aet);
-	diva::aet::Stop(&target->target_eff_aet);
-	diva::aet::Stop(&target->dword78);
-
-	const char* target_layer = GetTargetLayer(target->target_type);
-	const char* button_layer = GetButtonLayer(target->target_type);
-
-	diva::vec2 target_pos;
-	diva::vec2 button_pos;
-	diva::GetScaledPosition(&target->target_pos, &target_pos);
-	diva::GetScaledPosition(&target->button_pos, &button_pos);
-
-	target->target_aet = diva::aet::PlayLayer(
-		AetSceneID,
-		8,
-		0x20000,
-		target_layer,
-		&target_pos,
-		0,
-		nullptr,
-		nullptr,
-		0.0f,
-		-1.0f,
-		0,
-		nullptr
-	);
-
-	target->button_aet = diva::aet::PlayLayer(
-		AetSceneID,
-		9,
-		0x20000,
-		button_layer,
-		&button_pos,
-		0,
-		nullptr,
-		nullptr,
-		0.0f,
-		-1.0f,
-		0,
-		nullptr
-	);
-
-	// NOTE: Initialize some information
-	target->out_start_time = 360.0f;
-	target->scaling_end_time = 31.0f;
-}
 
 /*
 HOOK(uint32_t, __fastcall, PVGameArcade_DetermineTarget, 0x14026E8E0, void* a1, PvDscTarget* a2, float a3, int32_t a4, int32_t a5, int32_t a6, int64_t a7, int64_t a8, int32_t a9)
@@ -369,12 +316,6 @@ extern "C"
 {
 	void __declspec(dllexport) Init()
 	{
-		/*
-		INSTALL_HOOK(PVGameArcade_UpdateTargets);
-		INSTALL_HOOK(PVGameArcade_DetermineTarget);
-		INSTALL_HOOK(PVGameArcade_InitKiseki);
-		*/
-
 		freopen("CONOUT$", "w", stdout);
 
 		// NOTE: Patch target type check in PVGameTarget::CreateAet (0x150D54750)
@@ -386,7 +327,6 @@ extern "C"
 		INSTALL_HOOK(TaskPvGameDest);
 		INSTALL_HOOK(ParseTargets);
 		INSTALL_HOOK(LoadDscCtrl);
-		INSTALL_HOOK(PvGameTarget_CreateAetLayers);
 		InstallHitStateHooks();
 		InstallTargetHooks();
 	}

@@ -68,6 +68,18 @@ enum SEState : int32_t
 	SEState_SuccessRelease = 3
 };
 
+enum LinkStepState : int32_t
+{
+	LinkStepState_None      = 0,
+	LinkStepState_FadeIn    = 1,
+	LinkStepState_Normal    = 2,
+	LinkStepState_GlowStart = 3,
+	LinkStepState_Glow      = 4,
+	LinkStepState_GlowEnd   = 5,
+	LinkStepState_Wait      = 6,
+	LinkStepState_Idle      = 7
+};
+
 struct TargetStateEx
 {
 	// NOTE: Static data; Information about the target.
@@ -86,18 +98,30 @@ struct TargetStateEx
 	ButtonState* hold_button = nullptr;
 	PvGameTarget* org = nullptr;
 	int32_t force_hit_state = HitState_None;
+	int32_t hit_state = HitState_None;
+	float flying_time_max = 0.0f;
+	float flying_time_remaining = 0.0f;
+	float delta_time_max = 0.0f;
+	float delta_time = 0.0f;
 	float length_remaining = 0.0f;
 	float kiseki_time = 0.0f;
+	float alpha = 0.0f;
 	bool holding = false;
 	bool success = false; // NOTE: If this note is a chance star, this determines if it's successful or not
+	bool current_step = false; // NOTE: If this target is the current step of the link star chain
+	int32_t step_state = LinkStepState_None;
+	bool link_ending = false;
 
 	// NOTE: Visual info for long notes. This is kind of a workaround as to not mess too much
 	//       with the vanilla game structs.
 	// PS:   Button aet handle isn't needed because this is only used for when the player is
 	//       holding the button, so there isn't a button icon.
 	int32_t target_aet = 0;
+	int32_t button_aet = 0;
+	diva::vec2 target_pos = { };
 	diva::vec2 kiseki_pos = { }; // NOTE: Position where the kiseki will be updated from
 	diva::vec2 kiseki_dir = { }; // NOTE: Direction of the note
+	diva::vec2 kiseki_dir_norot = { };
 	std::vector<SpriteVertex> kiseki;
 	size_t vertex_count_max = 0;
 
@@ -112,13 +136,24 @@ struct TargetStateEx
 		hold_button = nullptr;
 		org = nullptr;
 		force_hit_state = HitState_None;
+		hit_state = HitState_None;
+		flying_time_max = 0.0f;
+		flying_time_remaining = 0.0f;
+		delta_time_max = 0.0f;
+		delta_time = 0.0f;
 		length_remaining = length;
 		kiseki_time = 0.0f;
+		alpha = 0.0f;
 		holding = false;
 		success = false;
+		current_step = false;
+		step_state = LinkStepState_None;
+		link_ending = false;
 		diva::aet::Stop(&target_aet);
+		diva::aet::Stop(&button_aet);
 		kiseki_pos = { 0.0f, 0.0f };
 		kiseki_dir = { 0.0f, 0.0f };
+		kiseki_dir_norot = { 0.0f, 0.0f };
 		kiseki.clear();
 		vertex_count_max = 0;
 		ResetSE();
@@ -133,12 +168,22 @@ struct TargetStateEx
 		se_queue = -1;
 		se_name.clear();
 	}
+
+	inline bool IsChainSucessful()
+	{
+		bool cond = true;
+		for (TargetStateEx* ex = this; ex != nullptr; ex = ex->next)
+			cond = cond && (ex->hit_state >= HitState_Cool && ex->hit_state <= HitState_Sad);
+
+		return cond;
+	}
 };
 
 struct StateEx
 {
 	TargetStateEx* start_targets_ex[4];
 	int32_t start_target_count;
+	TargetStateEx* link_chain;
 	FileHandler file_handler;
 	int32_t file_state;
 	bool dsc_loaded;
@@ -149,6 +194,7 @@ struct StateEx
 	{
 		memset(start_targets_ex, 0, sizeof(start_targets_ex));
 		start_target_count = 0;
+		link_chain = nullptr;
 		for (TargetStateEx& ex : target_ex)
 			ex.ResetPlayState();
 	}
@@ -170,6 +216,19 @@ inline StateEx state = { };
 static inline bool IsLongNote(int32_t type)
 { 
 	return type >= TargetType_TriangleLong && type <= TargetType_SquareLong;
+}
+
+static inline bool IsStarLikeNote(int32_t type)
+{
+	return type == TargetType_Star ||
+		type == TargetType_ChanceStar ||
+		type == TargetType_LinkStar ||
+		type == TargetType_LinkStarEnd;
+}
+
+static inline bool IsLinkStarNote(int32_t type, bool exclude_end)
+{
+	return type == TargetType_LinkStar || (type == TargetType_LinkStarEnd && !exclude_end);
 }
 
 static inline bool CheckWindow(float time, float early, float late)

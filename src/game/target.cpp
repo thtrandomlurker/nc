@@ -5,6 +5,7 @@
 #include <common.h>
 #include "note_common.h"
 #include "note_long.h"
+#include "note_link.h"
 #include "target.h"
 
 static const NoteSprite nc_target_layers[] = {
@@ -133,17 +134,103 @@ int32_t PlayUpdateSoundEffect(PvGameTarget* target, TargetStateEx* ex, SoundEffe
 	return 0;
 };
 
-/*
+HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
+{
+	if (target->target_type < TargetType_Custom || target->target_type >= TargetType_Max)
+		return originalCreateTargetAetLayers(target);
+
+	TargetStateEx* ex = GetTargetStateEx(target->target_index, 0);
+	ex->org = target;
+	ex->target_pos = target->target_pos;
+
+	// NOTE: Remove previously created aet objects, if present
+	diva::aet::Stop(&target->target_aet);
+	diva::aet::Stop(&target->button_aet);
+	diva::aet::Stop(&target->target_eff_aet);
+	diva::aet::Stop(&target->dword78);
+
+	const char* target_layer = GetTargetLayer(target->target_type);
+	const char* button_layer = GetButtonLayer(target->target_type);
+
+	diva::vec2 target_pos;
+	diva::vec2 button_pos;
+	diva::GetScaledPosition(&target->target_pos, &target_pos);
+	diva::GetScaledPosition(&target->button_pos, &button_pos);
+
+	target->target_aet = diva::aet::PlayLayer(
+		AetSceneID,
+		8,
+		0x20000,
+		target_layer,
+		&target_pos,
+		0,
+		nullptr,
+		nullptr,
+		0.0f,
+		-1.0f,
+		0,
+		nullptr
+	);
+
+	target->button_aet = diva::aet::PlayLayer(
+		AetSceneID,
+		9,
+		0x20000,
+		button_layer,
+		&button_pos,
+		0,
+		nullptr,
+		nullptr,
+		0.0f,
+		-1.0f,
+		0,
+		nullptr
+	);
+
+	if (ex->link_step)
+	{
+		if (!ex->link_start)
+			diva::aet::Stop(&target->button_aet);
+
+		ex->target_aet = target->target_aet;
+		ex->button_aet = target->button_aet;
+		target->target_aet = 0;
+		target->button_aet = 0;
+	}
+
+	// NOTE: Initialize some information
+	target->out_start_time = 360.0f;
+	target->scaling_end_time = 31.0f;
+}
+
 HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 {
 	for (PvGameTarget* target = data->target; target != nullptr; target = target->next)
 	{
+		// NOTE: Update spawned link stars
 		//
+		TargetStateEx* ex = GetTargetStateEx(target->target_index);
+		if (ex->link_start)
+			state.link_chain = ex;
+
+		if (ex->link_step)
+		{
+			if (ex->flying_time_max <= 0.0f)
+			{
+				ex->flying_time_max = target->flying_time;
+				ex->flying_time_remaining = target->flying_time_remaining;
+			}
+		}
+	}
+
+	if (state.link_chain != nullptr && ShouldUpdateTargets())
+	{
+		UpdateLinkStar(data, state.link_chain, dt);
+		UpdateLinkStarKiseki(data, state.link_chain, dt);
 	}
 
 	return originalUpdateTargets(data, dt);
 }
-*/
 
 HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
 {
@@ -177,11 +264,13 @@ HOOK(void, __fastcall, UpdateKiseki, 0x14026F050, PVGameArcade* data, PvGameTarg
 HOOK(void, __fastcall, DrawKiseki, 0x140271030, PvGameTarget* target)
 {
 	TargetStateEx* ex = GetTargetStateEx(target->target_index);
-	if (IsLongNote(target->target_type) && ex != nullptr)
+	if (IsLongNote(target->target_type))
 	{
 		DrawLongNoteKiseki(ex);
 		return;
 	}
+	else if (IsLinkStarNote(target->target_type, false) && !ex->link_start)
+		return;
 
 	originalDrawKiseki(target);
 };
@@ -199,11 +288,28 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 		}
 	}
 
+	if (state.link_chain != nullptr)
+	{
+		for (TargetStateEx* ex = state.link_chain; ex != nullptr; ex = ex->next)
+		{
+			const uint32_t line1 = 752437696;
+			const uint32_t line2 = 716223682;
+
+			if (ex->vertex_count_max != 0)
+			{
+				// printf("draw %.3f %.3f\n", ex->kiseki[0].pos.x, ex->kiseki[0].pos.y);
+				DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, line1);
+			}
+		}
+	}
+
 	originalDrawArcadeGame(data);
 }
 
 void InstallTargetHooks()
 {
+	INSTALL_HOOK(CreateTargetAetLayers);
+	INSTALL_HOOK(UpdateTargets);
 	INSTALL_HOOK(UpdateKiseki);
 	INSTALL_HOOK(DrawKiseki);
 	INSTALL_HOOK(DrawArcadeGame);

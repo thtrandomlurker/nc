@@ -50,6 +50,23 @@ static void FinishAetButCopyTarget(PVGameArcade* data, PvGameTarget* target, Tar
 	}
 }
 
+static void FinishAetButCopyTargetAndButton(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex)
+{
+	if (data->play)
+	{
+		sub_14026EC80(data);
+		diva::aet::Stop(&target->dword78);
+		diva::aet::Stop(&target->target_eff_aet);
+
+		ex->target_aet = target->target_aet;
+		ex->button_aet = target->button_aet;
+		diva::aet::SetFrame(ex->button_aet, 360.0f);
+		diva::aet::SetPlay(ex->button_aet, false);
+		target->target_aet = 0;
+		target->button_aet = 0;
+	}
+}
+
 static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex)
 {
 	bool hit = false;
@@ -92,7 +109,7 @@ static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetSta
 				hit = ex->prev->hold_button->released;
 		}
 	}
-	else if (target->target_type == TargetType_Star || target->target_type == TargetType_ChanceStar)
+	else if (IsStarLikeNote(target->target_type))
 	{
 		for (int i = Button_L1; i <= Button_R2; i++)
 			hit |= input_state.buttons[i].tapped;
@@ -255,8 +272,10 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 
 		// TODO: Move this into DetermineTarget?
 		//
+		/*
 		if (extra->org == nullptr)
 			extra->org = target;
+		*/
 
 		// NOTE: First, check if this note isn't already deemed to be fail
 		//       (from missing the long note start target)...
@@ -275,6 +294,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 
 		hit_state = GetHitStateNC(data, target, extra);
 		target->hit_state = hit_state;
+		extra->hit_state = hit_state;
 
 		if (hit_state != HitState_None)
 		{
@@ -339,6 +359,21 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 			if (rating_count != nullptr && rating_pos != nullptr)
 				rating_pos[(*rating_count)++] = target->target_pos;
 		}
+
+		/*
+		if (IsLinkStarNote(targets[i]->target_type, false))
+		{
+			if (target->flying_time_remaining <= data->cool_late_window && extra->delta_time_max <= 0.0f)
+			{
+				if (extra->next && extra->next->org)
+				{
+					extra->delta_time_max = extra->next->org->flying_time_remaining;
+					extra->delta_time = extra->delta_time_max;
+					printf("%.3f / %.3f\n", extra->delta_time, extra->delta_time_max);
+				}
+			}
+		}
+		*/
 	}
 
 	// NOTE: This means long notes that start at the same time must also end at the same time

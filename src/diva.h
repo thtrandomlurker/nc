@@ -90,6 +90,43 @@ namespace diva
 	{
 		float x;
 		float y;
+
+		inline float length() const { return sqrtf(x * x + y * y); }
+
+		inline vec2 operator+(const vec2& right)
+		{
+			return { this->x + right.x, this->y + right.y };
+		}
+
+		inline vec2 operator-(const vec2& right)
+		{
+			return { this->x - right.x, this->y - right.y };
+		}
+
+		inline vec2 operator*(float scalar)
+		{
+			return { this->x * scalar, this->y * scalar };
+		}
+
+		inline vec2 operator*(const vec2& right)
+		{
+			return { this->x * right.x, this->y * right.y };
+		}
+
+		inline vec2 operator/(float scalar)
+		{
+			return { this->x / scalar, this->y / scalar };
+		}
+
+		inline vec2 rotated(float angle)
+		{
+			float c = cosf(angle);
+			float s = sinf(angle);
+			return {
+				this->x * c - this->y * s,
+				this->x * s - this->y * c
+			};
+		}
 	};
 
 	struct vec3
@@ -350,6 +387,10 @@ namespace diva
 		// NOTE: Plays a layer from AET_GAM_CMN. Resolution mode is HDTV720
 		inline FUNCTION_PTR(int32_t, __fastcall, PlayGamCmnLayer, 0x14027B2C0, int32_t prio, void* a2, const char* layer, const diva::vec2* pos);
 
+		// NOTE: Sets the position of the layer object
+		inline FUNCTION_PTR(void, __fastcall, SetPosition, 0x1402CA3F0, int32_t id, diva::vec3* pos);
+		// NOTE: Sets the scale of the layer object
+		inline FUNCTION_PTR(void, __fastcall, SetScale, 0x1402CA400, int32_t id, diva::vec3* scale);
 		// NOTE: Sets the current frame of the layer objects
 		inline FUNCTION_PTR(void, __fastcall, SetFrame, 0x1402CA4B0, int32_t id, float frame);
 		// NOTE: Sets if the layer object should play (1) or pause (0)
