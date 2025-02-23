@@ -211,7 +211,7 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 		//
 		TargetStateEx* ex = GetTargetStateEx(target->target_index);
 		if (ex->link_start)
-			state.link_chain = ex;
+			state.PushLinkStar(ex);
 
 		if (ex->link_step)
 		{
@@ -223,10 +223,14 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 		}
 	}
 
-	if (state.link_chain != nullptr && ShouldUpdateTargets())
+	
+	if (ShouldUpdateTargets())
 	{
-		UpdateLinkStar(data, state.link_chain, dt);
-		UpdateLinkStarKiseki(data, state.link_chain, dt);
+		for (TargetStateEx* chain : state.link_chains)
+		{
+			UpdateLinkStar(data, chain, dt);
+			UpdateLinkStarKiseki(data, chain, dt);
+		}
 	}
 
 	return originalUpdateTargets(data, dt);
@@ -288,13 +292,13 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 		}
 	}
 
-	if (state.link_chain != nullptr)
+	for (TargetStateEx* chain : state.link_chains)
 	{
-		for (TargetStateEx* ex = state.link_chain; ex != nullptr; ex = ex->next)
+		for (TargetStateEx* ex = chain; ex != nullptr; ex = ex->next)
 		{
 			if (ex->vertex_count_max != 0)
 			{
-				if (!state.link_chain->IsChainSucessful())
+				if (!chain->IsChainSucessful())
 					DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 752437696);
 				else
 					DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 716223682);

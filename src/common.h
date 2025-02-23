@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include "diva.h"
 #include "megamix.h"
 #include "input.h"
@@ -183,7 +184,7 @@ struct StateEx
 {
 	TargetStateEx* start_targets_ex[4];
 	int32_t start_target_count;
-	TargetStateEx* link_chain;
+	std::list<TargetStateEx*> link_chains;
 	FileHandler file_handler;
 	int32_t file_state;
 	bool dsc_loaded;
@@ -194,9 +195,21 @@ struct StateEx
 	{
 		memset(start_targets_ex, 0, sizeof(start_targets_ex));
 		start_target_count = 0;
-		link_chain = nullptr;
+		link_chains.clear();
 		for (TargetStateEx& ex : target_ex)
 			ex.ResetPlayState();
+	}
+
+	inline bool PushLinkStar(TargetStateEx* chain)
+	{
+		for (TargetStateEx*& p : link_chains)
+		{
+			if (p == chain)
+				return false;
+		}
+
+		link_chains.push_back(chain);
+		return true;
 	}
 };
 
