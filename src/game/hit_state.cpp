@@ -339,6 +339,11 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 					PlayUpdateSoundEffect(target, extra, se);
 				*play_default_se = false;
 			}
+			else if (IsLongNote(target->target_type) && extra->long_end)
+			{
+				extra->prev->se_state = SEState_FailRelease;
+				PlayUpdateSoundEffect(nullptr, extra->prev, nullptr);
+			}
 
 			// NOTE: Remove target aet objects
 			//
