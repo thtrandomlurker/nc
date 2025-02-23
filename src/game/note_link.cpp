@@ -21,6 +21,7 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 		// NOTE: Reset state
 		ex->current_step = false;
 		ex->kiseki_pos = ex->target_pos;
+
 		if (ex->next != nullptr)
 		{
 			ex->kiseki_dir = CalculateDirection(ex->target_pos, ex->next->target_pos, true);
@@ -197,7 +198,8 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 
 void UpdateLinkStarKiseki(PVGameArcade* data, TargetStateEx* chain, float dt)
 {
-	// FROM:  FUN_813474f2 (Vita F 2nd JP Patch 1)
+	const float width = 12.0f;
+
 	for (TargetStateEx* ex = chain; ex != nullptr; ex = ex->next)
 	{
 		if (ex->link_end || ex->next->org == nullptr)
@@ -205,87 +207,43 @@ void UpdateLinkStarKiseki(PVGameArcade* data, TargetStateEx* chain, float dt)
 
 		ex->vertex_count_max = 20;
 		ex->kiseki.resize(ex->vertex_count_max);
-		
-		diva::vec2 offset = ex->kiseki_pos - ex->kiseki_dir_norot * 12.0f;
-		diva::vec2 step = ((ex->kiseki_dir_norot * 12.0f + ex->next->target_pos) - offset) / static_cast<float>(ex->vertex_count_max);
-		float offset_u = 0.0f;
 
+		// NOTE: Calculate color value for alpha
 		uint32_t color = 0x00FFFFFF;
 		color |= static_cast<uint32_t>(ex->alpha * 255.0f) << 24;
 
-		for (int i = 0; i < ex->vertex_count_max; i += 2)
-		{
-			float line = static_cast<float>(i);
+		// NOTE: Calculate position data
+		diva::vec2 center = ex->kiseki_dir * width / 2.0f;
+		diva::vec2 delta = (ex->next->target_pos - ex->kiseki_pos) / 10.0f;
 
-			ex->kiseki[i].pos.x = line * step.x + offset.x + ex->kiseki_dir.x * 32.0f;
-			ex->kiseki[i].pos.y = line * step.y + offset.y + ex->kiseki_dir.y * 32.0f;
+		// NOTE: Calculate UV data
+		diva::vec2 uv_offset = { 7.0f, 0.0f };
+		float uv_step_x = 130.0f / 10.0f;
+		float uv_size_y = 32.0f;
+
+		for (int i = 0; i < 20; i += 2)
+		{
+			float step = static_cast<float>(i / 2);
+			if (step > 0.0f)
+				step += 1.0f;
+
+			ex->kiseki[i].pos.x = ex->kiseki_pos.x + delta.x * step + ex->kiseki_dir.x * width;
+			ex->kiseki[i].pos.y = ex->kiseki_pos.y + delta.y * step + ex->kiseki_dir.y * width;
 			ex->kiseki[i].pos.z = 0.0f;
-			ex->kiseki[i].uv.x  = offset_u + line * 6.666667f;
-			ex->kiseki[i].uv.y  = 32.0f;
+			ex->kiseki[i].uv.x = uv_offset.x + uv_step_x * step;
+			ex->kiseki[i].uv.y = uv_offset.y + uv_size_y;
 			ex->kiseki[i].color = color;
 
-			ex->kiseki[i + 1].pos.x = line * step.x + offset.x - ex->kiseki_dir.x * 32.0f;
-			ex->kiseki[i + 1].pos.y = line * step.y + offset.y - ex->kiseki_dir.y * 32.0f;
+			ex->kiseki[i + 1].pos.x = ex->kiseki_pos.x + delta.x * step - ex->kiseki_dir.x * width;
+			ex->kiseki[i + 1].pos.y = ex->kiseki_pos.y + delta.y * step - ex->kiseki_dir.y * width;
 			ex->kiseki[i + 1].pos.z = 0.0f;
-			ex->kiseki[i + 1].uv.x  = offset_u + line * 6.666667f;
-			ex->kiseki[i + 1].uv.y  = 0.0f;
+			ex->kiseki[i + 1].uv.x = uv_offset.x + uv_step_x * step;
+			ex->kiseki[i + 1].uv.y = uv_offset.y;
 			ex->kiseki[i + 1].color = color;
-
-			
-			if (i == 0 || i == 16)
-				offset_u += 12.0f;
-			
 
 			// NOTE: Scale position
 			diva::GetScaledPosition((diva::vec2*)&ex->kiseki[i].pos, (diva::vec2*)&ex->kiseki[i].pos);
 			diva::GetScaledPosition((diva::vec2*)&ex->kiseki[i + 1].pos, (diva::vec2*)&ex->kiseki[i + 1].pos);
 		}
 	}
-
-	/*
-	const float width = 24.0f;
-	const float half_width = width / 2.0f;
-
-	for (TargetStateEx* ex = chain; ex != nullptr; ex = ex->next)
-	{
-		if (!ex->link_end && ex->next->org != nullptr)
-		{
-			ex->kiseki.resize(4);
-			ex->vertex_count_max = 4;
-
-			diva::vec2 start_pos;
-			diva::vec2 end_pos;
-			diva::GetScaledPosition(&ex->kiseki_pos, &start_pos);
-			diva::GetScaledPosition(&ex->next->target_pos, &end_pos);
-
-			// diva::vec2 offset = ex->kiseki_dir * half_width;
-			diva::vec2 offset = { 0.0f, 0.0f };
-
-			// Bottom Right
-			ex->kiseki[0].pos.x = start_pos.x + ex->kiseki_dir.x * width - offset.x;
-			ex->kiseki[0].pos.y = start_pos.y + ex->kiseki_dir.y * width - offset.y;
-			ex->kiseki[0].pos.z = 0.0f;
-			ex->kiseki[0].uv = { 0.0f, 32.0f };
-			ex->kiseki[0].color = 0xFFFFFFFF;
-			// Bottom Left
-			ex->kiseki[1].pos.x = start_pos.x - ex->kiseki_dir.x * width - offset.x;
-			ex->kiseki[1].pos.y = start_pos.y - ex->kiseki_dir.y * width - offset.y;
-			ex->kiseki[1].pos.z = 0.0f;
-			ex->kiseki[1].uv = { 0.0f, 0.0f };
-			ex->kiseki[1].color = 0xFFFFFFFF;
-			// Upper Right
-			ex->kiseki[2].pos.x = end_pos.x + ex->kiseki_dir.x * width - offset.x;
-			ex->kiseki[2].pos.y = end_pos.y + ex->kiseki_dir.y * width - offset.y;
-			ex->kiseki[2].pos.z = 0.0f;
-			ex->kiseki[2].uv = { 144.0f, 32.0f };
-			ex->kiseki[2].color = 0xFFFFFFFF;
-			// Upper Left
-			ex->kiseki[3].pos.x = end_pos.x - ex->kiseki_dir.x * width - offset.x;
-			ex->kiseki[3].pos.y = end_pos.y - ex->kiseki_dir.y * width - offset.y;
-			ex->kiseki[3].pos.z = 0.0f;
-			ex->kiseki[3].uv = { 144.0f, 0.0f };
-			ex->kiseki[3].color = 0xFFFFFFFF;
-		}
-	}
-	*/
 }

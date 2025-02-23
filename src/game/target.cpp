@@ -292,13 +292,12 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 	{
 		for (TargetStateEx* ex = state.link_chain; ex != nullptr; ex = ex->next)
 		{
-			const uint32_t line1 = 752437696;
-			const uint32_t line2 = 716223682;
-
 			if (ex->vertex_count_max != 0)
 			{
-				// printf("draw %.3f %.3f\n", ex->kiseki[0].pos.x, ex->kiseki[0].pos.y);
-				DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, line1);
+				if (!state.link_chain->IsChainSucessful())
+					DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 752437696);
+				else
+					DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 716223682);
 			}
 		}
 	}
