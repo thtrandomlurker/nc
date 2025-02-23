@@ -211,7 +211,7 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 		//
 		TargetStateEx* ex = GetTargetStateEx(target->target_index);
 		if (ex->link_start)
-			state.PushLinkStar(ex);
+			state.PushTarget(ex);
 
 		if (ex->link_step)
 		{
@@ -226,10 +226,15 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 	
 	if (ShouldUpdateTargets())
 	{
-		for (TargetStateEx* chain : state.link_chains)
+		for (TargetStateEx* tgt : state.target_references)
 		{
-			UpdateLinkStar(data, chain, dt);
-			UpdateLinkStarKiseki(data, chain, dt);
+			if (tgt->link_start)
+			{
+				UpdateLinkStar(data, tgt, dt);
+				UpdateLinkStarKiseki(data, tgt, dt);
+			}
+			else if (IsLongNote(tgt->target_type) && tgt->holding)
+				UpdateLongNoteKiseki(data, nullptr, tgt, dt);
 		}
 	}
 
@@ -281,27 +286,21 @@ HOOK(void, __fastcall, DrawKiseki, 0x140271030, PvGameTarget* target)
 
 HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 {
-	for (int i = 0; i < state.start_target_count; i++)
+	for (TargetStateEx* tgt : state.target_references)
 	{
-		TargetStateEx* ex = state.start_targets_ex[i];
-		if (ex->holding)
+		if (IsLongNote(tgt->target_type) && tgt->holding)
+			DrawLongNoteKiseki(tgt);
+		else if (tgt->link_start)
 		{
-			if (ShouldUpdateTargets())
-				UpdateLongNoteKiseki(data, nullptr, ex, 1.0f / 60.0f);
-			DrawLongNoteKiseki(ex);
-		}
-	}
-
-	for (TargetStateEx* chain : state.link_chains)
-	{
-		for (TargetStateEx* ex = chain; ex != nullptr; ex = ex->next)
-		{
-			if (ex->vertex_count_max != 0)
+			for (TargetStateEx* ex = tgt; ex != nullptr; ex = ex->next)
 			{
-				if (!chain->IsChainSucessful())
-					DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 752437696);
-				else
-					DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 716223682);
+				if (ex->vertex_count_max != 0)
+				{
+					if (!tgt->IsChainSucessful())
+						DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 752437696);
+					else
+						DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 716223682);
+				}
 			}
 		}
 	}

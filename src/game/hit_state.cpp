@@ -161,8 +161,7 @@ static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetSta
 		{
 			if (CheckHit(hit_state, false, false) && !ex->long_end)
 			{
-				state.start_targets_ex[state.start_target_count] = ex;
-				state.start_target_count++;
+				state.PushTarget(ex);
 				ex->kiseki_pos = target->target_pos;
 				ex->kiseki_dir = target->delta_pos_sq;
 				ex->holding = true;
@@ -209,12 +208,14 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 	//
 	if (ShouldUpdateTargets())
 	{
-		for (int i = 0; i < state.start_target_count; i++)
+		for (TargetStateEx* tgt : state.target_references)
 		{
+			if (!IsLongNote(tgt->target_type))
+				continue;
+
 			bool is_in_zone = false;
 
 			// NOTE: Check if the end target is in it's timing window
-			TargetStateEx* tgt = state.start_targets_ex[i];
 			if (tgt->next->org != nullptr)
 			{
 				is_in_zone = CheckWindow(
@@ -382,13 +383,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 	for (int i = 0; i < target_count; i++)
 	{
 		if (IsLongNote(targets[i]->target_type) && extras[i]->long_end && targets[i]->hit_state != HitState_None)
-		{
-			if (state.start_target_count > 0)
-			{
-				state.start_targets_ex[state.start_target_count - 1] = nullptr;
-				state.start_target_count--;
-			}
-		}
+			state.PopTarget(extras[i]);
 	}
 
 	// NOTE: Erase passed targets from list

@@ -182,9 +182,7 @@ struct TargetStateEx
 
 struct StateEx
 {
-	TargetStateEx* start_targets_ex[4];
-	int32_t start_target_count;
-	std::list<TargetStateEx*> link_chains;
+	std::list<TargetStateEx*> target_references;
 	FileHandler file_handler;
 	int32_t file_state;
 	bool dsc_loaded;
@@ -193,23 +191,33 @@ struct StateEx
 
 	inline void ResetPlayState()
 	{
-		memset(start_targets_ex, 0, sizeof(start_targets_ex));
-		start_target_count = 0;
-		link_chains.clear();
+		target_references.clear();
 		for (TargetStateEx& ex : target_ex)
 			ex.ResetPlayState();
 	}
 
-	inline bool PushLinkStar(TargetStateEx* chain)
+	inline bool PushTarget(TargetStateEx* ex)
 	{
-		for (TargetStateEx*& p : link_chains)
-		{
-			if (p == chain)
+		for (TargetStateEx* p : target_references)
+			if (p == ex)
 				return false;
+
+		target_references.push_back(ex);
+		return true;
+	}
+
+	inline bool PopTarget(TargetStateEx* ex)
+	{
+		for (auto it = target_references.begin(); it != target_references.end(); it++)
+		{
+			if (*it == ex)
+			{
+				target_references.erase(it);
+				return true;
+			}
 		}
 
-		link_chains.push_back(chain);
-		return true;
+		return false;
 	}
 };
 
