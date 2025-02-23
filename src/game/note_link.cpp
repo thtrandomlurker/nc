@@ -31,6 +31,15 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 		// NOTE: Update target
 		if (ex->flying_time_max > 0.0f)
 		{
+			// NOTE: Set the flying position of the first note
+			//
+			if (ex->link_start && ex->flying_time_remaining > 0.0f && ex->org != nullptr)
+			{
+				diva::vec3 pos = { 0.0f, 0.0f, 0.0f};
+				diva::GetScaledPosition(&ex->org->button_pos, (diva::vec2*)&pos);
+				diva::aet::SetPosition(ex->button_aet, &pos);
+			}
+
 			// NOTE: Calculate target note scale. Link Stars are not removed after the target is hit,
 			//       it just does the shrinking out animation for every piece (except the end one)
 			if (ex->flying_time_remaining <= data->cool_late_window && ex->target_aet != 0)
