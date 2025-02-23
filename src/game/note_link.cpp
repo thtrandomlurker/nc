@@ -198,7 +198,12 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 
 void UpdateLinkStarKiseki(PVGameArcade* data, TargetStateEx* chain, float dt)
 {
+	// NOTE: The width of the mesh. It's in 480x272 screen space.
 	const float width = 12.0f;
+	// NOTE: The amount of padding in each side of the line texture
+	//       that is considered as the glow effect of the line.
+	const float tex_padding = 12.0f;
+	const diva::vec2 tex_size = { 144.0f, 32.0f };
 
 	for (TargetStateEx* ex = chain; ex != nullptr; ex = ex->next)
 	{
@@ -212,32 +217,36 @@ void UpdateLinkStarKiseki(PVGameArcade* data, TargetStateEx* chain, float dt)
 		uint32_t color = 0x00FFFFFF;
 		color |= static_cast<uint32_t>(ex->alpha * 255.0f) << 24;
 
-		// NOTE: Calculate position data
-		diva::vec2 center = ex->kiseki_dir * width / 2.0f;
-		diva::vec2 delta = (ex->next->target_pos - ex->kiseki_pos) / 10.0f;
+		// NOTE: Calculate position data.
+		//   PS: Delta vectors here are divided by 18 because when looping `i < 20`,
+		//       the last vertex will be the one at index 18.
+		diva::vec2 start_pos = ex->kiseki_pos - ex->kiseki_dir_norot * width;
+		diva::vec2 end_pos = ex->next->target_pos + ex->kiseki_dir_norot * width;
+		diva::vec2 delta = (end_pos - start_pos) / 18.0f;
 
 		// NOTE: Calculate UV data
-		diva::vec2 uv_offset = { 7.0f, 0.0f };
-		float uv_step_x = 130.0f / 10.0f;
-		float uv_size_y = 32.0f;
+		diva::vec2 uv_offset = { 0.0f, 0.0f };
+		float uv_delta_x = (tex_size.x - tex_padding * 2.0f) / 18.0f;
 
+		// NOTE: Create mesh
 		for (int i = 0; i < 20; i += 2)
 		{
-			float step = static_cast<float>(i / 2);
-			if (step > 0.0f)
-				step += 1.0f;
+			float step = i;
 
-			ex->kiseki[i].pos.x = ex->kiseki_pos.x + delta.x * step + ex->kiseki_dir.x * width;
-			ex->kiseki[i].pos.y = ex->kiseki_pos.y + delta.y * step + ex->kiseki_dir.y * width;
+			if (i == 2 || i == 18)
+				uv_offset.x += 12.0f;
+
+			ex->kiseki[i].pos.x = start_pos.x + delta.x * step + ex->kiseki_dir.x * width;
+			ex->kiseki[i].pos.y = start_pos.y + delta.y * step + ex->kiseki_dir.y * width;
 			ex->kiseki[i].pos.z = 0.0f;
-			ex->kiseki[i].uv.x = uv_offset.x + uv_step_x * step;
-			ex->kiseki[i].uv.y = uv_offset.y + uv_size_y;
+			ex->kiseki[i].uv.x = uv_offset.x + uv_delta_x * step;
+			ex->kiseki[i].uv.y = uv_offset.y + tex_size.y;
 			ex->kiseki[i].color = color;
 
-			ex->kiseki[i + 1].pos.x = ex->kiseki_pos.x + delta.x * step - ex->kiseki_dir.x * width;
-			ex->kiseki[i + 1].pos.y = ex->kiseki_pos.y + delta.y * step - ex->kiseki_dir.y * width;
+			ex->kiseki[i + 1].pos.x = start_pos.x + delta.x * step - ex->kiseki_dir.x * width;
+			ex->kiseki[i + 1].pos.y = start_pos.y + delta.y * step - ex->kiseki_dir.y * width;
 			ex->kiseki[i + 1].pos.z = 0.0f;
-			ex->kiseki[i + 1].uv.x = uv_offset.x + uv_step_x * step;
+			ex->kiseki[i + 1].uv.x = uv_offset.x + uv_delta_x * step;
 			ex->kiseki[i + 1].uv.y = uv_offset.y;
 			ex->kiseki[i + 1].color = color;
 
