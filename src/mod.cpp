@@ -267,6 +267,58 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 		}
 	}
 
+	// NOTE: Find chance time
+	//
+	int32_t pos = 1;
+	int32_t time = -1;
+	int32_t last_time = -1;
+	int64_t chance_start_time = -1;
+	int64_t chance_end_time = -1;
+	while (true)
+	{
+		int32_t branch = 0;
+		pos = FindNextCommand(&pv_game->pv_data, 26, &time, &branch, pos);
+
+		if (pos != -1)
+		{
+			if (time != -1)
+				last_time = time;
+
+			// TODO: Add difficulty check
+			if (pv_game->pv_data.script_buffer[pos + 2] == 4)
+				chance_start_time = static_cast<int64_t>(last_time) * 10000;
+			else if (pv_game->pv_data.script_buffer[pos + 2] == 5)
+				chance_end_time = static_cast<int64_t>(last_time) * 10000;
+
+			/*
+			printf("%d %d %d (%d %d %d)\n", pos, time, branch, pv_game->pv_data.script_buffer[pos], pv_game->pv_data.script_buffer[pos + 1], pv_game->pv_data.script_buffer[pos + 2]);
+			*/
+
+			pos += diva::dsc::GetOpcodeInfo(26)->length + 1;
+			continue;
+		}
+
+		break;
+	}
+
+	// NOTE: Figure out which notes are part of the chance time
+	//
+	state.chance_time.first_target_index = -1;
+	state.chance_time.last_target_index = -1;
+	if (chance_start_time != -1 && chance_end_time != -1)
+	{
+		for (size_t i = 0; i < pv_game->pv_data.targets.size(); i++)
+		{
+			PvDscTargetGroup* tgt = &pv_game->pv_data.targets[i];
+			if (tgt->hit_time >= chance_start_time && tgt->hit_time <= chance_end_time)
+			{
+				if (state.chance_time.first_target_index == -1)
+					state.chance_time.first_target_index = i;
+				state.chance_time.last_target_index = i;
+			}
+		}
+	}
+
 	for (TargetStateEx& ex : state.target_ex)
 	{
 		if (ex.next == nullptr && ex.prev == nullptr)
@@ -284,33 +336,6 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 
 	return ret;
 }
-
-// NOTE: Important functions
-//
-
-/*
-HOOK(uint32_t, __fastcall, PVGameArcade_DetermineTarget, 0x14026E8E0, void* a1, PvDscTarget* a2, float a3, int32_t a4, int32_t a5, int32_t a6, int64_t a7, int64_t a8, int32_t a9)
-{
-	printf("[DetermineTarget] %f %d %d %d %lld %lld %d\n", a3, a4, a5, a6, a7, a8, a9);
-	printf("  (%.2f, %.2f)  (%.2f, %.2f)  %d %.3f %d %d %d %d %d %d\n", a2->target_pos.x, a2->target_pos.y, a2->start_pos.x, a2->start_pos.y, a2->type, a2->amplitude, a2->frequency, a2->slide_chain_start, a2->slide_chain_end, a2->slide_chain_left, a2->slide_chain_right, a2->slide_chain);
-
-	return originalPVGameArcade_DetermineTarget(a1, a2, a3, a4, a5, a6, a7, a8, a9);
-}
-
-HOOK(uint64_t, __fastcall, PVGameArcade_UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
-{
-	return originalPVGameArcade_UpdateTargets(data, dt);
-}
-
-HOOK(uint64_t, __fastcall, PVGameArcade_InitKiseki, 0x150D50360, PVGameArcade* data, PvGameTarget* target)
-{
-	uint64_t ret = originalPVGameArcade_InitKiseki(data, target);
-	if (data->b1)
-		target->kiseki_width = 2.0;
-
-	return ret;
-}
-*/
 
 extern "C"
 {

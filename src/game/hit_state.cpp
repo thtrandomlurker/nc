@@ -195,7 +195,7 @@ static bool CheckLongNoteState(TargetStateEx* target)
 	return false;
 };
 
-HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* play_default_se, size_t* rating_count, diva::vec2* rating_pos, int32_t a5, SoundEffect* se, int32_t* multi_count, int32_t* a8, int32_t* a9, bool* a10, bool* slide, bool* slide_chain, bool* slide_chain_start, bool* slide_chain_max, bool* slide_chain_continues)
+HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* play_default_se, size_t* rating_count, diva::vec2* rating_pos, int32_t a5, SoundEffect* se, int32_t* multi_count, int32_t* a8, int32_t* target_index, bool* is_success_note, bool* slide, bool* slide_chain, bool* slide_chain_start, bool* slide_chain_max, bool* slide_chain_continues)
 {
 	if (!data->play)
 		return HitState_None;
@@ -237,150 +237,179 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 		}
 	}
 
-	if (data->target != nullptr && data->target->target_type < TargetType_Custom)
-	{
-		return originalGetHitState(data, play_default_se, rating_count, rating_pos, a5, se, multi_count, a8, a9, a10, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues);
-	}
-
-	// NOTE: Set default return values
-	//
-	*play_default_se = true;
-	*rating_count = 0;
-	*multi_count = 0;
-	*slide = false;
-	*slide_chain = false;
-	*slide_chain_start = false;
-	*slide_chain_max = false;
-	*slide_chain_continues = false;
-
-	// NOTE: Provisory fix to prevent SE from playing on the pause menu;
-	//       Ultimately, I should figure out how the game actually prevents
-	//       that from happening.
-	if (!ShouldUpdateTargets())
-		*play_default_se = false;
-
 	int32_t hit_state = HitState_None;
-	int32_t target_count = 0;
-	PvGameTarget* targets[4] = { };
-	TargetStateEx* extras[4] = { };
 
-	// TODO: Add support for multi notes? Is that something we wanna do?
-	if (data->target != nullptr)
+	// NOTE: Update our own custom notes
+	//
+	if (data->target != nullptr && data->target->target_type >= TargetType_Custom)
 	{
-		targets[0] = data->target;
-		extras[0] = GetTargetStateEx(targets[0]->target_index, 0);
-		target_count = 1;
-	}
+		// NOTE: Set default return values
+		//
+		*play_default_se = true;
+		*rating_count = 0;
+		*multi_count = 0;
+		*is_success_note = false;
+		*slide = false;
+		*slide_chain = false;
+		*slide_chain_start = false;
+		*slide_chain_max = false;
+		*slide_chain_continues = false;
 
-	for (int i = 0; i < target_count; i++)
-	{
-		PvGameTarget* target = targets[i];
-		TargetStateEx* extra = extras[i];
+		// NOTE: Provisory fix to prevent SE from playing on the pause menu;
+		//       Ultimately, I should figure out how the game actually prevents
+		//       that from happening.
+		if (!ShouldUpdateTargets())
+			*play_default_se = false;
 
-		// NOTE: First, check if this note isn't already deemed to be fail
-		//       (from missing the long note start target)...
-		if (extra->force_hit_state != HitState_None)
+		int32_t target_count = 0;
+		PvGameTarget* targets[4] = { };
+		TargetStateEx* extras[4] = { };
+
+		// TODO: Add support for multi notes? Is that something we wanna do?
+		if (data->target != nullptr)
 		{
-			hit_state = extra->force_hit_state;
-			target->hit_state = extra->force_hit_state;
-
-			// NOTE: Hide the combo counter
-			*rating_count = 1;
-			rating_pos[0] = { -1200.0f, 0.0f };
-
-			FinishTargetAet(data, target);
-			continue;
+			targets[0] = data->target;
+			extras[0] = GetTargetStateEx(targets[0]->target_index, 0);
+			target_count = 1;
 		}
 
-		hit_state = GetHitStateNC(data, target, extra);
-		target->hit_state = hit_state;
-		extra->hit_state = hit_state;
-
-		if (hit_state != HitState_None)
+		for (int i = 0; i < target_count; i++)
 		{
-			// NOTE: Play hit effect Aet
-			//
-			int32_t eff_index = -1;
-			switch (hit_state)
-			{
-			case HitState_Cool:
-				eff_index = 1;
-				break;
-			case HitState_Fine:
-				eff_index = 2;
-				break;
-			case HitState_Safe:
-				eff_index = 3;
-				break;
-			case HitState_Sad:
-				eff_index = 4;
-				break;
-			case HitState_WrongCool:
-			case HitState_WrongFine:
-			case HitState_WrongSafe:
-			case HitState_WrongSad:
-				eff_index = 0;
-				break;
-			};
+			PvGameTarget* target = targets[i];
+			TargetStateEx* extra = extras[i];
 
-			if (eff_index != -1)
-				PlayNoteHitEffect(data, eff_index, &target->target_pos);
-
-			// NOTE: Play hit sound effect
-			if (CheckHit(hit_state, true, false))
+			// NOTE: First, check if this note isn't already deemed to be fail
+			//       (from missing the long note start target)...
+			if (extra->force_hit_state != HitState_None)
 			{
-				if (IsLongNote(target->target_type) && extra->long_end)
+				hit_state = extra->force_hit_state;
+				target->hit_state = extra->force_hit_state;
+
+				// NOTE: Hide the combo counter
+				*rating_count = 1;
+				rating_pos[0] = { -1200.0f, 0.0f };
+
+				FinishTargetAet(data, target);
+				continue;
+			}
+
+			hit_state = GetHitStateNC(data, target, extra);
+			target->hit_state = hit_state;
+			extra->hit_state = hit_state;
+
+			if (hit_state != HitState_None)
+			{
+				// NOTE: Play hit effect Aet
+				//
+				int32_t eff_index = -1;
+				switch (hit_state)
 				{
-					extra->prev->se_state = SEState_SuccessRelease;
+				case HitState_Cool:
+					eff_index = 1;
+					break;
+				case HitState_Fine:
+					eff_index = 2;
+					break;
+				case HitState_Safe:
+					eff_index = 3;
+					break;
+				case HitState_Sad:
+					eff_index = 4;
+					break;
+				case HitState_WrongCool:
+				case HitState_WrongFine:
+				case HitState_WrongSafe:
+				case HitState_WrongSad:
+					eff_index = 0;
+					break;
+				};
+
+				if (eff_index != -1)
+					PlayNoteHitEffect(data, eff_index, &target->target_pos);
+
+				if (target->target_type == TargetType_ChanceStar)
+				{
+					if (CheckHit(hit_state, false, false) && extra->success)
+						GetPVGameData()->is_success_branch = true;
+					else
+						GetPVGameData()->is_success_branch = false;
+				}
+
+				// NOTE: Play hit sound effect
+				if (CheckHit(hit_state, true, false))
+				{
+					if (IsLongNote(target->target_type) && extra->long_end)
+					{
+						extra->prev->se_state = SEState_SuccessRelease;
+						PlayUpdateSoundEffect(nullptr, extra->prev, nullptr);
+					}
+					else
+						PlayUpdateSoundEffect(target, extra, se);
+
+					*play_default_se = false;
+				}
+				else if (IsLongNote(target->target_type) && extra->long_end)
+				{
+					extra->prev->se_state = SEState_FailRelease;
 					PlayUpdateSoundEffect(nullptr, extra->prev, nullptr);
 				}
-				else
-					PlayUpdateSoundEffect(target, extra, se);
 
-				*play_default_se = false;
-			}
-			else if (IsLongNote(target->target_type) && extra->long_end)
-			{
-				extra->prev->se_state = SEState_FailRelease;
-				PlayUpdateSoundEffect(nullptr, extra->prev, nullptr);
-			}
-
-			// NOTE: Remove target aet objects
-			//
-			if (IsLongNote(target->target_type))
-			{
-				if (CheckHit(target->hit_state, false, false) && !extra->long_end)
-					FinishAetButCopyTarget(data, target, extra);
-				else if (extra->long_end)
+				// NOTE: Remove target aet objects
+				//
+				if (IsLongNote(target->target_type))
 				{
-					FinishExtraAet(extra->prev);
-					FinishExtraAet(extra);
+					if (CheckHit(target->hit_state, false, false) && !extra->long_end)
+						FinishAetButCopyTarget(data, target, extra);
+					else if (extra->long_end)
+					{
+						FinishExtraAet(extra->prev);
+						FinishExtraAet(extra);
+					}
 				}
-			}
-			else
-				FinishTargetAet(data, target);
+				else
+					FinishTargetAet(data, target);
 
-			// NOTE: Set position of the combo counter
-			//
-			if (rating_count != nullptr && rating_pos != nullptr)
-				rating_pos[(*rating_count)++] = target->target_pos;
+				// NOTE: Set position of the combo counter
+				//
+				if (rating_count != nullptr && rating_pos != nullptr)
+					rating_pos[(*rating_count)++] = target->target_pos;
+			}
+		}
+
+		for (int i = 0; i < target_count; i++)
+		{
+			if (IsLongNote(targets[i]->target_type) && extras[i]->long_end && targets[i]->hit_state != HitState_None)
+				state.PopTarget(extras[i]->prev);
+		}
+
+		// NOTE: Erase passed targets from list
+		for (int i = 0; i < target_count; i++)
+		{
+			if (targets[i]->hit_state != HitState_None)
+				EraseTarget(data, targets[i]);
+		}
+
+		if (target_count > 0)
+		{
+			*multi_count = target_count;
+			*target_index = targets[0]->target_index;
+		}
+	}
+	else
+	{
+		hit_state = originalGetHitState(data, play_default_se, rating_count, rating_pos, a5, se, multi_count, a8, target_index, is_success_note, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues);
+	}
+
+	// NOTE: Update chance time
+	if (CheckHit(hit_state, false, false))
+	{
+		if (state.chance_time.CheckTargetInRange(*target_index))
+		{
+			state.chance_time.targets_hit += 1;
+			printf("CTFR: %.4f [%d]\n", 0.0f, state.chance_time.GetFillRate());
 		}
 	}
 
-	for (int i = 0; i < target_count; i++)
-	{
-		if (IsLongNote(targets[i]->target_type) && extras[i]->long_end && targets[i]->hit_state != HitState_None)
-			state.PopTarget(extras[i]->prev);
-	}
-
-	// NOTE: Erase passed targets from list
-	for (int i = 0; i < target_count; i++)
-	{
-		if (targets[i]->hit_state != HitState_None)
-			EraseTarget(data, targets[i]);
-	}
-
-	*multi_count = target_count;
 	return hit_state;
 }
 

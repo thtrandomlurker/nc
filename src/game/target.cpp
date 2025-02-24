@@ -225,6 +225,50 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 				ex->flying_time_remaining = target->flying_time_remaining;
 			}
 		}
+
+		// NOTE: Update chance stars
+		if (target->target_type == TargetType_ChanceStar)
+		{
+			if (state.chance_time.GetFillRate() == 15 && !ex->success)
+			{
+				diva::vec2 target_pos;
+				diva::GetScaledPosition(&target->target_pos, &target_pos);
+
+				diva::aet::Stop(&target->target_aet);
+				target->target_aet = diva::aet::PlayLayer(
+					AetSceneID,
+					8,
+					0x20000,
+					"target_touch_ch",
+					&target_pos,
+					0,
+					nullptr,
+					nullptr,
+					-1.0f,
+					-1.0f,
+					0,
+					nullptr
+				);
+
+				diva::aet::Stop(&target->button_aet);
+				target->button_aet = diva::aet::PlayLayer(
+					AetSceneID,
+					9,
+					0x20000,
+					"button_touch_ch",
+					&target->button_pos,
+					0,
+					nullptr,
+					nullptr,
+					-1.0f,
+					-1.0f,
+					0,
+					nullptr
+				);
+
+				ex->success = true;
+			}
+		}
 	}
 	
 	if (ShouldUpdateTargets())

@@ -180,6 +180,43 @@ struct TargetStateEx
 	}
 };
 
+struct ChanceState
+{
+	int32_t first_target_index = -1;
+	int32_t last_target_index = -1;
+	int32_t targets_hit = 0;
+
+	inline void ResetPlayState()
+	{
+		targets_hit = 0;
+	}
+
+	inline int32_t GetTargetCount() const
+	{
+		if (first_target_index != -1 && last_target_index != -1)
+			return last_target_index - first_target_index + 1;
+		return 0;
+	}
+
+	inline int32_t GetFillRate() const
+	{
+		const float max_threshold = 0.875f;
+		const float target_count = GetTargetCount();
+		if (target_count > 0.0f)
+		{
+			float percent = fminf(targets_hit / target_count / max_threshold, 1.0f);
+			return static_cast<int32_t>(percent * 15);
+		}
+
+		return 0;
+	}
+
+	inline bool CheckTargetInRange(int32_t index) const
+	{
+		return index >= first_target_index && index <= last_target_index;
+	}
+};
+
 struct StateEx
 {
 	std::list<TargetStateEx*> target_references;
@@ -188,12 +225,14 @@ struct StateEx
 	bool dsc_loaded;
 	bool files_loaded;
 	std::vector<TargetStateEx> target_ex;
+	ChanceState chance_time;
 
 	inline void ResetPlayState()
 	{
 		target_references.clear();
 		for (TargetStateEx& ex : target_ex)
 			ex.ResetPlayState();
+		chance_time.ResetPlayState();
 	}
 
 	inline bool PushTarget(TargetStateEx* ex)
