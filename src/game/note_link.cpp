@@ -1,11 +1,14 @@
 #include "note_link.h"
 
-static diva::vec2 CalculateDirection(diva::vec2& start, diva::vec2& end, bool rot)
+static bool CalculateDirection(TargetStateEx* ex)
 {
-	diva::vec2 dir_delta = end - start;
-	if (rot)
-		return (dir_delta / dir_delta.length()).rotated(1.570796);
-	return dir_delta / dir_delta.length();
+	if (!ex->next)
+		return false;
+
+	diva::vec2 delta = ex->next->target_pos - ex->kiseki_pos;
+	ex->kiseki_dir_norot = delta / delta.length();
+	ex->kiseki_dir = ex->kiseki_dir_norot.rotated(1.570796);
+	return true;
 }
 
 
@@ -21,12 +24,7 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 		// NOTE: Reset state
 		ex->current_step = false;
 		ex->kiseki_pos = ex->target_pos;
-
-		if (ex->next != nullptr)
-		{
-			ex->kiseki_dir = CalculateDirection(ex->target_pos, ex->next->target_pos, true);
-			ex->kiseki_dir_norot = CalculateDirection(ex->target_pos, ex->next->target_pos, false);
-		}
+		CalculateDirection(ex);
 
 		// NOTE: Update target
 		if (ex->flying_time_max > 0.0f)
@@ -174,8 +172,7 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 
 			// NOTE: Update kiseki data
 			current->kiseki_pos = pos;
-			current->kiseki_dir = CalculateDirection(pos, next->target_pos, true);
-			current->kiseki_dir_norot = CalculateDirection(pos, next->target_pos, false);
+			CalculateDirection(current);
 
 			// NOTE: Set the position
 			diva::vec3 pos_3 = { pos.x, pos.y, 0.0f };

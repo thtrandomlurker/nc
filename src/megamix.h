@@ -170,19 +170,29 @@ struct PVGameArcade
 	float safe_late_window;
 	float sad_early_window;
 	float sad_late_window;
-
-	/*
-	_BYTE gap13228[64];
-	float target_flying_time;
-	_BYTE gap1326C[44];
+	uint8_t gap1328C[4];
+	float current_time;
+	int32_t int13294;
 	int32_t hit_effects[64];
 	int32_t hit_effect_index;
-	_BYTE gap1339C[96];
+	uint8_t gap1339C[96];
 	int32_t dword133FC;
 	int32_t dword13400[3];
 	int32_t slide_hit_effects[64];
 	int32_t slide_hit_effect_index;
-	*/
+	uint8_t gap13510[8];
+	float fl13518;
+	float fl1351C;
+	float fl13520;
+	float fl13524;
+	float fl13528;
+	float fl1352C;
+	float fl13530;
+	uint8_t gap13534[8];
+	bool bool1353C[4];
+	uint8_t gap13540[14];
+	int8_t char1354E[4];
+	float fl13554[2];
 };
 
 struct PVGameData
@@ -315,9 +325,6 @@ struct SoundEffect
 	prj::string slide_ng;
 	prj::string chime;
 };
-
-//inline FUNCTION_PTR(bool, __fastcall, PlaySoundEffect2, 0x1405AAFB0, int32_t a1, const char* name);
-//inline FUNCTION_PTR(void, PlaySoundEffect, 0x1405AA540, const char* name, float volume);
 
 inline FUNCTION_PTR(PVGameData*, __fastcall, GetPVGameData, 0x140266720);
 inline FUNCTION_PTR(bool, __fastcall, IsInSongResults, 0x1401E8090);

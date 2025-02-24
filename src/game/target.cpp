@@ -3,10 +3,12 @@
 #include <detours.h>
 #include <Helpers.h>
 #include <common.h>
-#include "note_common.h"
-#include "note_long.h"
 #include "note_link.h"
 #include "target.h"
+
+static void PatchCommonKisekiColor(PvGameTarget* target);
+static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, float dt);
+static void DrawLongNoteKiseki(TargetStateEx* ex);
 
 static const NoteSprite nc_target_layers[] = {
 	{ nullptr,                nullptr, nullptr }, // 0x19 - Triangle Rush
@@ -27,6 +29,7 @@ static const NoteSprite nc_target_layers[] = {
 	{ "target_touch_ch_miss", nullptr, nullptr }, // 0x28 - Chance Star
 	{ "target_link",          nullptr, nullptr }, // 0x29 - Link Star
 	{ "target_link",          nullptr, nullptr }, // 0x2A - Link Star End
+	{ nullptr,                nullptr, nullptr }, // 0x2B - Star Rush
 };
 
 static const NoteSprite nc_button_layers[] = {
@@ -48,6 +51,7 @@ static const NoteSprite nc_button_layers[] = {
 	{ "button_touch_ch_miss", nullptr, nullptr }, // 0x28 - Chance Star
 	{ "button_link",          nullptr, nullptr }, // 0x29 - Link Star
 	{ "button_link",          nullptr, nullptr }, // 0x2A - Link Star End
+	{ nullptr,                nullptr, nullptr }, // 0x2B - Star Rush
 };
 
 static const char* GetProperLayerName(const NoteSprite* spr)
@@ -222,7 +226,6 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 			}
 		}
 	}
-
 	
 	if (ShouldUpdateTargets())
 	{
@@ -306,6 +309,182 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 	}
 
 	originalDrawArcadeGame(data);
+}
+
+static void PatchCommonKisekiColor(PvGameTarget* target)
+{
+	float r, g, b;
+	TargetStateEx* ex = GetTargetStateEx(target->target_index);
+
+	switch (target->target_type)
+	{
+	case TargetType_TriangleRush:
+	case TargetType_UpW:
+		r = 0.799f;
+		g = 1.0f;
+		b = 0.5401;
+		break;
+	case TargetType_CircleRush:
+	case TargetType_RightW:
+		r = 0.9372f;
+		g = 0.2705f;
+		b = 0.2901f;
+		break;
+	case TargetType_CrossRush:
+	case TargetType_DownW:
+		r = 0.7098f;
+		g = 1.0f;
+		b = 1.0f;
+		break;
+	case TargetType_SquareRush:
+	case TargetType_LeftW:
+		r = 1.0f;
+		g = 0.8117f;
+		b = 1.0f;
+		break;
+	case TargetType_Star:
+	case TargetType_StarW:
+	case TargetType_LinkStar:
+	case TargetType_LinkStarEnd:
+	case TargetType_StarRush:
+		r = 0.9f;
+		g = 0.9f;
+		b = 0.1f;
+		break;
+	case TargetType_ChanceStar:
+		if (ex != nullptr && ex->success)
+		{
+			r = 0.9f;
+			g = 0.9f;
+			b = 0.1f;
+		}
+		else
+		{
+			r = 0.65f;
+			g = 0.65f;
+			b = 0.65f;
+		}
+
+		break;
+	default:
+		r = 0.0f;
+		g = 0.0f;
+		b = 0.0f;
+		break;
+	}
+
+	uint32_t color = (uint8_t)(r * 255) |
+		((uint8_t)(g * 255) << 8) |
+		((uint8_t)(b * 255) << 16);
+
+	for (int i = 0; i < 40; i++)
+		target->kiseki[i].color = (target->kiseki[i].color & 0xFF000000) | (color & 0x00FFFFFF);
+}
+
+static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, float dt)
+{
+	const float width = 12.0f;
+
+	// NOTE: Initialize vertex buffer
+	if (ex->kiseki.size() < 1 && target != nullptr)
+	{
+		ex->vertex_count_max = ex->length * KisekiRate * 2;
+		if (ex->vertex_count_max % 2 != 0)
+			ex->vertex_count_max += 3;
+
+		ex->kiseki.resize(ex->vertex_count_max);
+
+		for (size_t i = 0; i < ex->vertex_count_max; i += 2)
+		{
+			ex->kiseki[i].pos = target->kiseki[0].pos;
+			ex->kiseki[i].uv = target->kiseki[0].uv;
+			ex->kiseki[i].color = 0xFFFFFFFF;
+			ex->kiseki[i + 1].pos = target->kiseki[1].pos;
+			ex->kiseki[i + 1].uv = target->kiseki[1].uv;
+			ex->kiseki[i + 1].color = 0xFFFFFFFF;
+		}
+	}
+
+	// NOTE: Update vertices
+	ex->kiseki_time += dt;
+	size_t count = 0;
+	while (ex->kiseki_time >= 1.0f / KisekiRate)
+	{
+		// NOTE: Move vertices back
+		if (ex->vertex_count_max >= 4)
+		{
+			for (int32_t i = static_cast<int32_t>(ex->vertex_count_max) - 4; i >= 0; i -= 2)
+			{
+				ex->kiseki[i + 2].pos = ex->kiseki[i].pos;
+				ex->kiseki[i + 3].pos = ex->kiseki[i + 1].pos;
+			}
+
+			count++;
+		}
+
+		ex->kiseki_time -= 1.0f / KisekiRate;
+	}
+
+	// NOTE: Update position
+	for (size_t i = 0; i < count; i++)
+	{
+		float offset_x = ex->kiseki_dir.x * (width / 2.0f);
+		float offset_y = ex->kiseki_dir.y * (width / 2.0f);
+
+		diva::vec3 left = {
+			ex->kiseki_pos.x - (ex->kiseki_dir.x * width) + offset_x,
+			ex->kiseki_pos.y - (ex->kiseki_dir.y * width) + offset_y,
+			0.0f
+		};
+
+		diva::vec3 right = {
+			ex->kiseki_pos.x + (ex->kiseki_dir.x * width) + offset_x,
+			ex->kiseki_pos.y + (ex->kiseki_dir.y * width) + offset_y,
+			0.0f
+		};
+
+		diva::GetScaledPosition((diva::vec2*)&left, (diva::vec2*)&left);
+		diva::GetScaledPosition((diva::vec2*)&right, (diva::vec2*)&right);
+
+		ex->kiseki[i * 2].pos = right;
+		ex->kiseki[i * 2].uv.y = 0.5f;
+		ex->kiseki[i * 2].color = 0xFFFFFFFF;
+		ex->kiseki[i * 2 + 1].pos = left;
+		ex->kiseki[i * 2 + 1].uv.y = 1.0f;
+		ex->kiseki[i * 2 + 1].color = 0xFFFFFFFF;
+	}
+
+	// NOTE: Update UV
+	for (size_t i = 0; i < ex->vertex_count_max; i++)
+		ex->kiseki[i].uv.x += dt * 128.0f;
+}
+
+static void DrawLongNoteKiseki(TargetStateEx* ex)
+{
+	if (ex->vertex_count_max != 0)
+	{
+		int32_t sprite_id = 0x3AB;
+		switch (ex->target_type)
+		{
+		case TargetType_TriangleLong:
+			sprite_id = 2547777446; // SPR_GAM_CMN_KISEKI02
+			break;
+		case TargetType_CircleLong:
+			sprite_id = 268038873;  // SPR_GAM_CMN_KISEKI03
+			break;
+		case TargetType_CrossLong:
+			sprite_id = 3751393426; // SPR_GAM_CMN_KISEKI04
+			break;
+		case TargetType_SquareLong:
+			sprite_id = 1382161087; // SPR_GAM_CMN_KISEKI05
+			break;
+		case TargetType_StarLong:
+			sprite_id = 337203558;  // SPR_GAM_CMN_KISEKI06
+			break;
+		}
+
+		DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, sprite_id);
+	}
 }
 
 void InstallTargetHooks()

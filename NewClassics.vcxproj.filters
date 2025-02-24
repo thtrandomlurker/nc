@@ -30,15 +30,6 @@
     <ClCompile Include="src\game\target.cpp">
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
-    <ClCompile Include="src\game\note_arrow.cpp">
-      <Filter>Arquivos de Origem</Filter>
-    </ClCompile>
-    <ClCompile Include="src\game\note_common.cpp">
-      <Filter>Arquivos de Origem</Filter>
-    </ClCompile>
-    <ClCompile Include="src\game\note_long.cpp">
-      <Filter>Arquivos de Origem</Filter>
-    </ClCompile>
     <ClCompile Include="src\game\note_link.cpp">
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
@@ -66,15 +57,6 @@
       <Filter>Arquivos de Cabeçalho</Filter>
     </ClInclude>
     <ClInclude Include="src\game\target.h">
-      <Filter>Arquivos de Cabeçalho</Filter>
-    </ClInclude>
-    <ClInclude Include="src\game\note_arrow.h">
-      <Filter>Arquivos de Cabeçalho</Filter>
-    </ClInclude>
-    <ClInclude Include="src\game\note_common.h">
-      <Filter>Arquivos de Cabeçalho</Filter>
-    </ClInclude>
-    <ClInclude Include="src\game\note_long.h">
       <Filter>Arquivos de Cabeçalho</Filter>
     </ClInclude>
     <ClInclude Include="src\game\note_link.h">

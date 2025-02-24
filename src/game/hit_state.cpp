@@ -253,6 +253,12 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 	*slide_chain_max = false;
 	*slide_chain_continues = false;
 
+	// NOTE: Provisory fix to prevent SE from playing on the pause menu;
+	//       Ultimately, I should figure out how the game actually prevents
+	//       that from happening.
+	if (!ShouldUpdateTargets())
+		*play_default_se = false;
+
 	int32_t hit_state = HitState_None;
 	int32_t target_count = 0;
 	PvGameTarget* targets[4] = { };
@@ -270,13 +276,6 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 	{
 		PvGameTarget* target = targets[i];
 		TargetStateEx* extra = extras[i];
-
-		// TODO: Move this into DetermineTarget?
-		//
-		/*
-		if (extra->org == nullptr)
-			extra->org = target;
-		*/
 
 		// NOTE: First, check if this note isn't already deemed to be fail
 		//       (from missing the long note start target)...
@@ -337,6 +336,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 				}
 				else
 					PlayUpdateSoundEffect(target, extra, se);
+
 				*play_default_se = false;
 			}
 			else if (IsLongNote(target->target_type) && extra->long_end)
@@ -365,30 +365,12 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 			if (rating_count != nullptr && rating_pos != nullptr)
 				rating_pos[(*rating_count)++] = target->target_pos;
 		}
-
-		/*
-		if (IsLinkStarNote(targets[i]->target_type, false))
-		{
-			if (target->flying_time_remaining <= data->cool_late_window && extra->delta_time_max <= 0.0f)
-			{
-				if (extra->next && extra->next->org)
-				{
-					extra->delta_time_max = extra->next->org->flying_time_remaining;
-					extra->delta_time = extra->delta_time_max;
-					printf("%.3f / %.3f\n", extra->delta_time, extra->delta_time_max);
-				}
-			}
-		}
-		*/
 	}
 
-	// NOTE: This means long notes that start at the same time must also end at the same time
-	//       or else the program will eventually overwrite other memory inside the StateEx struct.
-	//       I don't really plan on supporting multi notes for any of the custom notes, anyway.
 	for (int i = 0; i < target_count; i++)
 	{
 		if (IsLongNote(targets[i]->target_type) && extras[i]->long_end && targets[i]->hit_state != HitState_None)
-			state.PopTarget(extras[i]);
+			state.PopTarget(extras[i]->prev);
 	}
 
 	// NOTE: Erase passed targets from list
