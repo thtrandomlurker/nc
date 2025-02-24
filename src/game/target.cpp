@@ -6,7 +6,7 @@
 #include "note_link.h"
 #include "target.h"
 
-static void PatchCommonKisekiColor(PvGameTarget* target);
+static void PatchCommonKiseki(PvGameTarget* target);
 static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, float dt);
 static void DrawLongNoteKiseki(TargetStateEx* ex);
 
@@ -313,7 +313,7 @@ HOOK(void, __fastcall, UpdateKiseki, 0x14026F050, PVGameArcade* data, PvGameTarg
 	else
 	{
 		originalUpdateKiseki(data, target, dt);
-		PatchCommonKisekiColor(target);
+		PatchCommonKiseki(target);
 	}
 }
 
@@ -355,7 +355,7 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 	originalDrawArcadeGame(data);
 }
 
-static void PatchCommonKisekiColor(PvGameTarget* target)
+static void PatchCommonKiseki(PvGameTarget* target)
 {
 	float r, g, b;
 	TargetStateEx* ex = GetTargetStateEx(target->target_index);
@@ -417,12 +417,32 @@ static void PatchCommonKisekiColor(PvGameTarget* target)
 		break;
 	}
 
-	uint32_t color = (uint8_t)(r * 255) |
-		((uint8_t)(g * 255) << 8) |
-		((uint8_t)(b * 255) << 16);
+	if (state.chance_time.CheckTargetInRange(target->target_index))
+	{
+		for (int i = 0; i < 40; i++)
+		{
+			int32_t alpha = 0xFF000000;
+			if (i >= 20)
+			{
+				if (i % 2 == 0)
+					alpha = static_cast<int32_t>((1.0f - static_cast<float>(i - 20 + 2) / 20.0f) * 255) << 24;
+				else
+					alpha = target->kiseki[i - 1].color & 0xFF000000;
+			}
 
-	for (int i = 0; i < 40; i++)
-		target->kiseki[i].color = (target->kiseki[i].color & 0xFF000000) | (color & 0x00FFFFFF);
+			target->kiseki[i].uv.y = i % 2 != 0 ? 64.0f : 128.0f;
+			target->kiseki[i].color = alpha | 0x00FFFFFF;
+		}
+	}
+	else
+	{
+		uint32_t color = (uint8_t)(r * 255) |
+			((uint8_t)(g * 255) << 8) |
+			((uint8_t)(b * 255) << 16);
+
+		for (int i = 0; i < 40; i++)
+			target->kiseki[i].color = (target->kiseki[i].color & 0xFF000000) | (color & 0x00FFFFFF);
+	}
 }
 
 static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, float dt)
