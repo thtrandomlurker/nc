@@ -209,9 +209,10 @@ void UpdateLinkStarKiseki(PVGameArcade* data, TargetStateEx* chain, float dt)
 {
 	// NOTE: The width of the mesh. It's in 480x272 screen space.
 	const float width = 12.0f;
+	const float edge  = width * 0.375f;
 	// NOTE: The amount of padding in each side of the line texture
 	//       that is considered as the glow effect of the line.
-	const float tex_padding = 12.0f;
+	const float tex_padding   = 12.0f;
 	const diva::vec2 tex_size = { 144.0f, 32.0f };
 
 	for (TargetStateEx* ex = chain; ex != nullptr; ex = ex->next)
@@ -229,8 +230,8 @@ void UpdateLinkStarKiseki(PVGameArcade* data, TargetStateEx* chain, float dt)
 		// NOTE: Calculate position data.
 		//   PS: Delta vectors here are divided by 18 because when looping `i < 20`,
 		//       the last vertex will be the one at index 18.
-		diva::vec2 start_pos = ex->kiseki_pos - ex->kiseki_dir_norot * width;
-		diva::vec2 end_pos = ex->next->target_pos + ex->kiseki_dir_norot * width;
+		diva::vec2 start_pos = ex->kiseki_pos - ex->kiseki_dir_norot * edge;
+		diva::vec2 end_pos = ex->next->target_pos + ex->kiseki_dir_norot * edge;
 		diva::vec2 delta = (end_pos - start_pos) / 18.0f;
 
 		// NOTE: Calculate UV data
