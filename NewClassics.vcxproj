@@ -161,7 +161,8 @@
       <AdditionalDependencies>detours.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DIVA Mega Mix Plus\mods\New Classics\NewClassics.dll"</Command>
+      <Command>copy /y "$(TargetPath)" "$(ProjectDir)assets\New Classics\NewClassics.dll"
+copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DIVA Mega Mix Plus\mods\New Classics\NewClassics.dll"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Copy output DLL</Message>
@@ -169,21 +170,25 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\diva.cpp" />
+    <ClCompile Include="src\game\chance_time.cpp" />
     <ClCompile Include="src\game\hit_state.cpp" />
     <ClCompile Include="src\game\note_link.cpp" />
     <ClCompile Include="src\game\target.cpp" />
     <ClCompile Include="src\input.cpp" />
     <ClCompile Include="src\mod.cpp" />
+    <ClCompile Include="src\nc_log.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\common.h" />
     <ClInclude Include="src\diva.h" />
+    <ClInclude Include="src\game\chance_time.h" />
     <ClInclude Include="src\game\hit_state.h" />
     <ClInclude Include="src\game\note_link.h" />
     <ClInclude Include="src\game\target.h" />
     <ClInclude Include="src\helpers.h" />
     <ClInclude Include="src\input.h" />
     <ClInclude Include="src\megamix.h" />
+    <ClInclude Include="src\nc_log.h" />
     <ClInclude Include="src\thirdparty\toml.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

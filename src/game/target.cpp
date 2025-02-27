@@ -288,19 +288,8 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 	return originalUpdateTargets(data, dt);
 }
 
-HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
-{
-	printf("[NC] Reset!\n");
-	
-	state.ResetPlayState();
-	originalPVGameReset(pv_game);
-}
-
 HOOK(void, __fastcall, UpdateKiseki, 0x14026F050, PVGameArcade* data, PvGameTarget* target, float dt)
 {
-	if (target->target_type < TargetType_Custom)
-		return originalUpdateKiseki(data, target, dt);
-
 	if (IsLongNote(target->target_type))
 	{
 		if (TargetStateEx* ex = GetTargetStateEx(target->target_index); ex != nullptr)
@@ -434,7 +423,7 @@ static void PatchCommonKiseki(PvGameTarget* target)
 			target->kiseki[i].color = alpha | 0x00FFFFFF;
 		}
 	}
-	else
+	else if (target->target_type >= TargetType_Custom)
 	{
 		uint32_t color = (uint8_t)(r * 255) |
 			((uint8_t)(g * 255) << 8) |
@@ -558,5 +547,4 @@ void InstallTargetHooks()
 	INSTALL_HOOK(UpdateKiseki);
 	INSTALL_HOOK(DrawKiseki);
 	INSTALL_HOOK(DrawArcadeGame);
-	INSTALL_HOOK(PVGameReset);
 }

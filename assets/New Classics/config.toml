@@ -1,0 +1,10 @@
+enabled = true
+include = ["."]
+
+name = "New Classics"
+description = "Brings back gameplay features from F/F 2nd/X to MM+."
+version = "0.1.0"
+date = "13.02.2025"
+author = "ehoclover"
+
+dll = ["NewClassics.dll"]

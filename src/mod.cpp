@@ -9,6 +9,8 @@
 #include "megamix.h"
 #include "game/hit_state.h"
 #include "game/target.h"
+#include "game/chance_time.h"
+#include "nc_log.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -100,7 +102,17 @@ HOOK(bool, __fastcall, TaskPvGameDest, 0x1405DA0A0, uint64_t a1)
 		state.files_loaded = false;
 	}
 
+	FinishChanceTimeUI();
 	return originalTaskPvGameDest(a1);
+}
+
+HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
+{
+	nc::Print("PVGameReset()\n");
+
+	state.ResetPlayState();
+	FinishChanceTimeUI();
+	originalPVGameReset(pv_game);
 }
 
 // NOTE: Hook LoadDscCtrl to handle loading our external CSV file
@@ -122,7 +134,7 @@ HOOK(bool, __fastcall, LoadDscCtrl, 0x14024E270, PVGamePvData* pv_data, prj::str
 		prj::string fixed;
 		if (FileCheckExists(&csv_path_str, &fixed))
 		{
-			printf("File (%s) exists! Found at (%s)\n", csv_path_str.c_str(), fixed.c_str());
+			nc::Print("File (%s) exists! Found at (%s)\n", csv_path_str.c_str(), fixed.c_str());
 			if (!FileRequestLoad(&state.file_handler, csv_path_str.c_str(), 1))
 			{
 				state.file_handler = nullptr;
@@ -133,7 +145,7 @@ HOOK(bool, __fastcall, LoadDscCtrl, 0x14024E270, PVGamePvData* pv_data, prj::str
 		}
 		else
 		{
-			printf("File (%s) does not exist!\n", csv_path_str.c_str());
+			nc::Print("File (%s) does not exist!\n", csv_path_str.c_str());
 			state.file_handler = nullptr;
 			state.file_state = 2;
 		}
@@ -290,10 +302,6 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 			else if (pv_game->pv_data.script_buffer[pos + 2] == 5)
 				chance_end_time = static_cast<int64_t>(last_time) * 10000;
 
-			/*
-			printf("%d %d %d (%d %d %d)\n", pos, time, branch, pv_game->pv_data.script_buffer[pos], pv_game->pv_data.script_buffer[pos + 1], pv_game->pv_data.script_buffer[pos + 2]);
-			*/
-
 			pos += diva::dsc::GetOpcodeInfo(26)->length + 1;
 			continue;
 		}
@@ -323,15 +331,8 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 	{
 		if (ex.next == nullptr && ex.prev == nullptr)
 			continue;
-
-		printf("TARGET:  %d/%d  %d  %d:%.3f  <%d-%d-%d>  ", ex.target_index, ex.sub_index, ex.target_type, ex.long_end, ex.length, ex.link_start, ex.link_step, ex.link_end);
-		if (ex.next != nullptr)
-			printf("[NEXT:%d/%d]  ", ex.next->target_index, ex.next->sub_index);
-
-		if (ex.prev != nullptr)
-			printf("[PREV:%d/%d]  ", ex.prev->target_index, ex.prev->sub_index);
-
-		printf("\n");
+		
+		nc::Print("TARGET %03d/%03d:  %02d  %d:%.3f  <%d-%d-%d>\n", ex.target_index, ex.sub_index, ex.target_type, ex.long_end, ex.length, ex.link_start, ex.link_step, ex.link_end);
 	}
 
 	return ret;
@@ -350,9 +351,11 @@ extern "C"
 		INSTALL_HOOK(TaskPvGameInit);
 		INSTALL_HOOK(TaskPvGameCtrl);
 		INSTALL_HOOK(TaskPvGameDest);
+		INSTALL_HOOK(PVGameReset);
 		INSTALL_HOOK(ParseTargets);
 		INSTALL_HOOK(LoadDscCtrl);
 		InstallHitStateHooks();
 		InstallTargetHooks();
+		InstallChanceTimeHooks();
 	}
 };

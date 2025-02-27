@@ -30,6 +30,9 @@ struct PvDscTargetGroup
 	bool slide_chain;
 };
 
+struct PVGameData;
+struct PVGameArcade;
+
 struct PVGamePvData
 {
 	uint8_t gap0[4];
@@ -44,7 +47,11 @@ struct PVGamePvData
 	float prev_time_float;
 	uint8_t gap2BF50[32];
 	int int2BF70;
-	uint8_t gap2BF74[36];
+	int int2BF74;
+	PVGameData* pv_game;
+	void* ptr2BF80;
+	PVGameArcade* arcade;
+	uint8_t gap2BF90[8];
 	float float2BF98;
 	float float2BF9C;
 	int32_t dword2BFA0;
@@ -89,6 +96,7 @@ struct PVGamePvData
 	int32_t dword2C824;
 	int32_t dword2C828;
 	float float2C82C;
+	uint8_t gap2C830[8];
 };
 
 struct PvGameTarget
@@ -195,6 +203,34 @@ struct PVGameArcade
 	float fl13554[2];
 };
 
+struct PVGameUI
+{
+	int32_t int00;
+	uint32_t aet_list[95];
+	bool visibility[95];
+	float frame_bottom_offset[2];
+	float frame_bottom_dt[2];
+	float frame_top_offset[2];
+	float frame_top_dt[2];
+	float top_offset[2];
+	float bottom_offset[2];
+	bool frame_visibility[2];
+	int32_t frame_action[2];
+	uint8_t gap380[368];
+	int32_t life;
+	bool draw_combo_counter;
+	int32_t chance_txt_state;
+	bool show_chance_txt;
+	int32_t int39C;
+	uint8_t gap39C[8];
+	int32_t combo_counter_state;
+	float combo_counter_time;
+	uint8_t gap3B0[12];
+	int32_t combo_num;
+	int32_t int3C0;
+	diva::vec2 combo_counter_pos;
+};
+
 struct PVGameData
 {
 	bool loaded;
@@ -203,7 +239,8 @@ struct PVGameData
 	bool byte3;
 	uint8_t gap4[196];
 	PVGamePvData pv_data;
-	uint8_t gap2C8F8[1528];
+	PVGameUI ui;
+	uint8_t gap2C8F8[1528 - sizeof(PVGameUI)];
 	uint8_t byte2CEF0;
 	uint8_t gap2CEF1[39];
 	const char char2CF18;
@@ -284,13 +321,15 @@ struct PVGameData
 	int32_t dword2D398;
 	int32_t dword2D39C;
 	int32_t dword2D3A0;
-	uint8_t gap2D3A4[5];
+	uint8_t gap2D3A4[3];
+	bool is_success_branch;
+	uint8_t byte2D3A8;
 	uint8_t byte2D3A9;
 	uint8_t gap2D3AA;
 	uint8_t byte2D3AB;
 	uint8_t gap2D3AC[2];
 	uint8_t byte2D3AE;
-	bool is_success_branch;
+	uint8_t byte2D3AF;
 	uint8_t gap2D3B0[16];
 	int32_t dword2D3C0;
 	uint8_t gap2D3C4[16];

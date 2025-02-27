@@ -3,6 +3,7 @@
 #include <detours.h>
 #include <Helpers.h>
 #include <common.h>
+#include <nc_log.h>
 #include "target.h"
 #include "hit_state.h"
 
@@ -406,7 +407,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 		if (state.chance_time.CheckTargetInRange(*target_index))
 		{
 			state.chance_time.targets_hit += 1;
-			printf("CTFR: %.4f [%d]\n", 0.0f, state.chance_time.GetFillRate());
+			nc::Print("CTFR: %.4f [%d]\n", 0.0f, state.chance_time.GetFillRate());
 		}
 	}
 
