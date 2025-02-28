@@ -196,7 +196,7 @@ static bool CheckLongNoteState(TargetStateEx* target)
 	return false;
 };
 
-HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* play_default_se, size_t* rating_count, diva::vec2* rating_pos, int32_t a5, SoundEffect* se, int32_t* multi_count, int32_t* a8, int32_t* target_index, bool* is_success_note, bool* slide, bool* slide_chain, bool* slide_chain_start, bool* slide_chain_max, bool* slide_chain_continues)
+HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* play_default_se, size_t* rating_count, diva::vec2* rating_pos, int32_t* a5, SoundEffect* se, int32_t* multi_count, int32_t* a8, int32_t* target_index, bool* is_success_note, bool* slide, bool* slide_chain, bool* slide_chain_start, bool* slide_chain_max, bool* slide_chain_continues, void* a16)
 {
 	if (!data->play)
 		return HitState_None;
@@ -398,7 +398,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 	}
 	else
 	{
-		hit_state = originalGetHitState(data, play_default_se, rating_count, rating_pos, a5, se, multi_count, a8, target_index, is_success_note, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues);
+		hit_state = originalGetHitState(data, play_default_se, rating_count, rating_pos, a5, se, multi_count, a8, target_index, is_success_note, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues, a16);
 	}
 
 	// NOTE: Update chance time
