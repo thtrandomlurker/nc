@@ -268,7 +268,7 @@ constexpr uint32_t SprSetID = 3068121241;
 constexpr float KisekiRate = 60.0f; // NOTE: Framerate where the long note kiseki will be updated
 
 // NOTE: Global state
-inline InputState input_state = { };
+inline MacroState macro_state = { };
 inline StateEx state = { };
 
 // NOTE: Helper functions

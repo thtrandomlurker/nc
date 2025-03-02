@@ -460,6 +460,39 @@ namespace diva
 	inline FUNCTION_PTR(void, __fastcall, GetScaledPosition, 0x1402666E0, const diva::vec2* in, diva::vec2* out);
 }
 
+enum InputDevice : int32_t
+{
+	InputDevice_Xbox      = 0,
+	InputDevice_DualShock = 1,
+	InputDevice_Switch    = 2,
+	InputDevice_Steam     = 3,
+	InputDevice_Keyboard  = 4,
+	InputDevice_Unknown   = 5
+};
+
+namespace diva
+{
+	struct InputState
+	{
+		uint8_t _data[6720];
+
+		// 0x08 - Cursor position X (1920x1080)
+		// 0x09 - Cursor position Y (1920x1080)
+		// 0x10 - Cursor position X (1280x720)
+		// 0x11 - Cursor position Y (1280x720)
+		// 0x12 - Cursor pos delta X
+		// 0x13 - Cursor pos delta Y
+		// 0x14 - LStick X axis
+		// 0x15 - LStick Y axis
+		// 0x16 - RStick X axis
+		// 0x17 - RStick Y axis
+		float GetPosition(int32_t index);
+		int32_t GetDevice();
+	};
+
+	inline FUNCTION_PTR(InputState*, __fastcall, GetInputState, 0x1402AC970, int32_t index);
+}
+
 typedef void* FileHandler;
 
 struct SpriteVertex

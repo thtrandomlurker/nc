@@ -1,6 +1,8 @@
 #include <string.h>
 #include "Helpers.h"
+#include "diva.h"
 #include "input.h"
+#include "nc_log.h"
 
 enum ButtonIndex : int32_t
 {
@@ -46,34 +48,156 @@ static void UpdateButtonState(ButtonState* state, const int64_t* buffer, int32_t
 	state->up = !state->down;
 }
 
-void GetCurrentInputState(void* handler, InputState* state)
+bool MacroState::Update(void* internal_handler, int32_t player_index)
 {
-	if (handler == nullptr || state == nullptr)
-		return;
+	if (internal_handler == nullptr)
+		return false;
 
-	// NOTE: Move current state to previous state before updating
-	memcpy(state->prev, state->buttons, sizeof(state->buttons));
+	diva::InputState* diva_input = diva::GetInputState(player_index);
+	device = diva_input->GetDevice();
+
+	// NOTE: Update sticks
+	for (int i = 0; i < Stick_Max; i++)
+	{
+		sticks[i].prev  = sticks[i].cur;
+		sticks[i].cur   = diva_input->GetPosition(0x14 + i);
+		sticks[i].delta = sticks[i].cur - sticks[i].prev;
+		sticks[i].dist  = fabsf(sticks[i].cur) - fabsf(sticks[i].prev);
+	}
+
+	// NOTE: Update buttons
+	memcpy(prev, buttons, sizeof(buttons));
 
 	int64_t key_states[8];
 	for (int i = 0; i < 8; i++)
-		key_states[i] = GetPvKeyStateDown(handler, i);
+		key_states[i] = GetPvKeyStateDown(internal_handler, i);
 
-	UpdateButtonState(&state->buttons[Button_Triangle], key_states, ButtonIndex_Triangle, GameButton_Triangle);
-	UpdateButtonState(&state->buttons[Button_Circle], key_states, ButtonIndex_Circle, GameButton_Circle);
-	UpdateButtonState(&state->buttons[Button_Cross], key_states, ButtonIndex_Cross, GameButton_Cross);
-	UpdateButtonState(&state->buttons[Button_Square], key_states, ButtonIndex_Square, GameButton_Square);
-	UpdateButtonState(&state->buttons[Button_Up], key_states, ButtonIndex_Triangle, GameButton_Up);
-	UpdateButtonState(&state->buttons[Button_Right], key_states, ButtonIndex_Circle, GameButton_Right);
-	UpdateButtonState(&state->buttons[Button_Down], key_states, ButtonIndex_Cross, GameButton_Down);
-	UpdateButtonState(&state->buttons[Button_Left], key_states, ButtonIndex_Square, GameButton_Left);
-	UpdateButtonState(&state->buttons[Button_L1], key_states, ButtonIndex_L, GameButton_L1, GameButton_L2);
-	UpdateButtonState(&state->buttons[Button_L2], key_states, ButtonIndex_L, GameButton_L3, GameButton_L4);
-	UpdateButtonState(&state->buttons[Button_R1], key_states, ButtonIndex_R, GameButton_R1, GameButton_R2);
-	UpdateButtonState(&state->buttons[Button_R2], key_states, ButtonIndex_R, GameButton_R3, GameButton_R4);
+	UpdateButtonState(&buttons[Button_Triangle], key_states, ButtonIndex_Triangle, GameButton_Triangle);
+	UpdateButtonState(&buttons[Button_Circle], key_states, ButtonIndex_Circle, GameButton_Circle);
+	UpdateButtonState(&buttons[Button_Cross], key_states, ButtonIndex_Cross, GameButton_Cross);
+	UpdateButtonState(&buttons[Button_Square], key_states, ButtonIndex_Square, GameButton_Square);
+	UpdateButtonState(&buttons[Button_Up], key_states, ButtonIndex_Triangle, GameButton_Up);
+	UpdateButtonState(&buttons[Button_Right], key_states, ButtonIndex_Circle, GameButton_Right);
+	UpdateButtonState(&buttons[Button_Down], key_states, ButtonIndex_Cross, GameButton_Down);
+	UpdateButtonState(&buttons[Button_Left], key_states, ButtonIndex_Square, GameButton_Left);
+	UpdateButtonState(&buttons[Button_L1], key_states, ButtonIndex_L, GameButton_L1);
+	UpdateButtonState(&buttons[Button_L2], key_states, ButtonIndex_L, GameButton_L2);
+	UpdateButtonState(&buttons[Button_L3], key_states, ButtonIndex_L, GameButton_L3);
+	UpdateButtonState(&buttons[Button_L4], key_states, ButtonIndex_L, GameButton_L4);
+	UpdateButtonState(&buttons[Button_R1], key_states, ButtonIndex_R, GameButton_R1);
+	UpdateButtonState(&buttons[Button_R2], key_states, ButtonIndex_R, GameButton_R2);
+	UpdateButtonState(&buttons[Button_R3], key_states, ButtonIndex_R, GameButton_R3);
+	UpdateButtonState(&buttons[Button_R4], key_states, ButtonIndex_R, GameButton_R4);
 
 	for (int i = 0; i < Button_Max; i++)
 	{
-		state->buttons[i].tapped = state->buttons[i].down && state->prev[i].up;
-		state->buttons[i].released = state->buttons[i].up && state->prev[i].down;
+		buttons[i].tapped = buttons[i].down && prev[i].up;
+		buttons[i].released = buttons[i].up && prev[i].down;
 	}
+
+	return true;
+}
+
+bool MacroState::IsStickFlicked(int32_t index) const
+{
+	if (index < 0 || index >= Stick_Max)
+		return false;
+
+	if (sticks[index].dist > 0.05)
+		return fabsf(sticks[index].cur) >= sensivity;
+
+	return false;
+}
+
+bool MacroState::IsStickPushed(int32_t index) const
+{
+	if (index < 0 || index >= Stick_Max)
+		return false;
+
+	return fabsf(sticks[index].cur) >= sensivity;
+}
+
+int32_t MacroState::GetStickFlicked() const
+{
+	for (int i = 0; i < Stick_Max; i++)
+	{
+		if (IsStickFlicked(i))
+			return i;
+	}
+
+	return Stick_Max;
+}
+
+bool MacroState::GetStickDoubleFlicked(bool* both_flicked) const
+{
+	int32_t l = Stick_Max;
+	int32_t r = Stick_Max;
+
+	if (IsStickPushed(Stick_LX))
+		l = Stick_LX;
+	else if (IsStickPushed(Stick_LY))
+		l = Stick_LY;
+
+	if (IsStickPushed(Stick_RX))
+		r = Stick_RX;
+	else if (IsStickPushed(Stick_RY))
+		r = Stick_RY;
+
+	if (IsStickFlicked(l) || IsStickFlicked(r))
+	{
+		if (both_flicked != nullptr)
+			*both_flicked = IsStickFlicked(l) && IsStickFlicked(r);
+
+		return true;
+	}
+
+	return false;
+}
+
+bool MacroState::GetStarHit() const
+{
+	if (device != InputDevice_Keyboard)
+		return GetStickFlicked() != Stick_Max;
+
+	for (int32_t i = Button_L1; i < Button_Max; i++)
+	{
+		if (buttons[i].tapped)
+			return true;
+	}
+
+	return false;
+}
+
+bool MacroState::GetDoubleStarHit(bool* both_flicked) const
+{
+	if (device != InputDevice_Keyboard)
+		return GetStickDoubleFlicked(both_flicked);
+
+	int32_t l = Button_Max;
+	int32_t r = Button_Max;
+
+	for (int32_t i = Button_L1; i <= Button_L4; i++)
+	{
+		if (buttons[i].down)
+			l = i;
+	}
+
+	for (int32_t i = Button_R1; i <= Button_R4; i++)
+	{
+		if (buttons[i].down)
+			r = i;
+	}
+
+	if (l != Button_Max && r != Button_Max)
+	{
+		if (buttons[l].tapped || buttons[r].tapped)
+		{
+			if (both_flicked != nullptr)
+				*both_flicked = buttons[l].tapped && buttons[r].tapped;
+
+			return true;
+		}
+	}
+
+	return false;
 }

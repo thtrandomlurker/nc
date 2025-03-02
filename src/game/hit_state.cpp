@@ -79,8 +79,8 @@ static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetSta
 	if (target->target_type >= TargetType_UpW && target->target_type <= TargetType_LeftW)
 	{
 		int32_t base_index = target->target_type - TargetType_UpW;
-		ButtonState* face = &input_state.buttons[Button_Triangle + base_index];
-		ButtonState* arrow = &input_state.buttons[Button_Up + base_index];
+		ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
+		ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
 
 		if (face->tapped && arrow->tapped)
 		{
@@ -96,8 +96,8 @@ static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetSta
 	else if (target->target_type >= TargetType_TriangleLong && target->target_type <= TargetType_SquareLong)
 	{
 		int32_t base_index = target->target_type - TargetType_TriangleLong;
-		ButtonState* face = &input_state.buttons[Button_Triangle + base_index];
-		ButtonState* arrow = &input_state.buttons[Button_Up + base_index];
+		ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
+		ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
 
 		if (!ex->long_end)
 		{
@@ -111,38 +111,9 @@ static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetSta
 		}
 	}
 	else if (IsStarLikeNote(target->target_type))
-	{
-		for (int i = Button_L1; i <= Button_R2; i++)
-			hit |= input_state.buttons[i].tapped;
-	}
+		hit = macro_state.GetStarHit();
 	else if (target->target_type == TargetType_StarW)
-	{
-		ButtonState* left[2] = {
-			&input_state.buttons[Button_L1],
-			&input_state.buttons[Button_L1]
-		};
-
-		ButtonState* right[2] = {
-			&input_state.buttons[Button_R1],
-			&input_state.buttons[Button_R2]
-		};
-
-		for (int i = 0; i < 2; i++)
-		{
-			for (int j = 0; j < 2; j++)
-			{
-				if (left[i]->tapped && right[j]->tapped)
-				{
-					// TODO: Set score bonus
-				}
-
-				hit = (left[i]->down && right[j]->tapped) || (right[j]->down && left[i]->tapped);
-				if (hit) break;
-			}
-
-			if (hit) break;
-		}
-	}
+		hit = macro_state.GetDoubleStarHit(nullptr);
 
 	if (hit)
 	{
@@ -201,14 +172,13 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* pl
 	if (!data->play)
 		return HitState_None;
 
-	// NOTE: This being right here is likely being called framely, if not I have to move this
-	//       somewhere else...
-	GetCurrentInputState(data->ptr08, &input_state);
-
-	// NOTE: Poll input for ongoing long notes
-	//
 	if (ShouldUpdateTargets())
 	{
+		// NOTE: Update input manager
+		macro_state.Update(data->ptr08, 0);
+
+		// NOTE: Poll input for ongoing long notes
+		//
 		for (TargetStateEx* tgt : state.target_references)
 		{
 			if (!IsLongNote(tgt->target_type))

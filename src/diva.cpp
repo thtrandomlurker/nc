@@ -83,4 +83,12 @@ namespace diva
 
 		return true;
 	}
+
+	// NOTE: InputState implementation
+	static FUNCTION_PTR(float, __fastcall, IS_GetPosition, 0x1402AB2C0, InputState* t, int32_t index);
+	static FUNCTION_PTR(int32_t, __fastcall, IS_GetDeviceVendor, 0x1402AAF20, InputState* t);
+	static FUNCTION_PTR(int32_t, __fastcall, GetNormalizedDeviceType, 0x1402ACAA0, int32_t vendor);
+
+	float InputState::GetPosition(int32_t index) { return IS_GetPosition(this, index); }
+	int32_t InputState::GetDevice() { return GetNormalizedDeviceType(IS_GetDeviceVendor(this)); }
 }
