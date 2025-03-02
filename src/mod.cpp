@@ -95,6 +95,9 @@ HOOK(bool, __fastcall, TaskPvGameCtrl, 0x1405DA060, uint64_t a1)
 
 HOOK(bool, __fastcall, TaskPvGameDest, 0x1405DA0A0, uint64_t a1)
 {
+	state.ResetPlayState();
+	FinishChanceTimeUI();
+
 	if (state.files_loaded)
 	{
 		diva::aet::UnloadAetSet(AetSetID);
@@ -102,7 +105,6 @@ HOOK(bool, __fastcall, TaskPvGameDest, 0x1405DA0A0, uint64_t a1)
 		state.files_loaded = false;
 	}
 
-	FinishChanceTimeUI();
 	return originalTaskPvGameDest(a1);
 }
 
