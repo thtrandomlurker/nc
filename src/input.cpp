@@ -57,7 +57,7 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	device = diva_input->GetDevice();
 
 	// NOTE: Update sticks
-	for (int i = 0; i < Stick_Max; i++)
+	for (int i = 0; i < StickAxis_Max; i++)
 	{
 		sticks[i].prev  = sticks[i].cur;
 		sticks[i].cur   = diva_input->GetPosition(0x14 + i);
@@ -89,6 +89,11 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	UpdateButtonState(&buttons[Button_R3], key_states, ButtonIndex_R, GameButton_R3);
 	UpdateButtonState(&buttons[Button_R4], key_states, ButtonIndex_R, GameButton_R4);
 
+	buttons[Button_LStick].down = fabsf(sticks[StickAxis_LX].cur) >= sensivity || fabsf(sticks[StickAxis_LY].cur) >= sensivity;
+	buttons[Button_RStick].down = fabsf(sticks[StickAxis_RX].cur) >= sensivity || fabsf(sticks[StickAxis_RY].cur) >= sensivity;
+	buttons[Button_LStick].up = !buttons[Button_LStick].down;
+	buttons[Button_RStick].up = !buttons[Button_RStick].down;
+
 	for (int i = 0; i < Button_Max; i++)
 	{
 		buttons[i].tapped = buttons[i].down && prev[i].up;
@@ -98,106 +103,53 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	return true;
 }
 
-bool MacroState::IsStickFlicked(int32_t index) const
-{
-	if (index < 0 || index >= Stick_Max)
-		return false;
-
-	if (sticks[index].dist > 0.05)
-		return fabsf(sticks[index].cur) >= sensivity;
-
-	return false;
-}
-
-bool MacroState::IsStickPushed(int32_t index) const
-{
-	if (index < 0 || index >= Stick_Max)
-		return false;
-
-	return fabsf(sticks[index].cur) >= sensivity;
-}
-
-int32_t MacroState::GetStickFlicked() const
-{
-	for (int i = 0; i < Stick_Max; i++)
-	{
-		if (IsStickFlicked(i))
-			return i;
-	}
-
-	return Stick_Max;
-}
-
-bool MacroState::GetStickDoubleFlicked(bool* both_flicked) const
-{
-	int32_t l = Stick_Max;
-	int32_t r = Stick_Max;
-
-	if (IsStickPushed(Stick_LX))
-		l = Stick_LX;
-	else if (IsStickPushed(Stick_LY))
-		l = Stick_LY;
-
-	if (IsStickPushed(Stick_RX))
-		r = Stick_RX;
-	else if (IsStickPushed(Stick_RY))
-		r = Stick_RY;
-
-	if (IsStickFlicked(l) || IsStickFlicked(r))
-	{
-		if (both_flicked != nullptr)
-			*both_flicked = IsStickFlicked(l) && IsStickFlicked(r);
-
-		return true;
-	}
-
-	return false;
-}
-
 bool MacroState::GetStarHit() const
 {
-	if (device != InputDevice_Keyboard)
-		return GetStickFlicked() != Stick_Max;
-
-	for (int32_t i = Button_L1; i < Button_Max; i++)
-	{
-		if (buttons[i].tapped)
-			return true;
-	}
-
-	return false;
+	return buttons[Button_L1].tapped ||
+		buttons[Button_L2].tapped ||
+		buttons[Button_L3].tapped ||
+		buttons[Button_L4].tapped ||
+		buttons[Button_R1].tapped ||
+		buttons[Button_R2].tapped ||
+		buttons[Button_R3].tapped ||
+		buttons[Button_R4].tapped ||
+		buttons[Button_LStick].tapped ||
+		buttons[Button_RStick].tapped;
 }
 
 bool MacroState::GetDoubleStarHit(bool* both_flicked) const
 {
-	if (device != InputDevice_Keyboard)
-		return GetStickDoubleFlicked(both_flicked);
+	const int32_t buttons_left[] = {
+		Button_L1, Button_L2, Button_L3, Button_L4, Button_LStick, Button_RStick
+	};
 
-	int32_t l = Button_Max;
-	int32_t r = Button_Max;
+	const int32_t buttons_right[] = {
+		Button_R1, Button_R2, Button_R3, Button_R4, Button_LStick, Button_RStick
+	};
 
-	for (int32_t i = Button_L1; i <= Button_L4; i++)
+	const ButtonState* l = nullptr;
+	const ButtonState* r = nullptr;
+
+	for (int32_t i = 0; i < 6; i++)
+		if (buttons[buttons_left[i]].down)
+			l = &buttons[buttons_left[i]];
+
+	for (int32_t i = 0; i < 6; i++)
+		if (buttons[buttons_right[i]].down)
+			r = &buttons[buttons_right[i]];
+
+	if (l != nullptr && r != nullptr)
 	{
-		if (buttons[i].down)
-			l = i;
-	}
-
-	for (int32_t i = Button_R1; i <= Button_R4; i++)
-	{
-		if (buttons[i].down)
-			r = i;
-	}
-
-	if (l != Button_Max && r != Button_Max)
-	{
-		if (buttons[l].tapped || buttons[r].tapped)
+		if (l->tapped || r->tapped)
 		{
 			if (both_flicked != nullptr)
-				*both_flicked = buttons[l].tapped && buttons[r].tapped;
+				*both_flicked = l->tapped && r->tapped;
 
 			return true;
 		}
 	}
 
+	if (both_flicked != nullptr)
+		*both_flicked = false;
 	return false;
 }
