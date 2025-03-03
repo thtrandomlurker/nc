@@ -169,42 +169,41 @@ static bool CheckLongNoteState(TargetStateEx* target)
 
 HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* play_default_se, size_t* rating_count, diva::vec2* rating_pos, int32_t* a5, SoundEffect* se, int32_t* multi_count, int32_t* a8, int32_t* target_index, bool* is_success_note, bool* slide, bool* slide_chain, bool* slide_chain_start, bool* slide_chain_max, bool* slide_chain_continues, void* a16)
 {
-	if (!data->play)
-		return HitState_None;
+	// NOTE: Update input manager
+	macro_state.Update(data->ptr08, 0);
 
-	if (ShouldUpdateTargets())
+	if (!data->play || !ShouldUpdateTargets())
 	{
-		// NOTE: Update input manager
-		macro_state.Update(data->ptr08, 0);
+		return originalGetHitState(data, play_default_se, rating_count, rating_pos, a5, se, multi_count, a8, target_index, is_success_note, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues, a16);
+	}
 
-		// NOTE: Poll input for ongoing long notes
-		//
-		for (TargetStateEx* tgt : state.target_references)
+	// NOTE: Poll input for ongoing long notes
+	//
+	for (TargetStateEx* tgt : state.target_references)
+	{
+		if (!IsLongNote(tgt->target_type))
+			continue;
+
+		bool is_in_zone = false;
+
+		// NOTE: Check if the end target is in it's timing window
+		if (tgt->next->org != nullptr)
 		{
-			if (!IsLongNote(tgt->target_type))
-				continue;
+			is_in_zone = CheckWindow(
+				tgt->next->org->flying_time_remaining,
+				data->sad_early_window,
+				data->sad_late_window
+			);
+		}
 
-			bool is_in_zone = false;
-
-			// NOTE: Check if the end target is in it's timing window
-			if (tgt->next->org != nullptr)
-			{
-				is_in_zone = CheckWindow(
-					tgt->next->org->flying_time_remaining,
-					data->sad_early_window,
-					data->sad_late_window
-				);
-			}
-
-			// NOTE: Check if the start target button has been released;
-			//       if it's the end note is not inside it's timing zone,
-			//       automatically mark it as a fail.
-			if (!CheckLongNoteState(tgt) && !is_in_zone)
-			{
-				tgt->next->force_hit_state = HitState_Worst;
-				tgt->se_state = SEState_FailRelease;
-				PlayUpdateSoundEffect(nullptr, tgt, nullptr);
-			}
+		// NOTE: Check if the start target button has been released;
+		//       if it's the end note is not inside it's timing zone,
+		//       automatically mark it as a fail.
+		if (!CheckLongNoteState(tgt) && !is_in_zone)
+		{
+			tgt->next->force_hit_state = HitState_Worst;
+			tgt->se_state = SEState_FailRelease;
+			PlayUpdateSoundEffect(nullptr, tgt, nullptr);
 		}
 	}
 
