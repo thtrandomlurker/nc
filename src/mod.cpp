@@ -78,7 +78,7 @@ HOOK(bool, __fastcall, TaskPvGameInit, 0x1405DA040, uint64_t a1)
 	diva::aet::LoadAetSet(AetSetID, &str);
 	diva::spr::LoadSprSet(SprSetID, &strv);
 
-	state.ResetPlayState();
+	state.Reset();
 	return originalTaskPvGameInit(a1);
 }
 

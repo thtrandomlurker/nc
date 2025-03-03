@@ -235,6 +235,15 @@ struct StateEx
 		chance_time.ResetPlayState();
 	}
 
+	inline void Reset()
+	{
+		target_references.clear();
+		target_ex.clear();
+		chance_time.first_target_index = -1;
+		chance_time.last_target_index = -1;
+		chance_time.targets_hit = 0;
+	}
+
 	inline bool PushTarget(TargetStateEx* ex)
 	{
 		for (TargetStateEx* p : target_references)
