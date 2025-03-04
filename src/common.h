@@ -185,10 +185,12 @@ struct ChanceState
 	int32_t first_target_index = -1;
 	int32_t last_target_index = -1;
 	int32_t targets_hit = 0;
+	bool enabled = false;
 
 	inline void ResetPlayState()
 	{
 		targets_hit = 0;
+		enabled = false;
 	}
 
 	inline int32_t GetTargetCount() const

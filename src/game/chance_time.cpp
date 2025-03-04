@@ -53,11 +53,15 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 			ui_state.SetLayer(LayerUI_ChanceFrameTop, true, "chance_frame_top", 12, 0x10000);
 			ui_state.SetLayer(LayerUI_ChanceFrameBottom, true, "chance_frame_bottom", 12, 0x10000);
 			ui_state.SetLayer(LayerUI_StarGauge, true, "gauge_ch00", 13, 0x10000);
+
+			state.chance_time.enabled = true;
 			break;
 		case 5:
 			// Chance Time End
 			SetNormalFrameAction(&pv_data->pv_game->ui, true, 1.0f);
 			SetFrameAction(&pv_data->pv_game->ui, false, 1, 4, 60.0f);
+
+			state.chance_time.enabled = false;
 			break;
 		}
 	}
@@ -86,6 +90,20 @@ HOOK(void, __fastcall, UpdateGaugeFrame, 0x14027A490, PVGameUI* ui)
 	diva::aet::SetPosition(ui_state.aet_list[LayerUI_StarGauge], &bottom);
 }
 
+HOOK(void, __fastcall, UpdateLife, 0x140245220, PVGameData* a1, int32_t hit_state, bool a3, bool is_challenge_time, int32_t a5, bool a6, bool a7, bool a8)
+{
+	originalUpdateLife(
+		a1,
+		hit_state,
+		a3,
+		is_challenge_time || state.chance_time.enabled,
+		a5,
+		a6,
+		a7,
+		a8
+	);
+}
+
 void FinishChanceTimeUI()
 {
 	for (int i = 0; i < LayerUI_Max; i++)
@@ -99,4 +117,5 @@ void InstallChanceTimeHooks()
 {
 	INSTALL_HOOK(ExecuteModeSelect);
 	INSTALL_HOOK(UpdateGaugeFrame);
+	INSTALL_HOOK(UpdateLife);
 }
