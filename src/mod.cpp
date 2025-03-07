@@ -95,7 +95,7 @@ HOOK(bool, __fastcall, TaskPvGameCtrl, 0x1405DA060, uint64_t a1)
 HOOK(bool, __fastcall, TaskPvGameDest, 0x1405DA0A0, uint64_t a1)
 {
 	state.ResetPlayState();
-	FinishChanceTimeUI();
+	state.ui.ResetAllLayers();
 
 	if (state.files_loaded)
 	{
@@ -112,7 +112,7 @@ HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
 	nc::Print("PVGameReset()\n");
 
 	state.ResetPlayState();
-	FinishChanceTimeUI();
+	state.ui.ResetAllLayers();
 	originalPVGameReset(pv_game);
 }
 
@@ -357,6 +357,5 @@ extern "C"
 		INSTALL_HOOK(LoadDscCtrl);
 		InstallGameHooks();
 		InstallTargetHooks();
-		InstallChanceTimeHooks();
 	}
 };

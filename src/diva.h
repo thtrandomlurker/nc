@@ -406,7 +406,6 @@ struct PvGameplayInfo
 	int32_t difficulty;
 };
 
-
 struct PvDscTarget
 {
 	int32_t type;

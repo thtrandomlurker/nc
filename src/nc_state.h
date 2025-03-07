@@ -206,6 +206,30 @@ struct ChanceState
 	}
 };
 
+enum LayerUI : int32_t
+{
+	LayerUI_ChanceFrameTop = 0,
+	LayerUI_ChanceFrameBottom,
+	LayerUI_StarGaugeBase,
+	LayerUI_StarGauge,
+	LayerUI_Max
+};
+
+struct UIState
+{
+	int32_t aet_list[LayerUI_Max];
+	bool aet_visibility[LayerUI_Max];
+
+	UIState()
+	{
+		memset(aet_list, 0, sizeof(aet_list));
+		memset(aet_visibility, 0, sizeof(aet_visibility));
+	}
+
+	void SetLayer(int32_t index, bool visible, const char* name, int32_t prio, int32_t flags);
+	void ResetAllLayers();
+};
+
 struct StateEx
 {
 	std::list<TargetStateEx*> target_references;
@@ -215,6 +239,7 @@ struct StateEx
 	bool files_loaded;
 	std::vector<TargetStateEx> target_ex;
 	ChanceState chance_time;
+	UIState ui;
 
 	void ResetPlayState();
 	void Reset();

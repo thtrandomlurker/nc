@@ -89,6 +89,35 @@ bool TargetStateEx::SetLinkNoteAet()
 	return true;
 }
 
+void UIState::SetLayer(int32_t index, bool visible, const char* name, int32_t prio, int32_t flags)
+{
+	aet::Stop(&aet_list[index]);
+	aet_visibility[index] = visible;
+	aet_list[index] = aet::PlayLayer(
+		AetSceneID,
+		prio,
+		flags,
+		name,
+		nullptr,
+		0,
+		nullptr,
+		nullptr,
+		-1.0f,
+		-1.0f,
+		0,
+		nullptr
+	);
+}
+
+void UIState::ResetAllLayers()
+{
+	for (int i = 0; i < LayerUI_Max; i++)
+	{
+		aet::Stop(&aet_list[i]);
+		aet_visibility[i] = false;
+	}
+}
+
 void StateEx::ResetPlayState()
 {
 	target_references.clear();

@@ -9,6 +9,7 @@
 #include <nc_log.h>
 
 #include "target.h"
+#include "chance_time.h"
 #include "hit_state.h"
 
 HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
@@ -245,7 +246,42 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	return final_hit_state;
 }
 
+HOOK(void, __fastcall, UpdateLife, 0x140245220, PVGameData* a1, int32_t hit_state, bool a3, bool is_challenge_time, int32_t a5, bool a6, bool a7, bool a8)
+{
+	originalUpdateLife(
+		a1,
+		hit_state,
+		a3,
+		is_challenge_time || state.chance_time.enabled,
+		a5,
+		a6,
+		a7,
+		a8
+	);
+}
+
+HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, int32_t op)
+{
+	int32_t op_difficulty = pv_data->script_buffer[pv_data->script_pos + 1];
+	int32_t difficulty = 1 << GetPvGameplayInfo()->difficulty;
+	if ((op_difficulty & difficulty) != 0)
+		SetChanceTimeMode(&pv_data->pv_game->ui, pv_data->script_buffer[pv_data->script_pos + 2]);
+
+	return originalExecuteModeSelect(pv_data, op);
+}
+
+HOOK(void, __fastcall, UpdateGaugeFrame, 0x14027A490, PVGameUI* ui)
+{
+	originalUpdateGaugeFrame(ui);
+	if (state.chance_time.enabled)
+		SetChanceTimeStarFill(ui, state.chance_time.GetFillRate());
+	SetChanceTimePosition(ui);
+}
+
 void InstallGameHooks()
 {
 	INSTALL_HOOK(GetHitState);
+	INSTALL_HOOK(UpdateLife);
+	INSTALL_HOOK(ExecuteModeSelect);
+	INSTALL_HOOK(UpdateGaugeFrame);
 }

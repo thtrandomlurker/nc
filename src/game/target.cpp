@@ -150,7 +150,7 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 		// NOTE: Update spawned link stars
 		//
 		TargetStateEx* ex = GetTargetStateEx(target);
-		if (ex->link_start || ex->IsLongNote())
+		if (ex->link_start || ex->IsLongNoteStart())
 			state.PushTarget(ex);
 
 		if (ex->link_step)
