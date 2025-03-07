@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <detours.h>
 #include <Helpers.h>
-#include <common.h>
+#include <nc_state.h>
 #include "chance_time.h"
 
 static FUNCTION_PTR(void, __fastcall, SetNormalFrameAction, 0x1402756F0, PVGameUI* a1, bool in, float length_sec);
@@ -30,8 +30,8 @@ struct UIState
 
 	void SetLayer(int32_t index, bool visible, const char* name, int32_t prio, int32_t flags)
 	{
-		diva::aet::Stop(&aet_list[index]);
-		aet_list[index] = diva::aet::PlayLayer(AetSceneID, prio, flags, name, nullptr, 0, nullptr, nullptr, -1.0f, 1.0f, 0, nullptr);
+		aet::Stop(&aet_list[index]);
+		aet_list[index] = aet::PlayLayer(AetSceneID, prio, flags, name, nullptr, 0, nullptr, nullptr, -1.0f, 1.0f, 0, nullptr);
 		visibility[index] = visible;
 	}
 } static ui_state;
@@ -39,7 +39,7 @@ struct UIState
 HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, int32_t op)
 {
 	int32_t op_difficulty = pv_data->script_buffer[pv_data->script_pos + 1];
-	int32_t difficulty = 1 << diva::GetPvGameplayInfo()->difficulty;
+	int32_t difficulty = 1 << GetPvGameplayInfo()->difficulty;
 	if ((op_difficulty & difficulty) != 0)
 	{
 		switch (pv_data->script_buffer[pv_data->script_pos + 2])
@@ -85,9 +85,9 @@ HOOK(void, __fastcall, UpdateGaugeFrame, 0x14027A490, PVGameUI* ui)
 	diva::vec3 top = { 0.0f, -ui->frame_top_offset[1], 0.0f };
 	diva::vec3 bottom = { 0.0f, ui->frame_bottom_offset[1], 0.0f };
 
-	diva::aet::SetPosition(ui_state.aet_list[LayerUI_ChanceFrameTop], &top);
-	diva::aet::SetPosition(ui_state.aet_list[LayerUI_ChanceFrameBottom], &bottom);
-	diva::aet::SetPosition(ui_state.aet_list[LayerUI_StarGauge], &bottom);
+	aet::SetPosition(ui_state.aet_list[LayerUI_ChanceFrameTop], &top);
+	aet::SetPosition(ui_state.aet_list[LayerUI_ChanceFrameBottom], &bottom);
+	aet::SetPosition(ui_state.aet_list[LayerUI_StarGauge], &bottom);
 }
 
 HOOK(void, __fastcall, UpdateLife, 0x140245220, PVGameData* a1, int32_t hit_state, bool a3, bool is_challenge_time, int32_t a5, bool a6, bool a7, bool a8)
@@ -108,7 +108,7 @@ void FinishChanceTimeUI()
 {
 	for (int i = 0; i < LayerUI_Max; i++)
 	{
-		diva::aet::Stop(&ui_state.aet_list[i]);
+		aet::Stop(&ui_state.aet_list[i]);
 		ui_state.visibility[i] = false;
 	}
 }

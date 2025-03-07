@@ -33,9 +33,8 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 			//
 			if (ex->link_start && ex->flying_time_remaining > 0.0f && ex->org != nullptr)
 			{
-				diva::vec3 pos = { 0.0f, 0.0f, 0.0f};
-				diva::GetScaledPosition(&ex->org->button_pos, (diva::vec2*)&pos);
-				diva::aet::SetPosition(ex->button_aet, &pos);
+				diva::vec3 pos = diva::vec3(GetScaledPosition(ex->org->button_pos), 0.0f);
+				aet::SetPosition(ex->button_aet, &pos);
 			}
 
 			// NOTE: Calculate target note scale. Link Stars are not removed after the target is hit,
@@ -46,10 +45,10 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 				if (scale >= 0.0f)
 				{
 					diva::vec3 v = { scale, scale, 1.0f };
-					diva::aet::SetScale(ex->target_aet, &v);
+					aet::SetScale(ex->target_aet, &v);
 				}
 				else
-					diva::aet::Stop(&ex->target_aet);
+					aet::Stop(&ex->target_aet);
 			}
 
 			// NOTE: Calculate target note frame time
@@ -57,8 +56,8 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 			{
 				float frame = (ex->flying_time_max - ex->flying_time_remaining) / ex->flying_time_max * 360.0f;
 				frame = fminf(fmaxf(frame, 0.0f), 360.0f);
-				diva::aet::SetFrame(ex->target_aet, frame);
-				diva::aet::SetPlay(ex->target_aet, false);
+				aet::SetFrame(ex->target_aet, frame);
+				aet::SetPlay(ex->target_aet, false);
 			}
 
 			if (ex->flying_time_remaining <= 0.0f)
@@ -175,12 +174,11 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 			CalculateDirection(current);
 
 			// NOTE: Set the position
-			diva::vec3 pos_3 = { pos.x, pos.y, 0.0f };
-			diva::GetScaledPosition((diva::vec2*)&pos_3, (diva::vec2*)&pos_3);
-			diva::aet::SetPosition(chain->button_aet, &pos_3);
+			diva::vec3 pos_3 = diva::vec3(GetScaledPosition(pos), 0.0f);
+			aet::SetPosition(chain->button_aet, &pos_3);
 
 			// NOTE: Reset button frame to prevent it from scaling out
-			diva::aet::SetFrame(chain->button_aet, 0.0f);
+			aet::SetFrame(chain->button_aet, 0.0f);
 
 			current->delta_time -= dt;
 		}
@@ -190,14 +188,12 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 			{
 				if (current->flying_time_remaining <= data->cool_late_window)
 				{
-					diva::aet::SetFrame(chain->button_aet, 360.0f);
+					aet::SetFrame(chain->button_aet, 360.0f);
 					current->link_ending = true;
 				}
 			}
 			else
-			{
-				diva::aet::StopOnEnded(&chain->button_aet);
-			}
+				aet::StopOnEnded(&chain->button_aet);
 		}
 	}
 }
@@ -243,23 +239,29 @@ void UpdateLinkStarKiseki(PVGameArcade* data, TargetStateEx* chain, float dt)
 			if (i == 2 || i == 18)
 				uv_offset.x += 12.0f;
 
-			ex->kiseki[i].pos.x = start_pos.x + delta.x * step + ex->kiseki_dir.x * width;
-			ex->kiseki[i].pos.y = start_pos.y + delta.y * step + ex->kiseki_dir.y * width;
+			diva::vec2 right = GetScaledPosition({
+				start_pos.x + delta.x * step + ex->kiseki_dir.x * width,
+				start_pos.y + delta.y * step + ex->kiseki_dir.y * width
+			});
+
+			diva::vec2 left = GetScaledPosition({
+				start_pos.x + delta.x * step - ex->kiseki_dir.x * width,
+				start_pos.y + delta.y * step - ex->kiseki_dir.y * width
+			});
+
+			ex->kiseki[i].pos.x = right.x;
+			ex->kiseki[i].pos.y = right.y;
 			ex->kiseki[i].pos.z = 0.0f;
 			ex->kiseki[i].uv.x = uv_offset.x + uv_delta_x * step;
 			ex->kiseki[i].uv.y = uv_offset.y + tex_size.y;
 			ex->kiseki[i].color = color;
 
-			ex->kiseki[i + 1].pos.x = start_pos.x + delta.x * step - ex->kiseki_dir.x * width;
-			ex->kiseki[i + 1].pos.y = start_pos.y + delta.y * step - ex->kiseki_dir.y * width;
+			ex->kiseki[i + 1].pos.x = left.x;
+			ex->kiseki[i + 1].pos.y = left.y;
 			ex->kiseki[i + 1].pos.z = 0.0f;
 			ex->kiseki[i + 1].uv.x = uv_offset.x + uv_delta_x * step;
 			ex->kiseki[i + 1].uv.y = uv_offset.y;
 			ex->kiseki[i + 1].color = color;
-
-			// NOTE: Scale position
-			diva::GetScaledPosition((diva::vec2*)&ex->kiseki[i].pos, (diva::vec2*)&ex->kiseki[i].pos);
-			diva::GetScaledPosition((diva::vec2*)&ex->kiseki[i + 1].pos, (diva::vec2*)&ex->kiseki[i + 1].pos);
 		}
 	}
 }

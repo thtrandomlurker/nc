@@ -2,7 +2,6 @@
 #include <Windows.h>
 #include <detours.h>
 #include <Helpers.h>
-#include <common.h>
 #include "note_link.h"
 #include "target.h"
 
@@ -77,91 +76,28 @@ const char* GetButtonLayer(int32_t target_type)
 	return nullptr;
 }
 
-int32_t PlayUpdateSoundEffect(PvGameTarget* target, TargetStateEx* ex, SoundEffect* se)
-{
-	switch (ex->target_type)
-	{
-	case TargetType_TriangleLong:
-	case TargetType_CircleLong:
-	case TargetType_CrossLong:
-	case TargetType_SquareLong:
-		if (ex != nullptr)
-		{
-			if (ex->se_state == SEState_Idle)
-			{
-				diva::sound::PlaySoundEffect(3, "800_button_l1_on", 1.0f);
-				ex->se_queue = 3;
-				ex->se_name = "800_button_l1_on";
-				ex->se_state = SEState_Looping;
-			}
-			else if (ex->se_state == SEState_FailRelease)
-			{
-				diva::sound::ReleaseCue(ex->se_queue, ex->se_name.c_str(), false);
-				ex->ResetSE();
-			}
-			else if (ex->se_state == SEState_SuccessRelease)
-			{
-				int32_t queue = ex->se_queue;
-				diva::sound::ReleaseCue(ex->se_queue, ex->se_name.c_str(), true);
-				ex->ResetSE();
-				diva::sound::PlaySoundEffect(queue, "800_button_l1_off", 1.0f);
-			}
-		}
-
-		return 1;
-	case TargetType_UpW:
-	case TargetType_RightW:
-	case TargetType_DownW:
-	case TargetType_LeftW:
-		diva::sound::PlaySoundEffect(3, "400_button_w1", 1.0f);
-		return 1;
-	case TargetType_Star:
-	case TargetType_LinkStar:
-	case TargetType_LinkStarEnd:
-	case TargetType_StarRush:
-		diva::sound::PlaySoundEffect(3, "1200_scratch1", 1.0f);
-		return 1;
-	case TargetType_ChanceStar:
-		if (ex != nullptr && ex->success)
-		{
-			diva::sound::PlaySoundEffect(3, "1516_cymbal", 1.0f);
-			return 1;
-		}
-
-		diva::sound::PlaySoundEffect(3, "1200_scratch1", 1.0f);
-		return 1;
-	case TargetType_StarW:
-		diva::sound::PlaySoundEffect(3, "1400_scratch_w1", 1.0f);
-		return 1;
-	}
-
-	return 0;
-};
-
 HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 {
 	if (target->target_type < TargetType_Custom || target->target_type >= TargetType_Max)
 		return originalCreateTargetAetLayers(target);
 
-	TargetStateEx* ex = GetTargetStateEx(target->target_index, 0);
+	TargetStateEx* ex = GetTargetStateEx(target);
 	ex->org = target;
 	ex->target_pos = target->target_pos;
 
 	// NOTE: Remove previously created aet objects, if present
-	diva::aet::Stop(&target->target_aet);
-	diva::aet::Stop(&target->button_aet);
-	diva::aet::Stop(&target->target_eff_aet);
-	diva::aet::Stop(&target->dword78);
+	aet::Stop(&target->target_aet);
+	aet::Stop(&target->button_aet);
+	aet::Stop(&target->target_eff_aet);
+	aet::Stop(&target->dword78);
 
 	const char* target_layer = GetTargetLayer(target->target_type);
 	const char* button_layer = GetButtonLayer(target->target_type);
 
-	diva::vec2 target_pos;
-	diva::vec2 button_pos;
-	diva::GetScaledPosition(&target->target_pos, &target_pos);
-	diva::GetScaledPosition(&target->button_pos, &button_pos);
+	diva::vec2 target_pos = GetScaledPosition(target->target_pos);
+	diva::vec2 button_pos = GetScaledPosition(target->button_pos);
 
-	target->target_aet = diva::aet::PlayLayer(
+	target->target_aet = aet::PlayLayer(
 		AetSceneID,
 		8,
 		0x20000,
@@ -176,7 +112,7 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 		nullptr
 	);
 
-	target->button_aet = diva::aet::PlayLayer(
+	target->button_aet = aet::PlayLayer(
 		AetSceneID,
 		9,
 		0x20000,
@@ -194,7 +130,7 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 	if (ex->link_step)
 	{
 		if (!ex->link_start)
-			diva::aet::Stop(&target->button_aet);
+			aet::Stop(&target->button_aet);
 
 		ex->target_aet = target->target_aet;
 		ex->button_aet = target->button_aet;
@@ -213,8 +149,8 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 	{
 		// NOTE: Update spawned link stars
 		//
-		TargetStateEx* ex = GetTargetStateEx(target->target_index);
-		if (ex->link_start)
+		TargetStateEx* ex = GetTargetStateEx(target);
+		if (ex->link_start || ex->IsLongNote())
 			state.PushTarget(ex);
 
 		if (ex->link_step)
@@ -231,11 +167,10 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 		{
 			if (state.chance_time.GetFillRate() == 15 && !ex->success)
 			{
-				diva::vec2 target_pos;
-				diva::GetScaledPosition(&target->target_pos, &target_pos);
+				diva::vec2 target_pos = GetScaledPosition(target->target_pos);
 
-				diva::aet::Stop(&target->target_aet);
-				target->target_aet = diva::aet::PlayLayer(
+				aet::Stop(&target->target_aet);
+				target->target_aet = aet::PlayLayer(
 					AetSceneID,
 					8,
 					0x20000,
@@ -250,8 +185,8 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 					nullptr
 				);
 
-				diva::aet::Stop(&target->button_aet);
-				target->button_aet = diva::aet::PlayLayer(
+				aet::Stop(&target->button_aet);
+				target->button_aet = aet::PlayLayer(
 					AetSceneID,
 					9,
 					0x20000,
@@ -269,18 +204,24 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 				ex->success = true;
 			}
 		}
+
+		if (ex->IsLongNoteStart() && ex->holding)
+		{
+			ex->length_remaining -= dt;
+			ex->length_remaining = fmaxf(ex->length_remaining, 0.0f);
+		}
 	}
 	
 	if (ShouldUpdateTargets())
 	{
 		for (TargetStateEx* tgt : state.target_references)
 		{
-			if (tgt->link_start)
+			if (tgt->IsLinkNoteStart())
 			{
 				UpdateLinkStar(data, tgt, dt);
 				UpdateLinkStarKiseki(data, tgt, dt);
 			}
-			else if (IsLongNote(tgt->target_type) && tgt->holding)
+			else if (tgt->IsLongNoteStart() && tgt->holding)
 				UpdateLongNoteKiseki(data, nullptr, tgt, dt);
 		}
 	}
@@ -290,14 +231,12 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 
 HOOK(void, __fastcall, UpdateKiseki, 0x14026F050, PVGameArcade* data, PvGameTarget* target, float dt)
 {
-	if (IsLongNote(target->target_type))
+	TargetStateEx* ex = GetTargetStateEx(target);
+	if (ex->IsLongNote())
 	{
-		if (TargetStateEx* ex = GetTargetStateEx(target->target_index); ex != nullptr)
-		{
-			ex->kiseki_pos = target->button_pos;
-			ex->kiseki_dir = target->delta_pos_sq;
-			UpdateLongNoteKiseki(data, target, ex, dt);
-		}
+		ex->kiseki_pos = target->button_pos;
+		ex->kiseki_dir = target->delta_pos_sq;
+		UpdateLongNoteKiseki(data, target, ex, dt);
 	}
 	else
 	{
@@ -308,13 +247,10 @@ HOOK(void, __fastcall, UpdateKiseki, 0x14026F050, PVGameArcade* data, PvGameTarg
 
 HOOK(void, __fastcall, DrawKiseki, 0x140271030, PvGameTarget* target)
 {
-	TargetStateEx* ex = GetTargetStateEx(target->target_index);
-	if (IsLongNote(target->target_type))
-	{
-		DrawLongNoteKiseki(ex);
-		return;
-	}
-	else if (IsLinkStarNote(target->target_type, false) && !ex->link_start)
+	TargetStateEx* ex = GetTargetStateEx(target);
+	if (ex->IsLongNote())
+		return DrawLongNoteKiseki(ex);
+	else if (ex->IsLinkNote() && !ex->IsLinkNoteStart())
 		return;
 
 	originalDrawKiseki(target);
@@ -324,9 +260,9 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 {
 	for (TargetStateEx* tgt : state.target_references)
 	{
-		if (IsLongNote(tgt->target_type) && tgt->holding)
+		if (tgt->IsLongNoteStart() && tgt->holding)
 			DrawLongNoteKiseki(tgt);
-		else if (tgt->link_start)
+		else if (tgt->IsLinkNoteStart())
 		{
 			for (TargetStateEx* ex = tgt; ex != nullptr; ex = ex->next)
 			{
@@ -347,7 +283,7 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 static void PatchCommonKiseki(PvGameTarget* target)
 {
 	float r, g, b;
-	TargetStateEx* ex = GetTargetStateEx(target->target_index);
+	TargetStateEx* ex = GetTargetStateEx(target);
 
 	switch (target->target_type)
 	{
@@ -484,25 +420,27 @@ static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, Targe
 		float offset_x = ex->kiseki_dir.x * (width / 2.0f);
 		float offset_y = ex->kiseki_dir.y * (width / 2.0f);
 
-		diva::vec3 left = {
+		diva::vec2 left = {
 			ex->kiseki_pos.x - (ex->kiseki_dir.x * width) + offset_x,
-			ex->kiseki_pos.y - (ex->kiseki_dir.y * width) + offset_y,
-			0.0f
+			ex->kiseki_pos.y - (ex->kiseki_dir.y * width) + offset_y
 		};
 
-		diva::vec3 right = {
+		diva::vec2 right = {
 			ex->kiseki_pos.x + (ex->kiseki_dir.x * width) + offset_x,
-			ex->kiseki_pos.y + (ex->kiseki_dir.y * width) + offset_y,
-			0.0f
+			ex->kiseki_pos.y + (ex->kiseki_dir.y * width) + offset_y
 		};
 
-		diva::GetScaledPosition((diva::vec2*)&left, (diva::vec2*)&left);
-		diva::GetScaledPosition((diva::vec2*)&right, (diva::vec2*)&right);
+		left = GetScaledPosition(left);
+		right = GetScaledPosition(right);
 
-		ex->kiseki[i * 2].pos = right;
+		ex->kiseki[i * 2].pos.x = right.x;
+		ex->kiseki[i * 2].pos.y = right.y;
+		ex->kiseki[i * 2].pos.z = 0.0f;
 		ex->kiseki[i * 2].uv.y = 0.5f;
 		ex->kiseki[i * 2].color = 0xFFFFFFFF;
-		ex->kiseki[i * 2 + 1].pos = left;
+		ex->kiseki[i * 2 + 1].pos.x = left.x;
+		ex->kiseki[i * 2 + 1].pos.y = left.y;
+		ex->kiseki[i * 2 + 1].pos.z = 0.0f;
 		ex->kiseki[i * 2 + 1].uv.y = 1.0f;
 		ex->kiseki[i * 2 + 1].color = 0xFFFFFFFF;
 	}

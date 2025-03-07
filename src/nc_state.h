@@ -2,7 +2,6 @@
 
 #include <list>
 #include "diva.h"
-#include "megamix.h"
 #include "input.h"
 
 enum TargetType : int32_t
@@ -61,14 +60,6 @@ enum TargetType : int32_t
 	TargetType_Custom = 25
 };
 
-enum SEState : int32_t
-{
-	SEState_Idle = 0,
-	SEState_Looping = 1,
-	SEState_FailRelease = 2,
-	SEState_SuccessRelease = 3
-};
-
 enum LinkStepState : int32_t
 {
 	LinkStepState_None      = 0,
@@ -79,6 +70,18 @@ enum LinkStepState : int32_t
 	LinkStepState_GlowEnd   = 5,
 	LinkStepState_Wait      = 6,
 	LinkStepState_Idle      = 7
+};
+
+enum SEType : int32_t
+{
+	SEType_Normal = 1,
+	SEType_Star = 2,
+	SEType_LongStart = 3,
+	SEType_LongRelease = 4,
+	SEType_LongFail = 5,
+	SEType_Double = 6,
+	SEType_Cymbal = 7,
+	SEType_StarDouble = 8
 };
 
 struct TargetStateEx
@@ -113,6 +116,9 @@ struct TargetStateEx
 	int32_t step_state = LinkStepState_None;
 	bool link_ending = false;
 
+	int32_t score_bonus = 0;
+	bool double_bonus = false;
+
 	// NOTE: Visual info for long notes. This is kind of a workaround as to not mess too much
 	//       with the vanilla game structs.
 	// PS:   Button aet handle isn't needed because this is only used for when the player is
@@ -126,58 +132,39 @@ struct TargetStateEx
 	std::vector<SpriteVertex> kiseki;
 	size_t vertex_count_max = 0;
 
-	// NOTE: Sound effect state
-	//
-	int32_t se_state = SEState_Idle;
-	int32_t se_queue = -1;
-	std::string se_name = "";
+	void ResetPlayState();
+	bool IsChainSucessful();
+	void StopAet(bool button = true, bool target = true, bool kiseki = true);
+	bool SetLongNoteAet();
+	bool SetLinkNoteAet();
 
-	inline void ResetPlayState()
+	inline bool IsWrong() const
 	{
-		hold_button = nullptr;
-		org = nullptr;
-		force_hit_state = HitState_None;
-		hit_state = HitState_None;
-		flying_time_max = 0.0f;
-		flying_time_remaining = 0.0f;
-		delta_time_max = 0.0f;
-		delta_time = 0.0f;
-		length_remaining = length;
-		kiseki_time = 0.0f;
-		alpha = 0.0f;
-		holding = false;
-		success = false;
-		current_step = false;
-		step_state = LinkStepState_None;
-		link_ending = false;
-		diva::aet::Stop(&target_aet);
-		diva::aet::Stop(&button_aet);
-		kiseki_pos = { 0.0f, 0.0f };
-		kiseki_dir = { 0.0f, 0.0f };
-		kiseki_dir_norot = { 0.0f, 0.0f };
-		kiseki.clear();
-		vertex_count_max = 0;
-		ResetSE();
+		return (hit_state >= HitState_WrongCool && hit_state <= HitState_WrongSad) || hit_state == HitState_Worst;
 	}
 
-	inline void ResetSE()
+	inline bool IsLongNote() const
 	{
-		if (se_state != SEState_Idle && se_queue != -1 && !se_name.empty())
-			diva::sound::ReleaseCue(se_queue, se_name.c_str(), true);
-
-		se_state = SEState_Idle;
-		se_queue = -1;
-		se_name.clear();
+		return target_type == TargetType_TriangleLong ||
+			target_type == TargetType_CircleLong ||
+			target_type == TargetType_CrossLong ||
+			target_type == TargetType_SquareLong ||
+			target_type == TargetType_StarLong;
 	}
 
-	inline bool IsChainSucessful()
+	inline bool IsStarLikeNote() const
 	{
-		bool cond = true;
-		for (TargetStateEx* ex = this; ex != nullptr; ex = ex->next)
-			cond = cond && (ex->hit_state >= HitState_Cool && ex->hit_state <= HitState_Sad);
-
-		return cond;
+		return target_type == TargetType_Star ||
+			target_type == TargetType_ChanceStar ||
+			target_type == TargetType_LinkStar ||
+			target_type == TargetType_LinkStarEnd;
 	}
+
+	inline bool IsLongNoteStart() const { return IsLongNote() && !long_end; }
+	inline bool IsLongNoteEnd()   const { return IsLongNote() && long_end; }
+	inline bool IsLinkNote()      const { return link_step; }
+	inline bool IsLinkNoteStart() const { return link_step && link_start; }
+	inline bool IsLinkNoteEnd()   const { return link_step && link_end; }
 };
 
 struct ChanceState
@@ -229,46 +216,11 @@ struct StateEx
 	std::vector<TargetStateEx> target_ex;
 	ChanceState chance_time;
 
-	inline void ResetPlayState()
-	{
-		target_references.clear();
-		for (TargetStateEx& ex : target_ex)
-			ex.ResetPlayState();
-		chance_time.ResetPlayState();
-	}
-
-	inline void Reset()
-	{
-		target_references.clear();
-		target_ex.clear();
-		chance_time.first_target_index = -1;
-		chance_time.last_target_index = -1;
-		chance_time.targets_hit = 0;
-	}
-
-	inline bool PushTarget(TargetStateEx* ex)
-	{
-		for (TargetStateEx* p : target_references)
-			if (p == ex)
-				return false;
-
-		target_references.push_back(ex);
-		return true;
-	}
-
-	inline bool PopTarget(TargetStateEx* ex)
-	{
-		for (auto it = target_references.begin(); it != target_references.end(); it++)
-		{
-			if (*it == ex)
-			{
-				target_references.erase(it);
-				return true;
-			}
-		}
-
-		return false;
-	}
+	void ResetPlayState();
+	void Reset();
+	bool PushTarget(TargetStateEx* ex);
+	bool PopTarget(TargetStateEx* ex);
+	void PlaySoundEffect(int32_t type);
 };
 
 // NOTE: Constants
@@ -283,34 +235,5 @@ inline MacroState macro_state = { };
 inline StateEx state = { };
 
 // NOTE: Helper functions
-
-static inline bool IsLongNote(int32_t type)
-{ 
-	return type >= TargetType_TriangleLong && type <= TargetType_SquareLong;
-}
-
-static inline bool IsStarLikeNote(int32_t type)
-{
-	return type == TargetType_Star ||
-		type == TargetType_ChanceStar ||
-		type == TargetType_LinkStar ||
-		type == TargetType_LinkStarEnd;
-}
-
-static inline bool IsLinkStarNote(int32_t type, bool exclude_end)
-{
-	return type == TargetType_LinkStar || (type == TargetType_LinkStarEnd && !exclude_end);
-}
-
-static inline bool CheckWindow(float time, float early, float late)
-{
-	return time >= late && time <= early;
-}
-
-static inline TargetStateEx* GetTargetStateEx(int32_t index, int32_t sub_index = 0)
-{
-	for (TargetStateEx& ex : state.target_ex)
-		if (ex.target_index == index && ex.sub_index == sub_index)
-			return &ex;
-	return nullptr;
-}
+TargetStateEx* GetTargetStateEx(int32_t index, int32_t sub_index);
+TargetStateEx* GetTargetStateEx(const PvGameTarget* org);

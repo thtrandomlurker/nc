@@ -2,19 +2,98 @@
 #include <Windows.h>
 #include <detours.h>
 #include <Helpers.h>
-#include <common.h>
+#include <nc_state.h>
 #include <nc_log.h>
 #include "target.h"
 #include "hit_state.h"
 
-static FUNCTION_PTR(void, __fastcall, sub_14026EC80, 0x14026EC80, PVGameArcade* data);
-static FUNCTION_PTR(void, __fastcall, EraseTarget, 0x14026E5C0, PVGameArcade* data, PvGameTarget* target);
-static FUNCTION_PTR(void, __fastcall, FinishTargetAet, 0x14026E640, PVGameArcade* data, PvGameTarget* target);
-static FUNCTION_PTR(void, __fastcall, PlayNoteHitEffect, 0x1402715F0, PVGameArcade* data, int32_t effect, diva::vec2* pos);
+const float NormalWindow[5]  = { 0.03f, 0.07f, 0.1f, 0.13f };
+const float StarWindow[5]    = { 0.03f, 0.07f, 0.1f, 0.13f }; // TODO: CHANGE
 
-static bool CheckHit(int32_t hit_state, bool wrong, bool worst)
+namespace nc
+{
+	static bool CheckTiming(float time, int32_t hit_state, bool star)
+	{
+		float early = star ? StarWindow[hit_state] : NormalWindow[hit_state];
+		float late = -early;
+		return time >= late && time <= early;
+	}
+
+	static int32_t JudgeTiming(float time, bool star, bool wrong)
+	{
+		if (CheckTiming(time, HitState_Cool, star))
+			return wrong ? HitState_WrongCool : HitState_Cool;
+		else if (CheckTiming(time, HitState_Fine, star))
+			return wrong ? HitState_WrongFine : HitState_Fine;
+		else if (CheckTiming(time, HitState_Safe, star))
+			return wrong ? HitState_WrongSafe : HitState_Safe;
+		else if (CheckTiming(time, HitState_Sad, star))
+			return wrong ? HitState_WrongSad : HitState_Sad;
+
+		return HitState_None;
+	}
+
+	static int32_t GetHitStateInternal(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, ButtonState** hold_button)
+	{
+		if (ex->force_hit_state != HitState_None)
+			return ex->force_hit_state;
+
+		bool hit = false;
+		bool wrong = false;
+
+		// NOTE: Check input for double notes
+		if (target->target_type >= TargetType_UpW && target->target_type <= TargetType_LeftW)
+		{
+			int32_t base_index = target->target_type - TargetType_UpW;
+			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
+			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
+
+			ex->double_bonus = face->tapped && arrow->tapped;
+			hit = (face->down && arrow->tapped) || (arrow->down && face->tapped);
+
+			// TODO: Add logic for WRONG
+			//
+			//
+		}
+		else if (target->target_type >= TargetType_TriangleLong && target->target_type <= TargetType_SquareLong)
+		{
+			int32_t base_index = target->target_type - TargetType_TriangleLong;
+			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
+			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
+
+			if (!ex->long_end)
+			{
+				hit = face->tapped || arrow->tapped;
+				*hold_button = face->tapped ? face : arrow;
+			}
+			else if (ex->long_end)
+			{
+				if (ex->prev->hold_button != nullptr)
+					hit = ex->prev->hold_button->released;
+			}
+
+			// TODO: Add logic for WRONG
+			//
+		}
+		else if (ex->IsStarLikeNote())
+			hit = macro_state.GetStarHit();
+		else if (target->target_type == TargetType_StarW)
+			hit = macro_state.GetDoubleStarHit(&ex->double_bonus);
+
+		if (target->flying_time_remaining < -NormalWindow[HitState_Sad])
+			return HitState_Worst;
+		
+		if (hit)
+			return nc::JudgeTiming(target->flying_time_remaining, ex->IsStarLikeNote(), wrong);
+
+		return HitState_None;
+	}
+}
+
+bool nc::CheckHit(int32_t hit_state, bool wrong, bool worst)
 {
 	bool cond = (hit_state >= HitState_Cool && hit_state <= HitState_Sad);
+	cond |= (hit_state >= HitState_CoolDouble && hit_state <= HitState_SadQuad);
 	if (wrong)
 		cond |= (hit_state >= HitState_WrongCool && hit_state <= HitState_WrongSad);
 	if (worst)
@@ -22,369 +101,48 @@ static bool CheckHit(int32_t hit_state, bool wrong, bool worst)
 	return cond;
 }
 
-static void FinishExtraAet(TargetStateEx* ex)
+int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx** extras, int32_t group_count, bool* success)
 {
-	if (ex == nullptr)
-		return;
+	if (group_count < 1)
+		return HitState_None;
 
-	diva::aet::Stop(&ex->target_aet);
-	ex->kiseki.clear();
-	ex->vertex_count_max = 0;
-}
-
-static void FinishAetButCopyTarget(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex)
-{
-	if (data->play)
+	for (int i = 0; i < group_count; i++)
 	{
-		sub_14026EC80(data);
-		diva::aet::Stop(&target->button_aet);
-		diva::aet::Stop(&target->dword78);
-		diva::aet::Stop(&target->target_eff_aet);
+		PvGameTarget* target = group[i];
+		TargetStateEx* ex = extras[i];
 
-		ex->target_aet = target->target_aet;
-		target->target_aet = 0;
-		diva::aet::SetFrame(ex->target_aet, 360.0f);
-		// TODO: Set scale to 1.0;
-		//       Fix KISEKI pos when hit after the cool window!!!
-		//
-		diva::aet::SetPlay(ex->target_aet, false);
-	}
-}
+		// NOTE: Evaluate note hit
+		ButtonState* hold_button = nullptr;
+		int32_t hit_state = nc::GetHitStateInternal(game, target, ex, &hold_button);
 
-static void FinishAetButCopyTargetAndButton(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex)
-{
-	if (data->play)
-	{
-		sub_14026EC80(data);
-		diva::aet::Stop(&target->dword78);
-		diva::aet::Stop(&target->target_eff_aet);
-
-		ex->target_aet = target->target_aet;
-		ex->button_aet = target->button_aet;
-		diva::aet::SetFrame(ex->button_aet, 360.0f);
-		diva::aet::SetPlay(ex->button_aet, false);
-		target->target_aet = 0;
-		target->button_aet = 0;
-	}
-}
-
-static int32_t GetHitStateNC(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex)
-{
-	bool hit = false;
-	bool wrong = false;
-	int32_t hit_state = HitState_None;
-	ButtonState* button = nullptr;
-
-	// NOTE: Check input for double notes
-	if (target->target_type >= TargetType_UpW && target->target_type <= TargetType_LeftW)
-	{
-		int32_t base_index = target->target_type - TargetType_UpW;
-		ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
-		ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
-
-		if (face->tapped && arrow->tapped)
+		if (hit_state != HitState_None)
 		{
-			// TODO: Set score bonus
-		}
-
-		hit = (face->down && arrow->tapped) || (arrow->down && face->tapped);
-
-		// TODO: Add logic for WRONG
-		//
-		//
-	}
-	else if (target->target_type >= TargetType_TriangleLong && target->target_type <= TargetType_SquareLong)
-	{
-		int32_t base_index = target->target_type - TargetType_TriangleLong;
-		ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
-		ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
-
-		if (!ex->long_end)
-		{
-			hit = face->tapped || arrow->tapped;
-			button = face->tapped ? face : arrow;
-		}
-		else if (ex->long_end)
-		{
-			if (ex->prev->hold_button != nullptr)
-				hit = ex->prev->hold_button->released;
-		}
-	}
-	else if (IsStarLikeNote(target->target_type))
-		hit = macro_state.GetStarHit();
-	else if (target->target_type == TargetType_StarW)
-		hit = macro_state.GetDoubleStarHit(nullptr);
-
-	if (hit)
-	{
-		float time = target->flying_time_remaining;
-
-		if (time >= data->cool_late_window && time <= data->cool_early_window)
-			hit_state = wrong ? HitState_WrongCool : HitState_Cool;
-		else if (time >= data->fine_late_window && time <= data->fine_early_window)
-			hit_state = wrong ? HitState_WrongFine : HitState_Fine;
-		else if (time >= data->safe_late_window && time <= data->safe_early_window)
-			hit_state = wrong ? HitState_WrongSafe : HitState_Safe;
-		else if (time >= data->sad_late_window && time <= data->sad_early_window)
-			hit_state = wrong ? HitState_WrongSad : HitState_Sad;
-
-		// NOTE: Handle long note input
-		if (IsLongNote(target->target_type))
-		{
-			if (CheckHit(hit_state, false, false) && !ex->long_end)
+			if (CheckHit(hit_state, false, false))
 			{
-				state.PushTarget(ex);
-				ex->kiseki_pos = target->target_pos;
-				ex->kiseki_dir = target->delta_pos_sq;
-				ex->holding = true;
-				ex->hold_button = button;
-				ex->next->force_hit_state = HitState_None;
-			}
-		}
-	}
-
-	if (target->flying_time_remaining < data->sad_late_window)
-	{
-		hit_state = HitState_Worst;
-		if (IsLongNote(target->target_type) && !ex->long_end)
-			ex->next->force_hit_state = HitState_Worst;
-	}
-
-	return hit_state;
-}
-
-static bool CheckLongNoteState(TargetStateEx* target)
-{
-	if (target->hold_button->down)
-	{
-		target->holding = true;
-		return true;
-	}
-
-	// TODO: Maybe move this somewhere else (?)
-	diva::aet::Stop(&target->target_aet);
-	target->holding = false;
-	return false;
-};
-
-HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60, PVGameArcade* data, bool* play_default_se, size_t* rating_count, diva::vec2* rating_pos, int32_t* a5, SoundEffect* se, int32_t* multi_count, int32_t* a8, int32_t* target_index, bool* is_success_note, bool* slide, bool* slide_chain, bool* slide_chain_start, bool* slide_chain_max, bool* slide_chain_continues, void* a16)
-{
-	// NOTE: Update input manager
-	macro_state.Update(data->ptr08, 0);
-
-	if (!data->play || !ShouldUpdateTargets())
-	{
-		return originalGetHitState(data, play_default_se, rating_count, rating_pos, a5, se, multi_count, a8, target_index, is_success_note, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues, a16);
-	}
-
-	// NOTE: Poll input for ongoing long notes
-	//
-	for (TargetStateEx* tgt : state.target_references)
-	{
-		if (!IsLongNote(tgt->target_type))
-			continue;
-
-		bool is_in_zone = false;
-
-		// NOTE: Check if the end target is in it's timing window
-		if (tgt->next->org != nullptr)
-		{
-			is_in_zone = CheckWindow(
-				tgt->next->org->flying_time_remaining,
-				data->sad_early_window,
-				data->sad_late_window
-			);
-		}
-
-		// NOTE: Check if the start target button has been released;
-		//       if it's the end note is not inside it's timing zone,
-		//       automatically mark it as a fail.
-		if (!CheckLongNoteState(tgt) && !is_in_zone)
-		{
-			tgt->next->force_hit_state = HitState_Worst;
-			tgt->se_state = SEState_FailRelease;
-			PlayUpdateSoundEffect(nullptr, tgt, nullptr);
-		}
-	}
-
-	int32_t hit_state = HitState_None;
-
-	// NOTE: Update our own custom notes
-	//
-	if (data->target != nullptr && data->target->target_type >= TargetType_Custom)
-	{
-		// NOTE: Set default return values
-		//
-		*play_default_se = true;
-		*rating_count = 0;
-		*multi_count = 0;
-		*is_success_note = false;
-		*slide = false;
-		*slide_chain = false;
-		*slide_chain_start = false;
-		*slide_chain_max = false;
-		*slide_chain_continues = false;
-
-		// NOTE: Provisory fix to prevent SE from playing on the pause menu;
-		//       Ultimately, I should figure out how the game actually prevents
-		//       that from happening.
-		if (!ShouldUpdateTargets())
-			*play_default_se = false;
-
-		int32_t target_count = 0;
-		PvGameTarget* targets[4] = { };
-		TargetStateEx* extras[4] = { };
-
-		// TODO: Add support for multi notes? Is that something we wanna do?
-		if (data->target != nullptr)
-		{
-			targets[0] = data->target;
-			extras[0] = GetTargetStateEx(targets[0]->target_index, 0);
-			target_count = 1;
-		}
-
-		for (int i = 0; i < target_count; i++)
-		{
-			PvGameTarget* target = targets[i];
-			TargetStateEx* extra = extras[i];
-
-			// NOTE: First, check if this note isn't already deemed to be fail
-			//       (from missing the long note start target)...
-			if (extra->force_hit_state != HitState_None)
-			{
-				hit_state = extra->force_hit_state;
-				target->hit_state = extra->force_hit_state;
-
-				// NOTE: Hide the combo counter
-				*rating_count = 1;
-				rating_pos[0] = { -1200.0f, 0.0f };
-
-				FinishTargetAet(data, target);
-				continue;
+				if (ex->IsLongNoteStart())
+				{
+					ex->hold_button = hold_button;
+					ex->holding = true;
+					ex->next->force_hit_state = HitState_None;
+				}
+				else if (target->target_type == TargetType_ChanceStar)
+					*success = state.chance_time.GetFillRate() == 15;
 			}
 
-			hit_state = GetHitStateNC(data, target, extra);
 			target->hit_state = hit_state;
-			extra->hit_state = hit_state;
-
-			if (hit_state != HitState_None)
-			{
-				// NOTE: Play hit effect Aet
-				//
-				int32_t eff_index = -1;
-				switch (hit_state)
-				{
-				case HitState_Cool:
-					eff_index = 1;
-					break;
-				case HitState_Fine:
-					eff_index = 2;
-					break;
-				case HitState_Safe:
-					eff_index = 3;
-					break;
-				case HitState_Sad:
-					eff_index = 4;
-					break;
-				case HitState_WrongCool:
-				case HitState_WrongFine:
-				case HitState_WrongSafe:
-				case HitState_WrongSad:
-					eff_index = 0;
-					break;
-				};
-
-				if (eff_index != -1)
-					PlayNoteHitEffect(data, eff_index, &target->target_pos);
-
-				if (target->target_type == TargetType_ChanceStar)
-				{
-					if (CheckHit(hit_state, false, false) && extra->success)
-						GetPVGameData()->is_success_branch = true;
-					else
-						GetPVGameData()->is_success_branch = false;
-				}
-
-				// NOTE: Play hit sound effect
-				if (CheckHit(hit_state, true, false))
-				{
-					if (IsLongNote(target->target_type) && extra->long_end)
-					{
-						extra->prev->se_state = SEState_SuccessRelease;
-						PlayUpdateSoundEffect(nullptr, extra->prev, nullptr);
-					}
-					else
-						PlayUpdateSoundEffect(target, extra, se);
-
-					*play_default_se = false;
-				}
-				else if (IsLongNote(target->target_type) && extra->long_end)
-				{
-					extra->prev->se_state = SEState_FailRelease;
-					PlayUpdateSoundEffect(nullptr, extra->prev, nullptr);
-				}
-
-				// NOTE: Remove target aet objects
-				//
-				if (IsLongNote(target->target_type))
-				{
-					if (CheckHit(target->hit_state, false, false) && !extra->long_end)
-						FinishAetButCopyTarget(data, target, extra);
-					else if (extra->long_end)
-					{
-						FinishExtraAet(extra->prev);
-						FinishExtraAet(extra);
-					}
-				}
-				else
-					FinishTargetAet(data, target);
-
-				// NOTE: Set position of the combo counter
-				//
-				if (rating_count != nullptr && rating_pos != nullptr)
-					rating_pos[(*rating_count)++] = target->target_pos;
-			}
-		}
-
-		for (int i = 0; i < target_count; i++)
-		{
-			if (IsLongNote(targets[i]->target_type) && extras[i]->long_end && targets[i]->hit_state != HitState_None)
-				state.PopTarget(extras[i]->prev);
-		}
-
-		// NOTE: Erase passed targets from list
-		for (int i = 0; i < target_count; i++)
-		{
-			if (targets[i]->hit_state != HitState_None)
-				EraseTarget(data, targets[i]);
-		}
-
-		if (target_count > 0)
-		{
-			*multi_count = target_count;
-			*target_index = targets[0]->target_index;
-		}
-	}
-	else
-	{
-		hit_state = originalGetHitState(data, play_default_se, rating_count, rating_pos, a5, se, multi_count, a8, target_index, is_success_note, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues, a16);
-	}
-
-	// NOTE: Update chance time
-	if (CheckHit(hit_state, false, false))
-	{
-		if (state.chance_time.CheckTargetInRange(*target_index))
-		{
-			state.chance_time.targets_hit += 1;
-			nc::Print("CTFR: %.4f [%d]\n", 0.0f, state.chance_time.GetFillRate());
+			ex->hit_state = hit_state;
+			target->hit_time = target->flying_time_remaining;
 		}
 	}
 
-	return hit_state;
+	return extras[0]->hit_state;
 }
 
-bool InstallHitStateHooks()
+bool nc::CheckLongNoteHolding(TargetStateEx* ex)
 {
-	INSTALL_HOOK(GetHitState);
-	return true;
+	if (ex->hold_button == nullptr)
+		return false;
+
+	ex->holding = ex->hold_button->down;
+	return ex->holding;
 }

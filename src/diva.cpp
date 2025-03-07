@@ -2,93 +2,103 @@
 #include "diva.h"
 #include "Helpers.h"
 
-namespace prj
+FUNCTION_PTR(AetArgs*, __fastcall, CreateAetArgsOrg, 0x14028D560, AetArgs*, uint32_t, const char*, int32_t, int32_t);
+FUNCTION_PTR(void, __fastcall, StopAetOrg, 0x1402CA330, int32_t* id);
+FUNCTION_PTR(SprArgs*, __fastcall, DefaultSprArgs, 0x1405B78D0, SprArgs* args);
+FUNCTION_PTR(TextArgs*, __fastcall, DefaultTextArgs, 0x1402C53D0, TextArgs* args);
+FUNCTION_PTR(AetArgs*, __fastcall, DefaultAetArgs, 0x1401A87F0, AetArgs* args);
+
+SprArgs::SprArgs()
 {
-	FUNCTION_PTR(void*, __fastcall, operatorNew, 0x1409777D0, size_t);
-	FUNCTION_PTR(void*, __fastcall, operatorDelete, 0x1409B1E90, void*);
+	memset(this, 0, sizeof(SprArgs));
+	DefaultSprArgs(this);
+}
+	
+TextArgs::TextArgs()
+{
+	memset(this, 0, sizeof(TextArgs));
+	DefaultTextArgs(this);
 }
 
-namespace diva
+AetArgs::AetArgs()
 {
-	FUNCTION_PTR(AetArgs*, __fastcall, CreateAetArgsOrg, 0x14028D560, AetArgs*, uint32_t, const char*, int32_t, int32_t);
-	FUNCTION_PTR(void, __fastcall, StopAetOrg, 0x1402CA330, int32_t* id);
-	FUNCTION_PTR(SprArgs*, __fastcall, DefaultSprArgs, 0x1405B78D0, SprArgs* args);
-	FUNCTION_PTR(TextArgs*, __fastcall, DefaultTextArgs, 0x1402C53D0, TextArgs* args);
-	FUNCTION_PTR(AetArgs*, __fastcall, DefaultAetArgs, 0x1401A87F0, AetArgs* args);
+	memset(this, 0, sizeof(AetArgs));
+	DefaultAetArgs(this);
+}
 
-	SprArgs::SprArgs()
-	{
-		memset(this, 0, sizeof(diva::SprArgs));
-		DefaultSprArgs(this);
-	}
-	
-	TextArgs::TextArgs()
-	{
-		memset(this, 0, sizeof(diva::TextArgs));
-		DefaultTextArgs(this);
-	}
+// NOTE: Temporary. Just until I sort out the std::map types.
+FUNCTION_PTR(void, __fastcall, DestroyAetArgs, 0x1401A9100, AetArgs* args);
+AetArgs::~AetArgs()
+{
+	DestroyAetArgs(this);
+}
 
-	AetArgs::AetArgs()
-	{
-		memset(this, 0, sizeof(diva::AetArgs));
-		DefaultAetArgs(this);
-	}
+void aet::CreateAetArgs(AetArgs* args, uint32_t scene_id, const char* layer_name, int32_t prio)
+{
+	CreateAetArgsOrg(args, scene_id, layer_name, prio, 0);
+}
 
-	// NOTE: Temporary. Just until I sort out the std::map types.
-	FUNCTION_PTR(void, __fastcall, DestroyAetArgs, 0x1401A9100, AetArgs* args);
-	AetArgs::~AetArgs()
-	{
-		DestroyAetArgs(this);
-	}
+void aet::CreateAetArgs(AetArgs* args, uint32_t scene_id, const char* layer_name, int32_t flags, int32_t layer, int32_t prio, const char* start_marker, const char* end_marker)
+{
+	CreateAetArgs(args, scene_id, layer_name, prio);
+	args->flags = flags;
+	args->layer = layer;
+	args->start_marker = start_marker;
+	args->end_marker = end_marker;
+}
 
-	void aet::CreateAetArgs(AetArgs* args, uint32_t scene_id, const char* layer_name, int32_t prio)
-	{
-		CreateAetArgsOrg(args, scene_id, layer_name, prio, 0);
-	}
+void aet::Stop(int32_t id)
+{
+	if (id != 0)
+		StopAetOrg(&id);
+}
 
-	void aet::CreateAetArgs(AetArgs* args, uint32_t scene_id, const char* layer_name, int32_t flags, int32_t layer, int32_t prio, const char* start_marker, const char* end_marker)
+void aet::Stop(int32_t* id)
+{
+	if (id != nullptr)
 	{
-		CreateAetArgs(args, scene_id, layer_name, prio);
-		args->flags = flags;
-		args->layer = layer;
-		args->start_marker = start_marker;
-		args->end_marker = end_marker;
+		if (*id != 0)
+			StopAetOrg(id);
+		*id = 0;
 	}
+}
 
-	void aet::Stop(int32_t id)
+bool aet::StopOnEnded(int32_t* id)
+{
+	if (id != nullptr && *id != 0)
 	{
-		if (id != 0)
-			StopAetOrg(&id);
-	}
-
-	void aet::Stop(int32_t* id)
-	{
-		if (id != nullptr)
-		{
-			if (*id != 0)
-				StopAetOrg(id);
-			*id = 0;
-		}
+		bool ended = aet::GetEnded(*id);
+		if (ended)
+			aet::Stop(id);
+		return ended;
 	}
 
-	bool aet::StopOnEnded(int32_t* id)
-	{
-		if (id != nullptr && *id != 0)
-		{
-			bool ended = aet::GetEnded(*id);
-			if (ended)
-				aet::Stop(id);
-			return ended;
-		}
+	return true;
+}
 
-		return true;
-	}
+// NOTE: InputState implementation
+static FUNCTION_PTR(float, __fastcall, IS_GetPosition, 0x1402AB2C0, diva::InputState* t, int32_t index);
+static FUNCTION_PTR(int32_t, __fastcall, IS_GetDeviceVendor, 0x1402AAF20, diva::InputState* t);
+static FUNCTION_PTR(int32_t, __fastcall, GetNormalizedDeviceType, 0x1402ACAA0, int32_t vendor);
 
-	// NOTE: InputState implementation
-	static FUNCTION_PTR(float, __fastcall, IS_GetPosition, 0x1402AB2C0, InputState* t, int32_t index);
-	static FUNCTION_PTR(int32_t, __fastcall, IS_GetDeviceVendor, 0x1402AAF20, InputState* t);
-	static FUNCTION_PTR(int32_t, __fastcall, GetNormalizedDeviceType, 0x1402ACAA0, int32_t vendor);
+float diva::InputState::GetPosition(int32_t index) { return IS_GetPosition(this, index); }
+int32_t diva::InputState::GetDevice() { return GetNormalizedDeviceType(IS_GetDeviceVendor(this)); }
 
-	float InputState::GetPosition(int32_t index) { return IS_GetPosition(this, index); }
-	int32_t InputState::GetDevice() { return GetNormalizedDeviceType(IS_GetDeviceVendor(this)); }
+// NOTE: PVGameArcade implementation
+static FUNCTION_PTR(void, __fastcall, PVGAC_EraseTarget, 0x14026E5C0, PVGameArcade* data, PvGameTarget* target);
+static FUNCTION_PTR(void, __fastcall, PVGAC_FinishTargetAet, 0x14026E640, PVGameArcade* data, PvGameTarget* target);
+static FUNCTION_PTR(void, __fastcall, PVGAC_PlayHitEffect, 0x1402715F0, PVGameArcade* data, int32_t effect, const diva::vec2* pos);
+
+void PVGameArcade::EraseTarget(PvGameTarget* target) { PVGAC_EraseTarget(this, target); }
+void PVGameArcade::RemoveTargetAet(PvGameTarget* target) { PVGAC_FinishTargetAet(this, target); }
+void PVGameArcade::PlayHitEffect(int32_t index, const diva::vec2& pos) { PVGAC_PlayHitEffect(this, index, &pos); }
+
+// NOTE: Misc
+inline FUNCTION_PTR(void, __fastcall, DSC_ScalePosition, 0x1402666E0, const diva::vec2* in, diva::vec2* out);
+
+diva::vec2 GetScaledPosition(const diva::vec2& v)
+{
+	diva::vec2 scaled = { };
+	DSC_ScalePosition(&v, &scaled);
+	return scaled;
 }

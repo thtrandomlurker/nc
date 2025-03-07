@@ -5,12 +5,11 @@
 #include <stdint.h>
 #include <vector>
 #include "Helpers.h"
-#include "common.h"
-#include "megamix.h"
 #include "game/hit_state.h"
 #include "game/target.h"
 #include "game/chance_time.h"
 #include "nc_log.h"
+#include "game/game.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -75,8 +74,8 @@ HOOK(bool, __fastcall, TaskPvGameInit, 0x1405DA040, uint64_t a1)
 
 	prj::string str;
 	prj::string_view strv;
-	diva::aet::LoadAetSet(AetSetID, &str);
-	diva::spr::LoadSprSet(SprSetID, &strv);
+	aet::LoadAetSet(AetSetID, &str);
+	spr::LoadSprSet(SprSetID, &strv);
 
 	state.Reset();
 	return originalTaskPvGameInit(a1);
@@ -86,8 +85,8 @@ HOOK(bool, __fastcall, TaskPvGameCtrl, 0x1405DA060, uint64_t a1)
 {
 	if (!state.files_loaded)
 	{
-		state.files_loaded = !diva::aet::CheckAetSetLoading(AetSetID) &&
-			!diva::spr::CheckSprSetLoading(SprSetID);
+		state.files_loaded = !aet::CheckAetSetLoading(AetSetID) &&
+			!spr::CheckSprSetLoading(SprSetID);
 	}
 
 	return originalTaskPvGameCtrl(a1);
@@ -100,8 +99,8 @@ HOOK(bool, __fastcall, TaskPvGameDest, 0x1405DA0A0, uint64_t a1)
 
 	if (state.files_loaded)
 	{
-		diva::aet::UnloadAetSet(AetSetID);
-		diva::spr::UnloadSprSet(SprSetID);
+		aet::UnloadAetSet(AetSetID);
+		spr::UnloadSprSet(SprSetID);
 		state.files_loaded = false;
 	}
 
@@ -239,7 +238,7 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 
 			// NOTE: Link long note pieces together
 			//
-			if (IsLongNote(tgt->type) && !ex->long_end)
+			if (ex->IsLongNoteStart())
 			{
 				TargetStateEx* next = findNextTarget(i + 1, sub, tgt->type, -1, true).second;
 				if (next != nullptr)
@@ -304,7 +303,7 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 			else if (pv_game->pv_data.script_buffer[pos + 2] == 5)
 				chance_end_time = static_cast<int64_t>(last_time) * 10000;
 
-			pos += diva::dsc::GetOpcodeInfo(26)->length + 1;
+			pos += dsc::GetOpcodeInfo(26)->length + 1;
 			continue;
 		}
 
@@ -356,7 +355,7 @@ extern "C"
 		INSTALL_HOOK(PVGameReset);
 		INSTALL_HOOK(ParseTargets);
 		INSTALL_HOOK(LoadDscCtrl);
-		InstallHitStateHooks();
+		InstallGameHooks();
 		InstallTargetHooks();
 		InstallChanceTimeHooks();
 	}

@@ -171,23 +171,25 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
   <ItemGroup>
     <ClCompile Include="src\diva.cpp" />
     <ClCompile Include="src\game\chance_time.cpp" />
+    <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\game\hit_state.cpp" />
     <ClCompile Include="src\game\note_link.cpp" />
     <ClCompile Include="src\game\target.cpp" />
     <ClCompile Include="src\input.cpp" />
     <ClCompile Include="src\mod.cpp" />
     <ClCompile Include="src\nc_log.cpp" />
+    <ClCompile Include="src\nc_state.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\common.h" />
+    <ClInclude Include="src\nc_state.h" />
     <ClInclude Include="src\diva.h" />
     <ClInclude Include="src\game\chance_time.h" />
+    <ClInclude Include="src\game\game.h" />
     <ClInclude Include="src\game\hit_state.h" />
     <ClInclude Include="src\game\note_link.h" />
     <ClInclude Include="src\game\target.h" />
     <ClInclude Include="src\helpers.h" />
     <ClInclude Include="src\input.h" />
-    <ClInclude Include="src\megamix.h" />
     <ClInclude Include="src\nc_log.h" />
     <ClInclude Include="src\thirdparty\toml.hpp" />
   </ItemGroup>
