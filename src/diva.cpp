@@ -93,8 +93,13 @@ void PVGameArcade::EraseTarget(PvGameTarget* target) { PVGAC_EraseTarget(this, t
 void PVGameArcade::RemoveTargetAet(PvGameTarget* target) { PVGAC_FinishTargetAet(this, target); }
 void PVGameArcade::PlayHitEffect(int32_t index, const diva::vec2& pos) { PVGAC_PlayHitEffect(this, index, &pos); }
 
+// NOTE:  PVGameUI implementation
+static FUNCTION_PTR(void, __fastcall, PGUI_SetBonusText, 0x140275670, PVGameUI*, int32_t, float, float);
+
+void PVGameUI::SetBonusText(int32_t value, float x, float y) { PGUI_SetBonusText(this, value, x, y); }
+
 // NOTE: Misc
-inline FUNCTION_PTR(void, __fastcall, DSC_ScalePosition, 0x1402666E0, const diva::vec2* in, diva::vec2* out);
+static FUNCTION_PTR(void, __fastcall, DSC_ScalePosition, 0x1402666E0, const diva::vec2* in, diva::vec2* out);
 
 diva::vec2 GetScaledPosition(const diva::vec2& v)
 {

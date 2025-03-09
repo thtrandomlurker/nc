@@ -438,23 +438,18 @@ struct PVGameArcade;
 //
 struct PVGamePvData
 {
-	uint8_t gap0[4];
+	bool field_0;
 	int32_t dsc_state;
-	uint8_t byte8[4];
-	int32_t script_buffer[45000];
-	int32_t script_pos;
-	int64_t qword2BF30;
-	int64_t qword2BF38;
-	int64_t cur_time;
-	float cur_time_float;
-	float prev_time_float;
-	uint8_t gap2BF50[32];
+	bool play;
+	int script_buffer[45000];
+	int script_pos;
+	uint8_t gap2BF30[24];
+	float float2BF48;
+	uint8_t gap2BF4C[36];
 	int int2BF70;
 	int int2BF74;
 	PVGameData* pv_game;
-	void* ptr2BF80;
-	PVGameArcade* arcade;
-	uint8_t gap2BF90[8];
+	uint8_t gap2BF80[24];
 	float float2BF98;
 	float float2BF9C;
 	int32_t dword2BFA0;
@@ -463,11 +458,12 @@ struct PVGamePvData
 	uint8_t gap2BFA8[16];
 	uint8_t byte2BFC0;
 	uint8_t byte2BFC1;
-	__declspec(align(8)) uint8_t byte2BFC8;
+	uint8_t gap2BFC8[8];
 	int32_t dword2BFCC;
 	int32_t dword2BFD0;
 	uint8_t byte2BFD4;
-	__declspec(align(2)) uint8_t byte2BFD6;
+	uint8_t byte2BFD5;
+	uint8_t byte2BFD6;
 	uint8_t gap2BFD7[961];
 	uint8_t byte2C398;
 	int32_t dword2C39C;
@@ -483,23 +479,24 @@ struct PVGamePvData
 	float float2C4D4;
 	float float2C4D8;
 	float float2C4DC;
-	uint8_t gap2C4E0;
-	unsigned __int8 unsigned___int82C4E1;
-	int32_t targets_remaining;
+	bool has_dsc_signature;
+	bool is_dsc_ac200_format;
+	uint8_t pad2C4E2[2];
+	int targets_remaining;
 	prj::vector<PvDscTargetGroup> targets;
 	size_t target_index;
 	float float2C508;
 	char char2C50C;
 	uint8_t gap2C50D[63];
-	float float2C54C;
-	uint8_t gap2C550[4];
-	unsigned int unsigned_int2C554;
-	uint8_t gap2C558[712];
+	uint8_t gap2C54C[8];
+	int32_t dsc_branch_mode;
+	int32_t first_challenge_target_index;
+	int32_t last_challenge_target_index;
+	uint8_t gap2C558[704];
 	uint8_t byte2C820;
 	int32_t dword2C824;
 	int32_t dword2C828;
 	float float2C82C;
-	uint8_t gap2C830[8];
 };
 
 struct PvGameTarget
@@ -636,18 +633,21 @@ struct PVGameUI
 	int32_t combo_num;
 	int32_t int3C0;
 	diva::vec2 combo_counter_pos;
+
+	void SetBonusText(int32_t value, float x, float y);
 };
 
 struct PVGameData
 {
 	bool loaded;
 	bool paused;
-	bool byte2;
-	bool byte3;
+	uint8_t byte2;
+	uint8_t byte3;
 	uint8_t gap4[196];
 	PVGamePvData pv_data;
+	uint8_t gap2C8F8[8];
 	PVGameUI ui;
-	uint8_t gap2C8F8[1528 - sizeof(PVGameUI)];
+	uint8_t gap2CCCC[1520 - sizeof(PVGameUI)];
 	uint8_t byte2CEF0;
 	uint8_t gap2CEF1[39];
 	const char char2CF18;
@@ -676,17 +676,21 @@ struct PVGameData
 	int64_t qword2D010;
 	uint8_t gap2D018[357];
 	uint8_t byte2D17D;
-	uint8_t gap2D17E[182];
-	int life;
-	int32_t dword2D238;
-	uint8_t gap2D23C[4];
-	uint8_t byte2D240;
-	uint8_t gap2D241[7];
-	unsigned int unsigned_int2D248;
-	int32_t dword2D24C;
-	unsigned int unsigned_int2D250;
-	int32_t dword2D254;
-	uint8_t gap2D258[64];
+	uint8_t gap2D17E[174];
+	uint8_t gap2D22C[8];
+	int32_t life;
+	int32_t score;
+	int32_t dword2D23C;
+	int32_t dword2D240;
+	int32_t total_challenge_bonus;
+	int32_t combo;
+	int32_t total_surv_challenge_bonus;
+	uint8_t gap2D250[8];
+	int32_t challenge_combo;
+	int32_t max_combo;
+	int32_t judge_count[5];
+	int32_t judge_count_correct[5];
+	uint8_t gap2D288[16];
 	float float2D298;
 	uint8_t gap2D29C[12];
 	int int2D2A8;
@@ -694,7 +698,8 @@ struct PVGameData
 	uint8_t byte2D2AD;
 	float float2D2B0;
 	int16_t word2D2B4;
-	uint8_t gap2D2B6[10];
+	uint8_t gap2D2B6[6];
+	int32_t challenge_bonus;
 	int32_t dword2D2C0;
 	uint8_t gap2D2C4[8];
 	int32_t reference_score;
@@ -719,24 +724,25 @@ struct PVGameData
 	float float2D354;
 	int32_t dword2D358;
 	int32_t dword2D35C;
-	uint8_t gap2D360[16];
+	uint8_t gap2D360[5];
+	bool has_success_note;
+	uint8_t gap2D366[10];
 	int32_t dword2D370;
 	uint8_t byte2D374;
 	uint8_t byte2D375;
 	uint8_t gap2D376[30];
 	int32_t current_frame;
 	int32_t dword2D398;
-	int32_t dword2D39C;
+	int32_t total_life_bonus;
 	int32_t dword2D3A0;
-	uint8_t gap2D3A4[3];
-	bool is_success_branch;
+	uint8_t gap2D3A4[4];
 	uint8_t byte2D3A8;
 	uint8_t byte2D3A9;
 	uint8_t gap2D3AA;
 	uint8_t byte2D3AB;
 	uint8_t gap2D3AC[2];
 	uint8_t byte2D3AE;
-	uint8_t byte2D3AF;
+	bool is_success_branch;
 	uint8_t gap2D3B0[16];
 	int32_t dword2D3C0;
 	uint8_t gap2D3C4[16];
@@ -769,6 +775,29 @@ struct SoundEffect
 	prj::string slide_ng;
 	prj::string chime;
 };
+
+namespace diva
+{
+	struct InputState
+	{
+		uint8_t _data[6720];
+
+		// 0x08 - Cursor position X (1920x1080)
+		// 0x09 - Cursor position Y (1920x1080)
+		// 0x10 - Cursor position X (1280x720)
+		// 0x11 - Cursor position Y (1280x720)
+		// 0x12 - Cursor pos delta X
+		// 0x13 - Cursor pos delta Y
+		// 0x14 - LStick X axis
+		// 0x15 - LStick Y axis
+		// 0x16 - RStick X axis
+		// 0x17 - RStick Y axis
+		float GetPosition(int32_t index);
+		int32_t GetDevice();
+	};
+
+	inline FUNCTION_PTR(InputState*, __fastcall, GetInputState, 0x1402AC970, int32_t index);
+}
 
 namespace aet
 {
@@ -857,39 +886,16 @@ namespace dsc
 }
 
 inline FUNCTION_PTR(PvGameplayInfo*, __fastcall, GetPvGameplayInfo, 0x14027DD90);
-inline FUNCTION_PTR(void*, __fastcall, GetPvGameData, 0x140266720);
 inline FUNCTION_PTR(bool, __fastcall, IsPracticeMode, 0x1401E7B90);
+inline FUNCTION_PTR(int32_t, __fastcall, FindNextCommand, 0x140257D50, PVGamePvData* pv_data, int32_t op, int32_t* time, int32_t* branch, int32_t head);
+inline FUNCTION_PTR(PVGameData*, __fastcall, GetPVGameData, 0x140266720);
+inline FUNCTION_PTR(bool, __fastcall, IsInSongResults, 0x1401E8090);
+inline FUNCTION_PTR(int64_t, __fastcall, DrawTriangles, 0x1405B4C50, SpriteVertex* vertices, size_t vertex_count, int32_t res_mode, int32_t prio, uint32_t sprite_id);
 
 diva::vec2 GetScaledPosition(const diva::vec2& v);
 
-namespace diva
-{
-	struct InputState
-	{
-		uint8_t _data[6720];
-
-		// 0x08 - Cursor position X (1920x1080)
-		// 0x09 - Cursor position Y (1920x1080)
-		// 0x10 - Cursor position X (1280x720)
-		// 0x11 - Cursor position Y (1280x720)
-		// 0x12 - Cursor pos delta X
-		// 0x13 - Cursor pos delta Y
-		// 0x14 - LStick X axis
-		// 0x15 - LStick Y axis
-		// 0x16 - RStick X axis
-		// 0x17 - RStick Y axis
-		float GetPosition(int32_t index);
-		int32_t GetDevice();
-	};
-
-	inline FUNCTION_PTR(InputState*, __fastcall, GetInputState, 0x1402AC970, int32_t index);
-}
-
-typedef void* FileHandler;
-
-inline FUNCTION_PTR(int64_t, __fastcall, DrawTriangles, 0x1405B4C50, SpriteVertex* vertices, size_t vertex_count, int32_t res_mode, int32_t prio, uint32_t sprite_id);
-
 // NOTE: File IO functions
+typedef void* FileHandler;
 
 inline FUNCTION_PTR(bool, __fastcall, FileRequestLoad, 0x1402A4710, FileHandler* file, const char* path, int32_t a3);
 inline FUNCTION_PTR(bool, __fastcall, FileCheckExists, 0x1402A5330, prj::string* path, prj::string* fixed);
@@ -897,11 +903,6 @@ inline FUNCTION_PTR(bool, __fastcall, FileCheckNotReady, 0x151C03830, FileHandle
 inline FUNCTION_PTR(void*, __fastcall, FileGetData, 0x151C0EF70, FileHandler* file);
 inline FUNCTION_PTR(size_t, __fastcall, FileGetSize, 0x151C7ADA0, FileHandler* file);
 inline FUNCTION_PTR(void, __fastcall, FileFree, 0x1402A4E90, FileHandler* file);
-
-inline FUNCTION_PTR(int32_t, __fastcall, FindNextCommand, 0x140257D50, PVGamePvData* pv_data, int32_t op, int32_t* time, int32_t* branch, int32_t head);
-inline FUNCTION_PTR(PVGameData*, __fastcall, GetPVGameData, 0x140266720);
-inline FUNCTION_PTR(bool, __fastcall, IsInSongResults, 0x1401E8090);
-inline FUNCTION_PTR(void, __fastcall, SetBonusText, 0x140275670, PVGameUI* ui, int32_t value, float x, float y);
 
 inline bool ShouldUpdateTargets()
 {
