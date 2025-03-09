@@ -116,8 +116,10 @@ struct TargetStateEx
 	int32_t step_state = LinkStepState_None;
 	bool link_ending = false;
 
+	float long_bonus_timer = 0.0f;
 	int32_t score_bonus = 0;
-	bool double_bonus = false;
+	int32_t ct_score_bonus = 0;
+	bool double_tapped = false;
 
 	// NOTE: Visual info for long notes. This is kind of a workaround as to not mess too much
 	//       with the vanilla game structs.
@@ -157,7 +159,17 @@ struct TargetStateEx
 		return target_type == TargetType_Star ||
 			target_type == TargetType_ChanceStar ||
 			target_type == TargetType_LinkStar ||
-			target_type == TargetType_LinkStarEnd;
+			target_type == TargetType_LinkStarEnd ||
+			target_type == TargetType_StarRush;
+	}
+
+	inline bool IsRushNote() const
+	{
+		return target_type == TargetType_TriangleRush ||
+			target_type == TargetType_CircleRush ||
+			target_type == TargetType_CrossRush ||
+			target_type == TargetType_SquareRush ||
+			target_type == TargetType_StarRush;
 	}
 
 	inline bool IsLongNoteStart() const { return IsLongNote() && !long_end; }

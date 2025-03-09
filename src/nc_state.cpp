@@ -25,8 +25,10 @@ void TargetStateEx::ResetPlayState()
 	kiseki_dir_norot = { 0.0f, 0.0f };
 	kiseki.clear();
 	vertex_count_max = 0;
+	long_bonus_timer = 0.0f;
 	score_bonus = 0;
-	double_bonus = false;
+	ct_score_bonus = 0;
+	double_tapped = false;
 }
 
 bool TargetStateEx::IsChainSucessful()

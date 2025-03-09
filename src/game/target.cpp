@@ -78,12 +78,14 @@ const char* GetButtonLayer(int32_t target_type)
 
 HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 {
-	if (target->target_type < TargetType_Custom || target->target_type >= TargetType_Max)
-		return originalCreateTargetAetLayers(target);
-
+	// NOTE: Copy some stuff we might want to keep handy
 	TargetStateEx* ex = GetTargetStateEx(target);
 	ex->org = target;
 	ex->target_pos = target->target_pos;
+
+	// NOTE: From here, call the original routine if this is not an NC note
+	if (target->target_type < TargetType_Custom || target->target_type >= TargetType_Max)
+		return originalCreateTargetAetLayers(target);
 
 	// NOTE: Remove previously created aet objects, if present
 	aet::Stop(&target->target_aet);
@@ -204,18 +206,21 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 				ex->success = true;
 			}
 		}
-
-		if (ex->IsLongNoteStart() && ex->holding)
-		{
-			ex->length_remaining -= dt;
-			ex->length_remaining = fmaxf(ex->length_remaining, 0.0f);
-		}
 	}
 	
 	if (ShouldUpdateTargets())
 	{
 		for (TargetStateEx* tgt : state.target_references)
 		{
+			// NOTE: Update rush / long note length and timer
+			if (tgt->IsLongNoteStart() && tgt->holding)
+			{
+				tgt->length_remaining = fmaxf(tgt->length_remaining - dt, 0.0f);
+				tgt->long_bonus_timer += dt;
+			}
+			else if (tgt->IsRushNote() && tgt->holding)
+				tgt->length_remaining = fmaxf(tgt->length_remaining - dt, 0.0f);
+
 			if (tgt->IsLinkNoteStart())
 			{
 				UpdateLinkStar(data, tgt, dt);

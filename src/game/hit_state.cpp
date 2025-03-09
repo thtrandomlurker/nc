@@ -33,7 +33,7 @@ namespace nc
 		return HitState_None;
 	}
 
-	static int32_t GetHitStateInternal(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, ButtonState** hold_button)
+	static int32_t GetHitStateInternal(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, ButtonState** hold_button, bool* double_tapped)
 	{
 		if (ex->force_hit_state != HitState_None)
 			return ex->force_hit_state;
@@ -48,7 +48,7 @@ namespace nc
 			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
 			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
 
-			ex->double_bonus = face->tapped && arrow->tapped;
+			*double_tapped = face->tapped && arrow->tapped;
 			hit = (face->down && arrow->tapped) || (arrow->down && face->tapped);
 
 			// TODO: Add logic for WRONG
@@ -78,7 +78,7 @@ namespace nc
 		else if (ex->IsStarLikeNote())
 			hit = macro_state.GetStarHit();
 		else if (target->target_type == TargetType_StarW)
-			hit = macro_state.GetDoubleStarHit(&ex->double_bonus);
+			hit = macro_state.GetDoubleStarHit(double_tapped);
 
 		if (target->flying_time_remaining < -NormalWindow[HitState_Sad])
 			return HitState_Worst;
@@ -113,7 +113,8 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 
 		// NOTE: Evaluate note hit
 		ButtonState* hold_button = nullptr;
-		int32_t hit_state = nc::GetHitStateInternal(game, target, ex, &hold_button);
+		bool double_tapped = false;
+		int32_t hit_state = nc::GetHitStateInternal(game, target, ex, &hold_button, &double_tapped);
 
 		if (hit_state != HitState_None)
 		{
@@ -131,6 +132,7 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 
 			target->hit_state = hit_state;
 			ex->hit_state = hit_state;
+			ex->double_tapped = double_tapped;
 			target->hit_time = target->flying_time_remaining;
 		}
 	}

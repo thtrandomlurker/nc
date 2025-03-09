@@ -13,6 +13,8 @@
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
+const int32_t* life_table = reinterpret_cast<const int32_t*>(0x140BE9EA0);
+
 static bool ParseExtraCSV(const char* data, size_t size)
 {
 	state.target_ex.clear();
@@ -328,6 +330,46 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 		}
 	}
 
+	// NOTE: Patch score reference
+	int32_t life = 127;
+	int32_t total_chance_bonus = 0;
+	int32_t total_hold_bonus = 0;
+	int32_t total_link_bonus = 0;
+
+	for (size_t i = 0; i < pv_game->pv_data.targets.size(); i++)
+	{
+		for (int j = 0; j < pv_game->pv_data.targets[i].target_count; j++)
+		{
+			PvDscTarget& tgt = pv_game->pv_data.targets[i].targets[j];
+			TargetStateEx* ex = GetTargetStateEx(i, j);
+
+			if (ex->IsLinkNote())
+				total_link_bonus += 200;
+
+			if (state.chance_time.CheckTargetInRange(i))
+			{
+				total_chance_bonus += 1000;
+				
+				// NOTE: The game will apply life bonus to notes in chance time because
+				//       it isn't aware of chance times, so we need to deduct those too.
+				if (life == 255)
+					pv_game->reference_score_with_life -= 10;
+			}
+
+			pv_game->target_reference_scores[i + 1] += total_chance_bonus + total_link_bonus;
+		}
+
+		if (!state.chance_time.CheckTargetInRange(i))
+		{
+			life += life_table[21 * GetPvGameplayInfo()->difficulty];
+			if (life > 255)
+				life = 255;
+		}
+	}
+
+	pv_game->reference_score += total_chance_bonus + total_hold_bonus + total_link_bonus;
+	pv_game->reference_score_with_life += total_chance_bonus + total_hold_bonus + total_link_bonus;
+
 	for (TargetStateEx& ex : state.target_ex)
 	{
 		if (ex.next == nullptr && ex.prev == nullptr)
@@ -336,7 +378,7 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 		nc::Print("TARGET %03d/%03d:  %02d  %d:%.3f  <%d-%d-%d>\n", ex.target_index, ex.sub_index, ex.target_type, ex.long_end, ex.length, ex.link_start, ex.link_step, ex.link_end);
 	}
 
-	return ret;
+	return pv_game->reference_score;
 }
 
 extern "C"
