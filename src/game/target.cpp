@@ -10,10 +10,10 @@ static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, Targe
 static void DrawLongNoteKiseki(TargetStateEx* ex);
 
 static const NoteSprite nc_target_layers[] = {
-	{ nullptr,                nullptr, nullptr }, // 0x19 - Triangle Rush
-	{ nullptr,                nullptr, nullptr }, // 0x1A - Circle Rush
-	{ nullptr,                nullptr, nullptr }, // 0x1B - Cross Rush
-	{ nullptr,                nullptr, nullptr }, // 0x1C - Square Rush
+	{ "target_sankaku_long",  nullptr, nullptr }, // 0x19 - Triangle Rush
+	{ "target_maru_long",     nullptr, nullptr }, // 0x1A - Circle Rush
+	{ "target_batsu_long",    nullptr, nullptr }, // 0x1B - Cross Rush
+	{ "target_shikaku_long",  nullptr, nullptr }, // 0x1C - Square Rush
 	{ "target_up_w",          nullptr, nullptr }, // 0x1D - Triangle W
 	{ "target_right_w",       nullptr, nullptr }, // 0x1E - Circle W
 	{ "target_down_w",        nullptr, nullptr }, // 0x1F - Cross W
@@ -32,10 +32,10 @@ static const NoteSprite nc_target_layers[] = {
 };
 
 static const NoteSprite nc_button_layers[] = {
-	{ nullptr,                nullptr, nullptr }, // 0x19 - Triangle Rush
-	{ nullptr,                nullptr, nullptr }, // 0x1A - Circle Rush
-	{ nullptr,                nullptr, nullptr }, // 0x1B - Cross Rush
-	{ nullptr,                nullptr, nullptr }, // 0x1C - Square Rush
+	{ "button_touch",         nullptr, nullptr }, // 0x19 - Triangle Rush
+	{ "button_touch",         nullptr, nullptr }, // 0x1A - Circle Rush
+	{ "button_touch",         nullptr, nullptr }, // 0x1B - Cross Rush
+	{ "button_touch",         nullptr, nullptr }, // 0x1C - Square Rush
 	{ "button_up_w",          nullptr, nullptr }, // 0x1D - Triangle W
 	{ "button_right_w",       nullptr, nullptr }, // 0x1E - Circle W
 	{ "button_down_w",        nullptr, nullptr }, // 0x1F - Cross W
@@ -152,7 +152,7 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 		// NOTE: Update spawned link stars
 		//
 		TargetStateEx* ex = GetTargetStateEx(target);
-		if (ex->link_start || ex->IsLongNoteStart())
+		if (ex->link_start || ex->IsLongNoteStart() || ex->IsRushNote())
 			state.PushTarget(ex);
 
 		if (ex->link_step)

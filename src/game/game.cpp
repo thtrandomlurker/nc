@@ -14,6 +14,7 @@
 
 constexpr int32_t DoubleScoreBonus = 200;
 constexpr float   LongNoteInterval = 0.1;
+constexpr int32_t RushNotePopBonus = 30;
 constexpr int32_t ChanceTimeScoreBonus[4]   = { 1000, 600, 200, 60 };
 constexpr int32_t LongNoteHoldScoreBonus[4] = { 20,   10,  10,  0  };
 constexpr int32_t LinkNoteScoreBonus[4]     = { 200,  100, 0,   0  };
@@ -74,6 +75,14 @@ static void CalculateLongNoteScoreBonus(TargetStateEx* ex)
 	}
 }
 
+static void IncreaseRushNoteScoreBonus(TargetStateEx* ex)
+{
+	ex->score_bonus += RushNotePopBonus;
+	GetPVGameData()->score += RushNotePopBonus;
+	if (ex->score_bonus >= 0)
+		GetPVGameData()->ui.SetBonusText(ex->score_bonus, ex->target_pos.x, ex->target_pos.y);
+}
+
 HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	PVGameArcade* game,
 	bool* play_default_se,
@@ -97,35 +106,44 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	// NOTE: Update input manager
 	macro_state.Update(game->ptr08, 0);
 
-	// NOTE: Poll input for ongoing long notes
 	if (ShouldUpdateTargets())
 	{
 		for (TargetStateEx* tgt : state.target_references)
 		{
-			if (!tgt->IsLongNoteStart() || !tgt->holding)
-				continue;
-
-			bool is_in_zone = false;
-
-			// NOTE: Check if the end target is in it's timing window
-			if (tgt->next->org != nullptr)
+			// NOTE: Poll input for ongoing long notes
+			if (tgt->IsLongNoteStart() && tgt->holding)
 			{
-				float time = tgt->next->org->flying_time_remaining;
-				is_in_zone = time >= game->sad_late_window && time <= game->sad_early_window;
+				bool is_in_zone = false;
+
+				// NOTE: Check if the end target is in it's timing window
+				if (tgt->next->org != nullptr)
+				{
+					float time = tgt->next->org->flying_time_remaining;
+					is_in_zone = time >= game->sad_late_window && time <= game->sad_early_window;
+				}
+
+				CalculateLongNoteScoreBonus(tgt);
+
+				// NOTE: Check if the start target button has been released;
+				//       if it's the end note is not inside it's timing zone,
+				//       automatically mark it as a fail.
+				if (!nc::CheckLongNoteHolding(tgt) && !is_in_zone)
+				{
+					tgt->next->force_hit_state = HitState_Worst;
+					tgt->StopAet();
+					tgt->holding = false;
+					state.PopTarget(tgt);
+					state.PlaySoundEffect(SEType_LongFail);
+				}
 			}
-
-			CalculateLongNoteScoreBonus(tgt);
-
-			// NOTE: Check if the start target button has been released;
-			//       if it's the end note is not inside it's timing zone,
-			//       automatically mark it as a fail.
-			if (!nc::CheckLongNoteHolding(tgt) && !is_in_zone)
+			// NOTE: Poll input for ongoing rush notes
+			else if (tgt->IsRushNote() && tgt->holding)
 			{
-				tgt->next->force_hit_state = HitState_Worst;
-				tgt->StopAet();
-				tgt->holding = false;
-				state.PopTarget(tgt);
-				state.PlaySoundEffect(SEType_LongFail);
+				if (nc::CheckRushNotePops(tgt))
+					IncreaseRushNoteScoreBonus(tgt);
+
+				if (tgt->length_remaining <= 0.0f)
+					tgt->holding = false;
 			}
 		}
 	}
@@ -224,6 +242,11 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 				{
 					ex->prev->StopAet();
 					state.PopTarget(ex->prev);
+				}
+				else if (ex->IsLongNote())
+				{
+					if (ex->IsWrong())
+						state.PopTarget(ex);
 				}
 
 				rating_pos[(*rating_count)++] = tgt->target_pos;

@@ -81,6 +81,16 @@ namespace nc
 			hit = macro_state.GetStarHit();
 		else if (target->target_type == TargetType_StarW)
 			hit = macro_state.GetDoubleStarHit(double_tapped);
+		else if (ex->IsRushNote())
+		{
+			// NOTE: Star rush input is handled right up there
+			//
+			int32_t base_index = target->target_type - TargetType_TriangleRush;
+			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
+			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
+
+			hit = face->IsTapped() || arrow->IsTapped();
+		}
 
 		if (target->flying_time_remaining < -NormalWindow[HitState_Sad])
 			return HitState_Worst;
@@ -128,14 +138,16 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 					ex->holding = true;
 					ex->next->force_hit_state = HitState_None;
 				}
+				else if (ex->IsRushNote())
+					ex->holding = true;
 				else if (target->target_type == TargetType_ChanceStar)
 					*success = state.chance_time.GetFillRate() == 15;
 			}
 
 			target->hit_state = hit_state;
+			target->hit_time = target->flying_time_remaining;
 			ex->hit_state = hit_state;
 			ex->double_tapped = double_tapped;
-			target->hit_time = target->flying_time_remaining;
 		}
 	}
 
@@ -149,4 +161,33 @@ bool nc::CheckLongNoteHolding(TargetStateEx* ex)
 
 	ex->holding = ex->hold_button->IsDown();
 	return ex->holding;
+}
+
+bool nc::CheckRushNotePops(TargetStateEx* ex)
+{
+	ButtonState* button1 = nullptr;
+	ButtonState* button2 = nullptr;
+
+	switch (ex->target_type)
+	{
+	case TargetType_TriangleRush:
+	case TargetType_CircleRush:
+	case TargetType_CrossRush:
+	case TargetType_SquareRush:
+		button1 = &macro_state.buttons[ex->target_type - TargetType_TriangleRush + Button_Triangle];
+		button2 = &macro_state.buttons[ex->target_type - TargetType_TriangleRush + Button_Up];
+		break;
+	case TargetType_StarRush:
+		// TODO: Implement this
+		break;
+	}
+
+	bool cond = false;
+	if (button1 != nullptr)
+		cond |= button1->IsTapped();
+
+	if (button2 != nullptr)
+		cond |= button2->IsTapped();
+
+	return cond;
 }
