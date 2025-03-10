@@ -39,13 +39,10 @@ enum GameButton : int32_t
 static FUNCTION_PTR(int64_t, __fastcall, GetPvKeyStateDown, 0x140274930, void* handler, int32_t key);
 static FUNCTION_PTR(int64_t, __fastcall, GetPvKeyStateTapped, 0x140274960, void* handler, int32_t key);
 
-static void UpdateButtonState(ButtonState* state, const int64_t* buffer, int32_t index, int32_t mask, int32_t mask2 = -1)
+static void UpdateButtonState(ButtonState* state, const int64_t* buffer, int32_t index, int32_t mask)
 {
-	state->down = (buffer[index] & mask) != 0;
-	if (mask2 != -1)
-		state->down = state->down || ((buffer[index] & mask2) != 0);
-
-	state->up = !state->down;
+	state->data[0].down = (buffer[index] & mask) != 0;
+	state->data[0].up = !state->data[0].down;
 }
 
 bool MacroState::Update(void* internal_handler, int32_t player_index)
@@ -66,7 +63,11 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	}
 
 	// NOTE: Update buttons
-	memcpy(prev, buttons, sizeof(buttons));
+	for (int32_t i = 0; i < Button_Max; i++)
+	{
+		for (int32_t j = 14; j >= 0; j--)
+			buttons[i].data[j + 1] = buttons[i].data[j];
+	}
 
 	int64_t key_states[8];
 	for (int i = 0; i < 8; i++)
@@ -89,15 +90,17 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	UpdateButtonState(&buttons[Button_R3], key_states, ButtonIndex_R, GameButton_R3);
 	UpdateButtonState(&buttons[Button_R4], key_states, ButtonIndex_R, GameButton_R4);
 
+	/*
 	buttons[Button_LStick].down = fabsf(sticks[StickAxis_LX].cur) >= sensivity || fabsf(sticks[StickAxis_LY].cur) >= sensivity;
 	buttons[Button_RStick].down = fabsf(sticks[StickAxis_RX].cur) >= sensivity || fabsf(sticks[StickAxis_RY].cur) >= sensivity;
 	buttons[Button_LStick].up = !buttons[Button_LStick].down;
 	buttons[Button_RStick].up = !buttons[Button_RStick].down;
+	*/
 
 	for (int i = 0; i < Button_Max; i++)
 	{
-		buttons[i].tapped = buttons[i].down && prev[i].up;
-		buttons[i].released = buttons[i].up && prev[i].down;
+		buttons[i].data[0].tapped = buttons[i].data[0].down && buttons[i].data[1].up;
+		buttons[i].data[0].released = buttons[i].data[0].up && buttons[i].data[1].down;
 	}
 
 	return true;
@@ -105,16 +108,16 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 
 bool MacroState::GetStarHit() const
 {
-	return buttons[Button_L1].tapped ||
-		buttons[Button_L2].tapped ||
-		buttons[Button_L3].tapped ||
-		buttons[Button_L4].tapped ||
-		buttons[Button_R1].tapped ||
-		buttons[Button_R2].tapped ||
-		buttons[Button_R3].tapped ||
-		buttons[Button_R4].tapped ||
-		buttons[Button_LStick].tapped ||
-		buttons[Button_RStick].tapped;
+	return buttons[Button_L1].IsTapped() ||
+		buttons[Button_L2].IsTapped() ||
+		buttons[Button_L3].IsTapped() ||
+		buttons[Button_L4].IsTapped() ||
+		buttons[Button_R1].IsTapped() ||
+		buttons[Button_R2].IsTapped() ||
+		buttons[Button_R3].IsTapped() ||
+		buttons[Button_R4].IsTapped() ||
+		buttons[Button_LStick].IsTapped() ||
+		buttons[Button_RStick].IsTapped();
 }
 
 bool MacroState::GetDoubleStarHit(bool* both_flicked) const
@@ -131,19 +134,22 @@ bool MacroState::GetDoubleStarHit(bool* both_flicked) const
 	const ButtonState* r = nullptr;
 
 	for (int32_t i = 0; i < 6; i++)
-		if (buttons[buttons_left[i]].down)
+		if (buttons[buttons_left[i]].IsDown())
 			l = &buttons[buttons_left[i]];
 
 	for (int32_t i = 0; i < 6; i++)
-		if (buttons[buttons_right[i]].down)
+		if (buttons[buttons_right[i]].IsDown())
 			r = &buttons[buttons_right[i]];
 
 	if (l != nullptr && r != nullptr)
 	{
-		if (l->tapped || r->tapped)
+		if (l->IsTapped() || r->IsTapped())
 		{
 			if (both_flicked != nullptr)
-				*both_flicked = l->tapped && r->tapped;
+			{
+				*both_flicked = (l->IsTapped() && r->IsTappedInNearFrames()) ||
+					(r->IsTapped() && l->IsTappedInNearFrames());
+			}
 
 			return true;
 		}

@@ -48,8 +48,10 @@ namespace nc
 			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
 			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
 
-			*double_tapped = face->tapped && arrow->tapped;
-			hit = (face->down && arrow->tapped) || (arrow->down && face->tapped);
+			*double_tapped = (face->IsTapped() && arrow->IsTappedInNearFrames()) ||
+				(arrow->IsTapped() && face->IsTappedInNearFrames());
+			hit = (face->IsDown() && arrow->IsTapped()) || (arrow->IsDown() && face->IsTapped());
+			
 
 			// TODO: Add logic for WRONG
 			//
@@ -63,13 +65,13 @@ namespace nc
 
 			if (!ex->long_end)
 			{
-				hit = face->tapped || arrow->tapped;
-				*hold_button = face->tapped ? face : arrow;
+				hit = face->IsTapped() || arrow->IsTapped();
+				*hold_button = face->IsTapped() ? face : arrow;
 			}
 			else if (ex->long_end)
 			{
 				if (ex->prev->hold_button != nullptr)
-					hit = ex->prev->hold_button->released;
+					hit = ex->prev->hold_button->IsReleased();
 			}
 
 			// TODO: Add logic for WRONG
@@ -145,6 +147,6 @@ bool nc::CheckLongNoteHolding(TargetStateEx* ex)
 	if (ex->hold_button == nullptr)
 		return false;
 
-	ex->holding = ex->hold_button->down;
+	ex->holding = ex->hold_button->IsDown();
 	return ex->holding;
 }

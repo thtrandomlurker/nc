@@ -45,10 +45,19 @@ enum StickAxis : int32_t
 
 struct ButtonState
 {
-	bool down;
-	bool up;
-	bool tapped;
-	bool released;
+	struct StateInternal
+	{
+		bool down;
+		bool up;
+		bool tapped;
+		bool released;
+	} data[16];
+	
+	inline bool IsDown() const { return data[0].down; }
+	inline bool IsTapped() const { return data[0].tapped; }
+	inline bool IsUp() const { return data[0].up; }
+	inline bool IsReleased() const { return data[0].released; }
+	inline bool IsTappedInNearFrames() const { return data[0].tapped || data[1].tapped || data[2].tapped; }
 };
 
 struct StickState
@@ -62,7 +71,6 @@ struct StickState
 struct MacroState
 {
 	ButtonState buttons[Button_Max];
-	ButtonState prev[Button_Max];
 	StickState sticks[StickAxis_Max];
 	float sensivity;
 	int32_t device;
@@ -70,7 +78,6 @@ struct MacroState
 	MacroState()
 	{
 		memset(buttons, 0, sizeof(buttons));
-		memset(prev, 0, sizeof(prev));
 		memset(sticks, 0, sizeof(sticks));
 		sensivity = 0.6f;
 		device = InputDevice_Unknown;
