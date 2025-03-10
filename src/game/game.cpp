@@ -63,11 +63,14 @@ static void CalculateLongNoteScoreBonus(TargetStateEx* ex)
 			ex->long_bonus_timer -= LongNoteInterval;
 		}
 
-		GetPVGameData()->ui.SetBonusText(
-			ex->score_bonus + ex->ct_score_bonus,
-			ex->target_pos.x,
-			ex->target_pos.y
-		);
+		if (ex->score_bonus > 0 || ex->ct_score_bonus > 0)
+		{
+			GetPVGameData()->ui.SetBonusText(
+				ex->score_bonus + ex->ct_score_bonus,
+				ex->target_pos.x,
+				ex->target_pos.y
+			);
+		}
 	}
 }
 
@@ -293,6 +296,8 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 
 					*play_default_se = false;
 				}
+				else if (ex->IsLongNoteEnd())
+					state.PlaySoundEffect(SEType_LongFail);
 			}
 		}
 	}
