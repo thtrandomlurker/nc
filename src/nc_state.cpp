@@ -6,6 +6,7 @@ void TargetStateEx::ResetPlayState()
 	org = nullptr;
 	force_hit_state = HitState_None;
 	hit_state = HitState_None;
+	hit_time = 0.0f;
 	flying_time_max = 0.0f;
 	flying_time_remaining = 0.0f;
 	delta_time_max = 0.0f;
@@ -25,6 +26,7 @@ void TargetStateEx::ResetPlayState()
 	kiseki_dir_norot = { 0.0f, 0.0f };
 	kiseki.clear();
 	vertex_count_max = 0;
+	fix_long_kiseki = false;
 	long_bonus_timer = 0.0f;
 	score_bonus = 0;
 	ct_score_bonus = 0;
@@ -63,15 +65,14 @@ bool TargetStateEx::SetLongNoteAet()
 	aet::SetPlay(target_aet, false);
 	aet::SetFrame(target_aet, 360.0f);
 
+	diva::vec3 scale = { 1.0f, 1.0f, 1.0f };
+	aet::SetScale(target_aet, &scale);
+
 	// NOTE: Free original aets
 	org->target_aet = 0;
 	aet::Stop(&org->button_aet);
 	aet::Stop(&org->target_eff_aet);
 	aet::Stop(&org->dword78);
-
-	// TODO: Set scale to 1.0;
-	//       Fix KISEKI pos when hit after the cool window!!!
-	//
 
 	return true;
 }

@@ -103,6 +103,7 @@ struct TargetStateEx
 	PvGameTarget* org = nullptr;
 	int32_t force_hit_state = HitState_None;
 	int32_t hit_state = HitState_None;
+	float hit_time = 0.0f;
 	float flying_time_max = 0.0f;
 	float flying_time_remaining = 0.0f;
 	float delta_time_max = 0.0f;
@@ -123,8 +124,6 @@ struct TargetStateEx
 
 	// NOTE: Visual info for long notes. This is kind of a workaround as to not mess too much
 	//       with the vanilla game structs.
-	// PS:   Button aet handle isn't needed because this is only used for when the player is
-	//       holding the button, so there isn't a button icon.
 	int32_t target_aet = 0;
 	int32_t button_aet = 0;
 	diva::vec2 target_pos = { };
@@ -133,6 +132,7 @@ struct TargetStateEx
 	diva::vec2 kiseki_dir_norot = { };
 	std::vector<SpriteVertex> kiseki;
 	size_t vertex_count_max = 0;
+	bool fix_long_kiseki = false;
 
 	void ResetPlayState();
 	bool IsChainSucessful();

@@ -136,6 +136,8 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 				{
 					ex->hold_button = hold_button;
 					ex->holding = true;
+					ex->fix_long_kiseki = true;
+					ex->kiseki_pos = ex->target_pos;
 					ex->next->force_hit_state = HitState_None;
 				}
 				else if (ex->IsRushNote())
@@ -147,6 +149,7 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 			target->hit_state = hit_state;
 			target->hit_time = target->flying_time_remaining;
 			ex->hit_state = hit_state;
+			ex->hit_time = target->flying_time_remaining;
 			ex->double_tapped = double_tapped;
 		}
 	}

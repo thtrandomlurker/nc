@@ -419,6 +419,26 @@ static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, Targe
 		ex->kiseki_time -= 1.0f / KisekiRate;
 	}
 
+	// NOTE: Snap kiseki to the target position when hitting too late
+	if (ex->fix_long_kiseki)
+	{
+		if (ex->hit_time < 0.0f)
+		{
+			int32_t fix_count = fabsf(ex->hit_time) / (1.0f / KisekiRate) + 1;
+			diva::vec2 target_pos = GetScaledPosition(ex->target_pos);
+
+			for (int32_t i = count; i < fix_count + count; i++)
+			{
+				ex->kiseki[i * 2].pos.x = target_pos.x;
+				ex->kiseki[i * 2].pos.y = target_pos.y;
+				ex->kiseki[i * 2 + 1].pos.x = target_pos.x;
+				ex->kiseki[i * 2 + 1].pos.y = target_pos.y;
+			}
+
+			ex->fix_long_kiseki = false;
+		}
+	}
+
 	// NOTE: Update position
 	for (size_t i = 0; i < count; i++)
 	{
