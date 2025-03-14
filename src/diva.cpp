@@ -79,10 +79,14 @@ bool aet::StopOnEnded(int32_t* id)
 // NOTE: InputState implementation
 static FUNCTION_PTR(float, __fastcall, IS_GetPosition, 0x1402AB2C0, diva::InputState* t, int32_t index);
 static FUNCTION_PTR(int32_t, __fastcall, IS_GetDeviceVendor, 0x1402AAF20, diva::InputState* t);
+static FUNCTION_PTR(int32_t, __fastcall, IS_IsButtonTapped, 0x1402AAF80, diva::InputState* t, int32_t key);
+static FUNCTION_PTR(int32_t, __fastcall, IS_IsButtonDown, 0x1402AAFE0, diva::InputState* t, int32_t key);
 static FUNCTION_PTR(int32_t, __fastcall, GetNormalizedDeviceType, 0x1402ACAA0, int32_t vendor);
 
 float diva::InputState::GetPosition(int32_t index) { return IS_GetPosition(this, index); }
 int32_t diva::InputState::GetDevice() { return GetNormalizedDeviceType(IS_GetDeviceVendor(this)); }
+bool diva::InputState::IsButtonTapped(int32_t key) { return IS_IsButtonTapped(this, key); }
+bool diva::InputState::IsButtonDown(int32_t key) { return IS_IsButtonDown(this, key); }
 
 // NOTE: PVGameArcade implementation
 static FUNCTION_PTR(void, __fastcall, PVGAC_EraseTarget, 0x14026E5C0, PVGameArcade* data, PvGameTarget* target);

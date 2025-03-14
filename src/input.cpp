@@ -90,12 +90,14 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	UpdateButtonState(&buttons[Button_R3], key_states, ButtonIndex_R, GameButton_R3);
 	UpdateButtonState(&buttons[Button_R4], key_states, ButtonIndex_R, GameButton_R4);
 
-	/*
-	buttons[Button_LStick].down = fabsf(sticks[StickAxis_LX].cur) >= sensivity || fabsf(sticks[StickAxis_LY].cur) >= sensivity;
-	buttons[Button_RStick].down = fabsf(sticks[StickAxis_RX].cur) >= sensivity || fabsf(sticks[StickAxis_RY].cur) >= sensivity;
-	buttons[Button_LStick].up = !buttons[Button_LStick].down;
-	buttons[Button_RStick].up = !buttons[Button_RStick].down;
-	*/
+	buttons[Button_LStick].data[0].down = fabsf(sticks[StickAxis_LX].cur) >= sensivity ||
+		fabsf(sticks[StickAxis_LY].cur) >= sensivity;
+
+	buttons[Button_RStick].data[0].down = fabsf(sticks[StickAxis_RX].cur) >= sensivity ||
+		fabsf(sticks[StickAxis_RY].cur) >= sensivity;
+
+	buttons[Button_LStick].data[0].up = !buttons[Button_LStick].data[0].down;
+	buttons[Button_RStick].data[0].up = !buttons[Button_RStick].data[0].down;
 
 	for (int i = 0; i < Button_Max; i++)
 	{
@@ -108,6 +110,9 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 
 bool MacroState::GetStarHit() const
 {
+	if (diva::GetInputState(0)->GetDevice() != InputDevice_Keyboard)
+		return buttons[Button_LStick].IsTapped() || buttons[Button_RStick].IsTapped();
+
 	return buttons[Button_L1].IsTapped() ||
 		buttons[Button_L2].IsTapped() ||
 		buttons[Button_L3].IsTapped() ||
@@ -115,9 +120,7 @@ bool MacroState::GetStarHit() const
 		buttons[Button_R1].IsTapped() ||
 		buttons[Button_R2].IsTapped() ||
 		buttons[Button_R3].IsTapped() ||
-		buttons[Button_R4].IsTapped() ||
-		buttons[Button_LStick].IsTapped() ||
-		buttons[Button_RStick].IsTapped();
+		buttons[Button_R4].IsTapped();
 }
 
 bool MacroState::GetDoubleStarHit(bool* both_flicked) const

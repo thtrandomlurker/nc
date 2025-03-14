@@ -794,6 +794,8 @@ namespace diva
 		// 0x17 - RStick Y axis
 		float GetPosition(int32_t index);
 		int32_t GetDevice();
+		bool IsButtonDown(int32_t key);
+		bool IsButtonTapped(int32_t key);
 	};
 
 	inline FUNCTION_PTR(InputState*, __fastcall, GetInputState, 0x1402AC970, int32_t index);
