@@ -243,10 +243,15 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					ex->prev->StopAet();
 					state.PopTarget(ex->prev);
 				}
-				else if (ex->IsLongNote())
+				else if (ex->IsLinkNoteEnd() && nc::CheckHit(hit_state, true, false))
 				{
-					if (ex->IsWrong())
-						state.PopTarget(ex);
+					// NOTE: Find chain start target
+					TargetStateEx* chain = nullptr;
+					for (chain = ex; chain != nullptr && chain->prev != nullptr; chain = chain->prev) { }
+
+					if (chain != nullptr)
+						chain->StopAet();
+					ex->StopAet();
 				}
 
 				rating_pos[(*rating_count)++] = tgt->target_pos;
