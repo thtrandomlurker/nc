@@ -596,7 +596,8 @@ struct PVGameArcade
 	float fl13528;
 	float fl1352C;
 	float fl13530;
-	uint8_t gap13534[8];
+	bool mute_slide_chime;
+	uint8_t gap13535[7];
 	bool bool1353C[4];
 	uint8_t gap13540[14];
 	int8_t char1354E[4];

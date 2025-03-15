@@ -310,6 +310,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					case TargetType_LinkStar:
 					case TargetType_LinkStarEnd:
 						state.PlaySoundEffect(SEType_Star);
+						game->mute_slide_chime = true;
 						break;
 					case TargetType_ChanceStar:
 						if (state.chance_time.GetFillRate() == 15)
