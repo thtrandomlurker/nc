@@ -143,7 +143,10 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 				else if (ex->IsRushNote())
 					ex->holding = true;
 				else if (target->target_type == TargetType_ChanceStar)
+				{
 					*success = state.chance_time.GetFillRate() == 15;
+					state.chance_time.successful = *success;
+				}
 			}
 
 			target->hit_state = hit_state;

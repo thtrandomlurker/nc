@@ -20,6 +20,7 @@ bool SetChanceTimeMode(PVGameUI* ui, int32_t mode)
 		state.ui.SetLayer(LayerUI_ChanceFrameTop, true, "chance_frame_top", 12, 0x10000);
 		state.ui.SetLayer(LayerUI_ChanceFrameBottom, true, "chance_frame_bottom", 12, 0x10000);
 		state.ui.SetLayer(LayerUI_StarGauge, true, "gauge_ch00", 13, 0x10000);
+		state.ui.SetLayer(LayerUI_ChanceTxt, true, "chance_start_txt", 12, 0x20000);
 
 		state.chance_time.enabled = true;
 	}
@@ -29,6 +30,13 @@ bool SetChanceTimeMode(PVGameUI* ui, int32_t mode)
 		SetNormalFrameAction(ui, true, 1.0f);
 		SetFrameAction(ui, false, 1, 4, 60.0f);
 		state.chance_time.enabled = false;
+		state.ui.SetLayer(
+			LayerUI_ChanceTxt,
+			true,
+			state.chance_time.successful ? "chance_result_success_txt" : "chance_end_txt",
+			12,
+			0x20000
+		);
 	}
 	else
 		return false;

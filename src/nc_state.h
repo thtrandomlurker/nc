@@ -185,11 +185,13 @@ struct ChanceState
 	int32_t last_target_index = -1;
 	int32_t targets_hit = 0;
 	bool enabled = false;
+	bool successful = false;
 
 	inline void ResetPlayState()
 	{
 		targets_hit = 0;
 		enabled = false;
+		successful = false;
 	}
 
 	inline int32_t GetTargetCount() const
@@ -224,6 +226,7 @@ enum LayerUI : int32_t
 	LayerUI_ChanceFrameBottom,
 	LayerUI_StarGaugeBase,
 	LayerUI_StarGauge,
+	LayerUI_ChanceTxt,
 	LayerUI_Max
 };
 
