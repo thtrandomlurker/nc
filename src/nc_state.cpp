@@ -167,27 +167,27 @@ void StateEx::PlaySoundEffect(int32_t type)
 	switch (type)
 	{
 	case SEType_Double:
-		sound::PlaySoundEffect(3, "400_button_w1", 1.0f);
+		sound::PlaySoundEffect(3, "button_w1_mmv", 1.0f);
 		break;
 	case SEType_LongStart:
-		sound::ReleaseCue(3, "800_button_l1_on", true);
-		sound::PlaySoundEffect(3, "800_button_l1_on", 1.0f);
+		sound::ReleaseCue(3, "button_l1_on_mmv", true);
+		sound::PlaySoundEffect(3, "button_l1_on_mmv", 1.0f);
 		break;
 	case SEType_LongRelease:
-		sound::ReleaseCue(3, "800_button_l1_on", true);
-		sound::PlaySoundEffect(3, "800_button_l1_off", 1.0f);
+		sound::ReleaseCue(3, "button_l1_on_mmv", true);
+		sound::PlaySoundEffect(3, "button_l1_off_mmv", 1.0f);
 		break;
 	case SEType_LongFail:
-		sound::ReleaseCue(3, "800_button_l1_on", false);
+		sound::ReleaseCue(3, "button_l1_on_mmv", false);
 		break;
 	case SEType_Star:
-		sound::PlaySoundEffect(3, "1200_scratch1", 1.0f);
+		sound::PlaySoundEffect(3, "scratch1_mmv", 1.0f);
 		break;
 	case SEType_Cymbal:
-		sound::PlaySoundEffect(3, "1516_cymbal", 1.0f);
+		sound::PlaySoundEffect(3, "cymbal_mmv", 1.0f);
 		break;
 	case SEType_StarDouble:
-		sound::PlaySoundEffect(3, "1400_scratch_w1", 1.0f);
+		sound::PlaySoundEffect(3, "scratch_w1_mmv", 1.0f);
 		break;
 	}
 }

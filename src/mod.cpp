@@ -78,6 +78,8 @@ HOOK(bool, __fastcall, TaskPvGameInit, 0x1405DA040, uint64_t a1)
 	prj::string_view strv;
 	aet::LoadAetSet(AetSetID, &str);
 	spr::LoadSprSet(SprSetID, &strv);
+	if (!sound::RequestFarcLoad("rom/sound/se_nc.farc"))
+		nc::Print("Failed to load se_nc.farc\n");
 
 	state.Reset();
 	return originalTaskPvGameInit(a1);
@@ -88,7 +90,8 @@ HOOK(bool, __fastcall, TaskPvGameCtrl, 0x1405DA060, uint64_t a1)
 	if (!state.files_loaded)
 	{
 		state.files_loaded = !aet::CheckAetSetLoading(AetSetID) &&
-			!spr::CheckSprSetLoading(SprSetID);
+			!spr::CheckSprSetLoading(SprSetID) &&
+			!sound::IsFarcLoading("rom/sound/se_nc.farc");
 	}
 
 	return originalTaskPvGameCtrl(a1);
@@ -103,6 +106,7 @@ HOOK(bool, __fastcall, TaskPvGameDest, 0x1405DA0A0, uint64_t a1)
 	{
 		aet::UnloadAetSet(AetSetID);
 		spr::UnloadSprSet(SprSetID);
+		sound::UnloadFarc("rom/sound/se_nc.farc");
 		state.files_loaded = false;
 	}
 

@@ -871,6 +871,18 @@ namespace sound
 	// NOTE: Releases a sound effect from the queue.
 	//
 	inline FUNCTION_PTR(void, __fastcall, ReleaseCue, 0x1405AAD00, int32_t queue_index, const char* name, bool force_release);
+
+	// NOTE: Requests SoundWork to load a sound farc. Returns false if the queue is full.
+	//
+	inline FUNCTION_PTR(bool, __fastcall, RequestFarcLoad, 0x1405AA250, const char* path);
+
+	// NOTE: Returns true if SoundWork is still loading the farc, false otherwise.
+	//
+	inline FUNCTION_PTR(bool, __fastcall, IsFarcLoading, 0x1405AA420, const char* path);
+
+	// NOTE: Unloads a sound farc from memory
+	//
+	inline FUNCTION_PTR(bool, __fastcall, UnloadFarc, 0x1405AA480, const char* path);
 }
 
 namespace dsc
