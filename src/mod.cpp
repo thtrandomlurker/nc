@@ -10,6 +10,7 @@
 #include "game/chance_time.h"
 #include "nc_log.h"
 #include "game/game.h"
+#include "ui/pv_sel.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -126,57 +127,70 @@ HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
 //
 HOOK(bool, __fastcall, LoadDscCtrl, 0x14024E270, PVGamePvData* pv_data, prj::string* path, void* a3, bool a4)
 {
-	if (state.file_state == 0)
+	prj::string patched_path = *path;
+
+	if (state.song_mode == SongMode_NC)
 	{
 		// NOTE: Get filename without extension
 		const char* point = strchr(path->c_str(), '.');
 		size_t length = point != nullptr ? point - path->c_str() : path->size();
 
-		// NOTE: Format file name
-		char csv_path[256] = { '\0' };
-		sprintf_s(csv_path, "%.*s_nc.csv", static_cast<uint32_t>(length), path->c_str());
+		// NOTE: Patch DSC path
+		char patched_dsc_path[256] = { '\0' };
+		sprintf_s(patched_dsc_path, "%.*s_nc.dsc", static_cast<uint32_t>(length), path->c_str());
+		patched_path = patched_dsc_path;
 
-		// NOTE: Check if file exists and start reading it
-		prj::string csv_path_str = csv_path;
-		prj::string fixed;
-		if (FileCheckExists(&csv_path_str, &fixed))
+		// NOTE: Handle CSV reading
+		if (state.file_state == 0)
 		{
-			nc::Print("File (%s) exists! Found at (%s)\n", csv_path_str.c_str(), fixed.c_str());
-			if (!FileRequestLoad(&state.file_handler, csv_path_str.c_str(), 1))
+			// NOTE: Format file name
+			char csv_path[256] = { '\0' };
+			sprintf_s(csv_path, "%.*s_nc.csv", static_cast<uint32_t>(length), path->c_str());
+
+			// NOTE: Check if file exists and start reading it
+			prj::string csv_path_str = csv_path;
+			prj::string fixed;
+			if (FileCheckExists(&csv_path_str, &fixed))
 			{
+				nc::Print("File (%s) exists! Found at (%s)\n", csv_path_str.c_str(), fixed.c_str());
+				if (!FileRequestLoad(&state.file_handler, csv_path_str.c_str(), 1))
+				{
+					state.file_handler = nullptr;
+					state.file_state = 2;
+				}
+				else
+					state.file_state = 1;
+			}
+			else
+			{
+				nc::Print("File (%s) does not exist!\n", csv_path_str.c_str());
 				state.file_handler = nullptr;
 				state.file_state = 2;
 			}
-			else
-				state.file_state = 1;
 		}
-		else
+		else if (state.file_state == 1)
 		{
-			nc::Print("File (%s) does not exist!\n", csv_path_str.c_str());
-			state.file_handler = nullptr;
-			state.file_state = 2;
+			if (!FileCheckNotReady(&state.file_handler))
+				state.file_state = 2;
 		}
-	}
-	else if (state.file_state == 1)
-	{
-		if (!FileCheckNotReady(&state.file_handler))
-			state.file_state = 2;
-	}
-	else if (state.file_state == 2 && state.file_handler != nullptr)
-	{
-		const void* data = FileGetData(&state.file_handler);
-		size_t size = FileGetSize(&state.file_handler);
-		ParseExtraCSV(static_cast<const char*>(data), size);
-		FileFree(&state.file_handler);
+		else if (state.file_state == 2 && state.file_handler != nullptr)
+		{
+			const void* data = FileGetData(&state.file_handler);
+			size_t size = FileGetSize(&state.file_handler);
+			ParseExtraCSV(static_cast<const char*>(data), size);
+			FileFree(&state.file_handler);
+		}
 	}
 
 	if (!state.dsc_loaded)
 	{
-		state.dsc_loaded = originalLoadDscCtrl(pv_data, path, a3, a4);
+		state.dsc_loaded = originalLoadDscCtrl(pv_data, &patched_path, a3, a4);
 		return false;
 	}
 
-	return state.file_state == 2;
+	if (state.song_mode == SongMode_NC)
+		return state.file_state == 2;
+	return state.dsc_loaded;
 }
 
 HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
@@ -406,5 +420,6 @@ extern "C"
 		INSTALL_HOOK(LoadDscCtrl);
 		InstallGameHooks();
 		InstallTargetHooks();
+		InstallPvSelHooks();
 	}
 };

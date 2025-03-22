@@ -88,6 +88,13 @@ enum SEType : int32_t
 	SEType_Max         = 12
 };
 
+enum SongMode : int32_t
+{
+	SongMode_Original = 0,
+	SongMode_NC       = 1,
+	SongMode_Max
+};
+
 struct TargetStateEx
 {
 	// NOTE: Static data; Information about the target.
@@ -271,6 +278,7 @@ struct StateEx
 	UIState ui;
 	int32_t effect_buffer[MaxHitEffectCount] = { };
 	int32_t effect_index = 0;
+	int32_t song_mode = SongMode_Original;
 
 	void ResetPlayState();
 	void Reset();

@@ -179,6 +179,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClCompile Include="src\mod.cpp" />
     <ClCompile Include="src\nc_log.cpp" />
     <ClCompile Include="src\nc_state.cpp" />
+    <ClCompile Include="src\ui\pv_sel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\nc_state.h" />
@@ -192,6 +193,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClInclude Include="src\input.h" />
     <ClInclude Include="src\nc_log.h" />
     <ClInclude Include="src\thirdparty\toml.hpp" />
+    <ClInclude Include="src\ui\pv_sel.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
