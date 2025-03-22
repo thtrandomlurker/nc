@@ -53,7 +53,7 @@ namespace prj
 	using vector = std::vector<T, Allocator<T>>;
 
 	template <typename _K, typename _V>
-	using map = std::map<_K, _V, std::less<_K>, Allocator<std::pair<_K, _V>>>;
+	using map = std::map<_K, _V, std::less<_K>, Allocator<std::pair<const _K, _V>>>;
 }
 
 enum HitState : int32_t
