@@ -215,6 +215,14 @@ namespace diva
 		vec4 row1;
 		vec4 row2;
 		vec4 row3;
+
+		inline diva::vec3 GetScale() const
+		{
+			// NOTE: Only works for 2D transformations
+			float v = sqrtf(powf(row0.x, 2.0f) + powf(row1.x, 2.0f));
+			float t = acosf(row0.x / v);
+			return { t, t, 1.0f };
+		}
 	};
 
 	struct Rect
@@ -386,8 +394,8 @@ struct AetLayout
 	float width;
 	float height;
 	float opacity;
-	uint32_t unk64;
-	int32_t resolutionMode;
+	uint32_t color;
+	int32_t resolution_mode;
 	uint32_t unk6C;
 	int32_t unk70;
 	uint8_t blendMode;
@@ -816,6 +824,8 @@ namespace aet
 	inline FUNCTION_PTR(bool, __fastcall, GetEnded, 0x1402CA510, int32_t id);
 	// NOTE: Retrieves layout data for specific Aet object ID.
 	inline FUNCTION_PTR(void, __fastcall, GetComposition, 0x1402CA670, AetComposition* comp, int32_t id);
+	// NOTE: Returns the time where the specified marker is placed on a layer
+	inline FUNCTION_PTR(float, __fastcall, GetMarkerTime, 0x1402CA170, uint32_t id, const char* layer, const char* marker);
 
 	// NOTE: Plays a layer from a scene
 	inline FUNCTION_PTR(int32_t, __fastcall, PlayLayer, 0x14027B420, uint32_t scene_id, int32_t prio, int32_t flags, const char* layer, const diva::vec2* pos, int32_t index, const char* start_marker, const char* end_marker, float start_time, float end_time, int32_t a11, void* frmctl);

@@ -184,8 +184,7 @@ bool nc::CheckRushNotePops(TargetStateEx* ex)
 		button2 = &macro_state.buttons[ex->target_type - TargetType_TriangleRush + Button_Up];
 		break;
 	case TargetType_StarRush:
-		// TODO: Implement this
-		break;
+		return macro_state.GetStarHit();
 	}
 
 	bool cond = false;

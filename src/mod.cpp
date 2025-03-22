@@ -262,7 +262,7 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 						ex->link_start = true;
 
 					TargetStateEx* next = findNextTarget(
-						i + 1, 
+						i + 1,
 						sub,
 						TargetType_LinkStar,
 						TargetType_LinkStarEnd,
@@ -283,6 +283,9 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 					ex->link_end = true;
 				}
 			}
+			// NOTE: Resolve rush note info
+			else if (ex->IsRushNote())
+				ex->bal_max_hit_count = ex->length * 4.5f;
 		}
 	}
 

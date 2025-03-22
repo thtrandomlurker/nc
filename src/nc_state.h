@@ -74,14 +74,18 @@ enum LinkStepState : int32_t
 
 enum SEType : int32_t
 {
-	SEType_Normal = 1,
-	SEType_Star = 2,
-	SEType_LongStart = 3,
+	SEType_Normal      = 1,
+	SEType_Star        = 2,
+	SEType_LongStart   = 3,
 	SEType_LongRelease = 4,
-	SEType_LongFail = 5,
-	SEType_Double = 6,
-	SEType_Cymbal = 7,
-	SEType_StarDouble = 8
+	SEType_LongFail    = 5,
+	SEType_Double      = 6,
+	SEType_Cymbal      = 7,
+	SEType_StarDouble  = 8,
+	SEType_RushStart   = 9,
+	SEType_RushPop     = 10,
+	SEType_RushFail    = 11,
+	SEType_Max         = 12
 };
 
 struct TargetStateEx
@@ -97,6 +101,7 @@ struct TargetStateEx
 	bool link_start = false;
 	bool link_step = false;
 	bool link_end = false;
+	int32_t bal_max_hit_count = 0;
 
 	// NOTE: Gameplay state
 	ButtonState* hold_button = nullptr;
@@ -121,11 +126,13 @@ struct TargetStateEx
 	int32_t score_bonus = 0;
 	int32_t ct_score_bonus = 0;
 	bool double_tapped = false;
+	int32_t bal_hit_count = 0;
 
 	// NOTE: Visual info for long notes. This is kind of a workaround as to not mess too much
 	//       with the vanilla game structs.
 	int32_t target_aet = 0;
 	int32_t button_aet = 0;
+	int32_t bal_effect_aet = 0;
 	diva::vec2 target_pos = { };
 	diva::vec2 kiseki_pos = { }; // NOTE: Position where the kiseki will be updated from
 	diva::vec2 kiseki_dir = { }; // NOTE: Direction of the note
@@ -133,12 +140,17 @@ struct TargetStateEx
 	std::vector<SpriteVertex> kiseki;
 	size_t vertex_count_max = 0;
 	bool fix_long_kiseki = false;
+	float bal_time = -1.0f;
+	float bal_start_time = -1.0f;
+	float bal_end_time = -1.0f;
+	float bal_scale = 0.0f;
 
 	void ResetPlayState();
 	bool IsChainSucessful();
 	void StopAet(bool button = true, bool target = true, bool kiseki = true);
 	bool SetLongNoteAet();
 	bool SetLinkNoteAet();
+	bool SetRushNoteAet();
 
 	inline bool IsWrong() const
 	{
@@ -247,6 +259,8 @@ struct UIState
 
 struct StateEx
 {
+	static constexpr int32_t MaxHitEffectCount = 4;
+
 	std::list<TargetStateEx*> target_references;
 	FileHandler file_handler;
 	int32_t file_state;
@@ -255,12 +269,15 @@ struct StateEx
 	std::vector<TargetStateEx> target_ex;
 	ChanceState chance_time;
 	UIState ui;
+	int32_t effect_buffer[MaxHitEffectCount] = { };
+	int32_t effect_index = 0;
 
 	void ResetPlayState();
 	void Reset();
 	bool PushTarget(TargetStateEx* ex);
 	bool PopTarget(TargetStateEx* ex);
 	void PlaySoundEffect(int32_t type);
+	void PlayRushHitEffect(const diva::vec2& pos, float scale, bool pop);
 };
 
 // NOTE: Constants

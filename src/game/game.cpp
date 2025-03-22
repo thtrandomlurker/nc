@@ -78,9 +78,17 @@ static void CalculateLongNoteScoreBonus(TargetStateEx* ex)
 static void IncreaseRushNoteScoreBonus(TargetStateEx* ex)
 {
 	ex->score_bonus += RushNotePopBonus;
+	ex->bal_hit_count += 1;
+	
+	if (ex->bal_hit_count <= ex->bal_max_hit_count)
+		ex->bal_scale += 1.0f / static_cast<float>(ex->bal_max_hit_count);
+
 	GetPVGameData()->score += RushNotePopBonus;
 	if (ex->score_bonus >= 0)
 		GetPVGameData()->ui.SetBonusText(ex->score_bonus, ex->target_pos.x, ex->target_pos.y);
+
+	diva::vec2 pos = GetScaledPosition(ex->target_pos);
+	state.PlayRushHitEffect(pos, 0.6f * (1.0f + ex->bal_scale), false);
 }
 
 HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
@@ -140,10 +148,15 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 			else if (tgt->IsRushNote() && tgt->holding)
 			{
 				if (nc::CheckRushNotePops(tgt))
+				{
 					IncreaseRushNoteScoreBonus(tgt);
 
-				if (tgt->length_remaining <= 0.0f)
-					tgt->holding = false;
+					if (tgt->target_type == TargetType_StarRush)
+					{
+						state.PlaySoundEffect(SEType_Star);
+						game->mute_slide_chime = true;
+					}
+				}
 			}
 		}
 	}
@@ -238,6 +251,16 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					else
 						ex->SetLongNoteAet();
 				}
+				else if (ex->IsRushNote())
+				{
+					if (!ex->IsWrong())
+					{
+						ex->SetRushNoteAet();
+						state.PlaySoundEffect(SEType_RushStart);
+					}
+					else
+						state.PopTarget(ex);
+				}
 				else if (ex->IsLongNoteEnd())
 				{
 					ex->prev->StopAet();
@@ -293,6 +316,12 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 				{
 					switch (ex->target_type)
 					{
+					case TargetType_TriangleRush:
+					case TargetType_CircleRush:
+					case TargetType_CrossRush:
+					case TargetType_SquareRush:
+						sound::PlaySoundEffect(3, se->button.c_str(), 1.0f);
+						break;
 					case TargetType_UpW:
 					case TargetType_RightW:
 					case TargetType_DownW:

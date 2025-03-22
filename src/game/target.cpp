@@ -8,12 +8,13 @@
 static void PatchCommonKiseki(PvGameTarget* target);
 static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, float dt);
 static void DrawLongNoteKiseki(TargetStateEx* ex);
+static void DrawBalloonEffect(TargetStateEx* ex);
 
 static const NoteSprite nc_target_layers[] = {
-	{ "target_sankaku_long",  nullptr, nullptr }, // 0x19 - Triangle Rush
-	{ "target_maru_long",     nullptr, nullptr }, // 0x1A - Circle Rush
-	{ "target_batsu_long",    nullptr, nullptr }, // 0x1B - Cross Rush
-	{ "target_shikaku_long",  nullptr, nullptr }, // 0x1C - Square Rush
+	{ "target_sankaku_bal",   nullptr, nullptr }, // 0x19 - Triangle Rush
+	{ "target_maru_bal",      nullptr, nullptr }, // 0x1A - Circle Rush
+	{ "target_batsu_bal",     nullptr, nullptr }, // 0x1B - Cross Rush
+	{ "target_shikaku_bal",   nullptr, nullptr }, // 0x1C - Square Rush
 	{ "target_up_w",          nullptr, nullptr }, // 0x1D - Triangle W
 	{ "target_right_w",       nullptr, nullptr }, // 0x1E - Circle W
 	{ "target_down_w",        nullptr, nullptr }, // 0x1F - Cross W
@@ -28,14 +29,14 @@ static const NoteSprite nc_target_layers[] = {
 	{ "target_touch_ch_miss", nullptr, nullptr }, // 0x28 - Chance Star
 	{ "target_link",          nullptr, nullptr }, // 0x29 - Link Star
 	{ "target_link",          nullptr, nullptr }, // 0x2A - Link Star End
-	{ nullptr,                nullptr, nullptr }, // 0x2B - Star Rush
+	{ "target_touch_bal",     nullptr, nullptr }, // 0x2B - Star Rush
 };
 
 static const NoteSprite nc_button_layers[] = {
-	{ "button_touch",         nullptr, nullptr }, // 0x19 - Triangle Rush
-	{ "button_touch",         nullptr, nullptr }, // 0x1A - Circle Rush
-	{ "button_touch",         nullptr, nullptr }, // 0x1B - Cross Rush
-	{ "button_touch",         nullptr, nullptr }, // 0x1C - Square Rush
+	{ "button_sankaku_bal",   nullptr, nullptr }, // 0x19 - Triangle Rush
+	{ "button_maru_bal",      nullptr, nullptr }, // 0x1A - Circle Rush
+	{ "button_batsu_bal",     nullptr, nullptr }, // 0x1B - Cross Rush
+	{ "button_shikaku_bal",   nullptr, nullptr }, // 0x1C - Square Rush
 	{ "button_up_w",          nullptr, nullptr }, // 0x1D - Triangle W
 	{ "button_right_w",       nullptr, nullptr }, // 0x1E - Circle W
 	{ "button_down_w",        nullptr, nullptr }, // 0x1F - Cross W
@@ -50,7 +51,7 @@ static const NoteSprite nc_button_layers[] = {
 	{ "button_touch_ch_miss", nullptr, nullptr }, // 0x28 - Chance Star
 	{ "button_link",          nullptr, nullptr }, // 0x29 - Link Star
 	{ "button_link",          nullptr, nullptr }, // 0x2A - Link Star End
-	{ nullptr,                nullptr, nullptr }, // 0x2B - Star Rush
+	{ "button_touch_bal",     nullptr, nullptr }, // 0x2B - Star Rush
 };
 
 static const char* GetProperLayerName(const NoteSprite* spr)
@@ -143,6 +144,15 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 	// NOTE: Initialize some information
 	target->out_start_time = 360.0f;
 	target->scaling_end_time = 31.0f;
+
+	if (ex->IsRushNote())
+	{
+		ex->bal_time = aet::GetMarkerTime(AetSceneID, button_layer, "bal");
+		ex->bal_start_time = aet::GetMarkerTime(AetSceneID, button_layer, "bal_start");
+		ex->bal_end_time = aet::GetMarkerTime(AetSceneID, button_layer, "bal_end");
+		ex->bal_effect_aet = aet::PlayLayer(AetSceneID, 12, 0x10000, "target_balloon_eff", nullptr, 0, nullptr, nullptr, -1.0f, -1.0f, 0, nullptr);
+		aet::SetPlay(ex->bal_effect_aet, false);
+	}
 }
 
 HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
@@ -155,13 +165,10 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 		if (ex->link_start || ex->IsLongNoteStart() || ex->IsRushNote())
 			state.PushTarget(ex);
 
-		if (ex->link_step)
+		if (ex->flying_time_max <= 0.0f)
 		{
-			if (ex->flying_time_max <= 0.0f)
-			{
-				ex->flying_time_max = target->flying_time;
-				ex->flying_time_remaining = target->flying_time_remaining;
-			}
+			ex->flying_time_max = target->flying_time;
+			ex->flying_time_remaining = target->flying_time_remaining;
 		}
 
 		// NOTE: Update chance stars
@@ -219,7 +226,40 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 				tgt->long_bonus_timer += dt;
 			}
 			else if (tgt->IsRushNote() && tgt->holding)
+			{
+				if (tgt->length_remaining <= 0.0f)
+				{
+					tgt->holding = false;
+					if (tgt->bal_hit_count >= tgt->bal_max_hit_count)
+					{
+						diva::vec2 pos = GetScaledPosition(tgt->target_pos);
+						state.PlayRushHitEffect(pos, 1.0f + tgt->bal_scale, true);
+						state.PlaySoundEffect(SEType_RushPop);
+					}
+					else
+					{
+						state.PlaySoundEffect(SEType_RushFail);
+					}
+
+					tgt->StopAet();
+				}
+				else if (tgt->length_remaining <= tgt->flying_time_max)
+				{
+					if (tgt->flying_time_max > 0.0f)
+					{
+						float progress = (tgt->flying_time_max - tgt->length_remaining) / tgt->flying_time_max;
+						float frame = tgt->bal_start_time + (tgt->bal_end_time - tgt->bal_start_time) * progress;
+						aet::SetFrame(tgt->button_aet, frame);
+					}
+				}
+
+				// NOTE: Set rush note scale
+				float scale = 1.0f + tgt->bal_scale;
+				diva::vec3 scale_vec = { scale, scale, 1.0f };
+				aet::SetScale(tgt->button_aet, &scale_vec);
+
 				tgt->length_remaining = fmaxf(tgt->length_remaining - dt, 0.0f);
+			}
 
 			if (tgt->IsLinkNoteStart())
 			{
@@ -280,6 +320,8 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 				}
 			}
 		}
+		else if (tgt->IsRushNote() && tgt->holding)
+			DrawBalloonEffect(tgt);
 	}
 
 	originalDrawArcadeGame(data);
@@ -500,6 +542,81 @@ static void DrawLongNoteKiseki(TargetStateEx* ex)
 		}
 
 		DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, sprite_id);
+	}
+}
+
+static uint32_t GetBalloonSpriteId(const TargetStateEx* ex)
+{
+	constexpr uint32_t PlaystationStyle[4] = { 182, 181, 180, 183 };
+
+	switch (ex->target_type)
+	{
+	case TargetType_TriangleRush:
+	case TargetType_CircleRush:
+	case TargetType_CrossRush:
+	case TargetType_SquareRush:
+	{
+		// TODO: Add style logic
+		int32_t base_id = ex->target_type - TargetType_TriangleRush;
+		return PlaystationStyle[base_id];
+	}
+	case TargetType_StarRush:
+		// NOTE: This will probably have to be changed soon
+		return 265324370;
+	}
+
+	return 0;
+}
+
+static void DrawBalloonEffectNote(uint32_t id, const diva::vec2& pos, const diva::vec2& scale, float opacity)
+{
+	SprArgs args;
+	args.id = id;
+	args.trans.x = pos.x;
+	args.trans.y = pos.y;
+	args.trans.z = 0.0f;
+	args.scale.x = scale.x;
+	args.scale.y = scale.y;
+	args.scale.z = 1.0f;
+	args.resolution_mode_sprite = 13;
+	args.resolution_mode_sprite = 13;
+	args.index = 0;
+	args.layer = 0;
+	args.priority = 12;
+	args.attr = 0x400000; // SPR_ATTR_CTR_CC
+	args.color[0] = 0xFF;
+	args.color[1] = 0xFF;
+	args.color[2] = 0xFF;
+	args.color[3] = fminf(fmaxf(opacity * 255.0f, 0.0f), 255.0f);
+	spr::DrawSprite(&args);
+}
+
+static void DrawBalloonEffect(TargetStateEx* ex)
+{
+	if (ex->bal_effect_aet == 0)
+		return;
+
+	AetComposition comp;
+	aet::GetComposition(&comp, ex->bal_effect_aet);
+
+	float scale = 1.0f + ex->bal_scale;
+
+	for (const auto& [name, layout] : comp)
+	{
+		diva::vec2 pos = GetScaledPosition(ex->target_pos);
+		pos.x += layout.position.x * scale;
+		pos.y += layout.position.y * scale;
+
+		// HACK: Use matrix data to determine the scale of the sprite.
+		//       This will break if you use rotation on it!
+		diva::vec2 spr_scale = { layout.matrix.row0.x, layout.matrix.row1.y };
+
+		DrawBalloonEffectNote(
+			GetBalloonSpriteId(ex),
+			pos,
+			spr_scale,
+			layout.opacity
+		);
 	}
 }
 

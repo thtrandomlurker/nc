@@ -21,6 +21,7 @@ void TargetStateEx::ResetPlayState()
 	link_ending = false;
 	aet::Stop(&target_aet);
 	aet::Stop(&button_aet);
+	aet::Stop(&bal_effect_aet);
 	kiseki_pos = { 0.0f, 0.0f };
 	kiseki_dir = { 0.0f, 0.0f };
 	kiseki_dir_norot = { 0.0f, 0.0f };
@@ -31,6 +32,8 @@ void TargetStateEx::ResetPlayState()
 	score_bonus = 0;
 	ct_score_bonus = 0;
 	double_tapped = false;
+	bal_hit_count = 0;
+	bal_scale = 0.0f;
 }
 
 bool TargetStateEx::IsChainSucessful()
@@ -48,6 +51,7 @@ void TargetStateEx::StopAet(bool button, bool target, bool kiseki)
 		aet::Stop(&button_aet);
 	if (target)
 		aet::Stop(&target_aet);
+	aet::Stop(&bal_effect_aet);
 	if (kiseki)
 	{
 		this->kiseki.clear();
@@ -92,6 +96,30 @@ bool TargetStateEx::SetLinkNoteAet()
 	return true;
 }
 
+bool TargetStateEx::SetRushNoteAet()
+{
+	if (org == nullptr || !IsRushNote())
+		return false;
+
+	button_aet = org->button_aet;
+	aet::SetPlay(button_aet, false);
+	aet::SetFrame(button_aet, bal_time);
+
+	diva::vec2 scaled_pos = GetScaledPosition(target_pos);
+	diva::vec3 pos = { scaled_pos.x, scaled_pos.y, 0.0f };
+	aet::SetPosition(button_aet, &pos);
+
+	diva::vec3 scale = { 1.0f, 1.0f, 1.0f };
+	aet::SetScale(button_aet, &scale);
+
+	org->button_aet = 0;
+	aet::Stop(&org->target_eff_aet);
+	aet::Stop(&org->dword78);
+
+	if (bal_effect_aet != 0)
+		aet::SetPlay(bal_effect_aet, true);
+}
+
 void UIState::SetLayer(int32_t index, bool visible, const char* name, int32_t prio, int32_t flags)
 {
 	aet::Stop(&aet_list[index]);
@@ -127,6 +155,9 @@ void StateEx::ResetPlayState()
 	for (TargetStateEx& ex : target_ex)
 		ex.ResetPlayState();
 	chance_time.ResetPlayState();
+	for (int i = 0; i < MaxHitEffectCount; i++)
+		aet::Stop(&effect_buffer[i]);
+	effect_index = 0;
 }
 
 void StateEx::Reset()
@@ -189,7 +220,68 @@ void StateEx::PlaySoundEffect(int32_t type)
 	case SEType_StarDouble:
 		sound::PlaySoundEffect(3, "scratch_w1_mmv", 1.0f);
 		break;
+	case SEType_RushStart:
+		sound::PlaySoundEffect(3, "se_pv_button_rush1_on", 1.0f);
+		break;
+	case SEType_RushPop:
+		sound::ReleaseCue(3, "se_pv_button_rush1_on", true);
+		sound::PlaySoundEffect(3, "se_pv_button_rush1_off", 1.0f);
+		break;
+	case SEType_RushFail:
+		sound::ReleaseCue(3, "se_pv_button_rush1_on", false);
+		break;
 	}
+}
+
+void StateEx::PlayRushHitEffect(const diva::vec2& pos, float scale, bool pop)
+{
+	if (effect_index >= MaxHitEffectCount)
+		effect_index = 0;
+
+	uint32_t scene_id = pop ? AetSceneID : 3;
+	const char* layer_name = pop ? "bal_hit_eff" : "hit_eff00";
+	int32_t max_keep = pop ? 4 : 2;
+
+	aet::Stop(&effect_buffer[effect_index]);
+	effect_buffer[effect_index] = aet::PlayLayer(
+		scene_id,
+		8,
+		0x20000,
+		layer_name,
+		&pos,
+		0,
+		nullptr,
+		nullptr,
+		-1.0f,
+		-1.0f,
+		0,
+		nullptr
+	);
+
+	diva::vec3 scl = { scale, scale, 1.0f };
+	aet::SetScale(effect_buffer[effect_index], &scl);
+
+	int32_t count = 0;
+	int32_t start = effect_index > 0 ? effect_index - 1 : MaxHitEffectCount - 1;
+	for (int i = start; i > 0; i--)
+	{
+		// NOTE: Break early if we're back to the initial point. Should be when we
+		//       loop back around to it.
+		if (i == effect_index)
+			break;
+
+		// NOTE: Remove hit effect aet if it exceeds the max count
+		if (count + 1 > max_keep)
+			aet::Stop(&effect_buffer[i]);
+
+		count++;
+
+		// NOTE: Loop around to the back of the array
+		if (i == 0)
+			i = MaxHitEffectCount - 1;
+	}
+
+	effect_index++;
 }
 
 TargetStateEx* GetTargetStateEx(int32_t index, int32_t sub_index)
