@@ -827,9 +827,6 @@ namespace aet
 	// NOTE: Returns the time where the specified marker is placed on a layer
 	inline FUNCTION_PTR(float, __fastcall, GetMarkerTime, 0x1402CA170, uint32_t id, const char* layer, const char* marker);
 
-	// NOTE: Plays a layer from a scene
-	inline FUNCTION_PTR(int32_t, __fastcall, PlayLayer, 0x14027B420, uint32_t scene_id, int32_t prio, int32_t flags, const char* layer, const diva::vec2* pos, int32_t index, const char* start_marker, const char* end_marker, float start_time, float end_time, int32_t a11, void* frmctl);
-
 	// NOTE: Plays a layer from AET_GAM_CMN. Resolution mode is HDTV720
 	inline FUNCTION_PTR(int32_t, __fastcall, PlayGamCmnLayer, 0x14027B2C0, int32_t prio, void* a2, const char* layer, const diva::vec2* pos);
 
@@ -841,6 +838,7 @@ namespace aet
 	inline FUNCTION_PTR(void, __fastcall, SetFrame, 0x1402CA4B0, int32_t id, float frame);
 	// NOTE: Sets if the layer object should play (1) or pause (0)
 	inline FUNCTION_PTR(void, __fastcall, SetPlay, 0x1402CA380, int32_t id, bool play);
+	inline FUNCTION_PTR(void, __fastcall, SetVisible, 0x1402CA390, int32_t id, bool visible);
 
 	void CreateAetArgs(AetArgs* args, uint32_t scene_id, const char* layer_name, int32_t prio);
 	void CreateAetArgs(AetArgs* args, uint32_t scene_id, const char* layer_name, int32_t flags, int32_t layer, int32_t prio, const char* start_marker, const char* end_marker);
@@ -850,7 +848,10 @@ namespace aet
 	// NOTE: Same as the normal one, but sets id to 0 afterwards
 	void Stop(int32_t* id);
 	// NOTE: Stops if GetEnded() returns true and returns the value of GetEnded().
-	bool StopOnEnded(int32_t* id);
+	bool StopOnEnded(int32_t* id); 
+
+	int32_t PlayLayer(uint32_t scene_id, int32_t prio, int32_t flags, const char* layer, const diva::vec2* pos, int32_t index, const char* start_marker, const char* end_marker, float start_time, float end_time, int32_t a11, void* frmctl);
+	int32_t PlayLayer(uint32_t scene, int32_t prio, int32_t flags, const char* layer, const diva::vec2* pos, const char* start_marker, const char* end_marker);
 }
 
 namespace spr

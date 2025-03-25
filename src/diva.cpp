@@ -8,6 +8,8 @@ FUNCTION_PTR(SprArgs*, __fastcall, DefaultSprArgs, 0x1405B78D0, SprArgs* args);
 FUNCTION_PTR(TextArgs*, __fastcall, DefaultTextArgs, 0x1402C53D0, TextArgs* args);
 FUNCTION_PTR(AetArgs*, __fastcall, DefaultAetArgs, 0x1401A87F0, AetArgs* args);
 
+static FUNCTION_PTR(int32_t, __fastcall, PlayLayerImp, 0x14027B420, uint32_t scene_id, int32_t prio, int32_t flags, const char* layer, const diva::vec2* pos, int32_t index, const char* start_marker, const char* end_marker, float start_time, float end_time, int32_t a11, void* frmctl);
+
 SprArgs::SprArgs()
 {
 	memset(this, 0, sizeof(SprArgs));
@@ -74,6 +76,29 @@ bool aet::StopOnEnded(int32_t* id)
 	}
 
 	return true;
+}
+
+int32_t aet::PlayLayer(uint32_t scene_id, int32_t prio, int32_t flags, const char* layer, const diva::vec2* pos, int32_t index, const char* start_marker, const char* end_marker, float start_time, float end_time, int32_t a11, void* frmctl)
+{
+	return PlayLayerImp(
+		scene_id,
+		prio,
+		flags,
+		layer,
+		pos,
+		index,
+		start_marker,
+		end_marker,
+		start_time,
+		end_time,
+		a11,
+		frmctl
+	);
+}
+
+int32_t aet::PlayLayer(uint32_t scene, int32_t prio, int32_t flags, const char* layer, const diva::vec2* pos, const char* start_marker, const char* end_marker)
+{
+	return PlayLayer(scene, prio, flags, layer, pos, 0, start_marker, end_marker, -1.0f, -1.0f, 0, nullptr);
 }
 
 // NOTE: InputState implementation
