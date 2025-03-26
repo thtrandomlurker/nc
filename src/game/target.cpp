@@ -422,7 +422,7 @@ static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, Targe
 	const float width = 12.0f;
 
 	// NOTE: Initialize vertex buffer
-	if (ex->kiseki.size() < 1 && target != nullptr)
+	if (ex->kiseki.size() < 1 && target != nullptr && ex->length > 0.0f)
 	{
 		ex->vertex_count_max = ex->length * KisekiRate * 2;
 		if (ex->vertex_count_max % 2 != 0)

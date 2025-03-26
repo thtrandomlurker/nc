@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <vector>
+#include <thirdparty/lazycsv.hpp>
 #include "Helpers.h"
 #include "game/hit_state.h"
 #include "game/target.h"
@@ -23,45 +24,57 @@ static bool ParseExtraCSV(const char* data, size_t size)
 	if (data == nullptr || size == 0)
 		return false;
 
-	std::vector<std::string_view> lines;
-	const char* head = data;
-	const char* line = head;
-	size_t position = 0;
-	while (true)
-	{
-		// NOTE: Parse lines
-		bool comment = (*line == ';');
+	std::string_view view = std::string_view(data, size);
+	lazycsv::parser<std::string_view> parser { view };
 
-		if (*head == '\n')
+	auto header = parser.header();
+	for (const auto row : parser)
+	{
+		int32_t index = -1;
+		int32_t sub_index = 0;
+		float length = -1.0f;
+		bool is_end = false;
+
+		int32_t cell_index = 0;
+		for (const auto cell : row)
 		{
-			if (!comment)
-				lines.push_back(std::string_view(line, head - line));
-			line = head + 1;
+			std::string_view name = header.cells(cell_index)[0].trimed();
+
+			char value[128] = { 0 };
+			strncpy_s(value, cell.trimed().data(), cell.trimed().size());
+
+			if (strncmp("index", name.data(), name.size()) == 0)
+				index = strtol(value, nullptr, 10);
+			else if (strncmp("sub_index", name.data(), name.size()) == 0)
+				sub_index = strtol(value, nullptr, 10);
+			else if (strncmp("length", name.data(), name.size()) == 0)
+				length = strtof(value, nullptr);
+			else if (strncmp("end", name.data(), name.size()) == 0)
+			{
+				if (strcmp(value, "true") == 0)
+					is_end = true;
+				else if (strcmp(value, "false") == 0)
+					is_end = false;
+				else
+				{
+					int32_t i = strtol(value, nullptr, 10);
+					is_end = i > 0;
+				}
+			}
+
+
+			cell_index++;
 		}
 
-		head++;
-		position++;
-		if (position >= size)
+		if (index != -1)
 		{
-			if (line != head && !comment)
-				lines.push_back(std::string_view(line, head - line));
-			break;
+			TargetStateEx& ex = state.target_ex.emplace_back();
+			ex.target_index = index;
+			ex.sub_index = sub_index;
+			ex.length = length > 0.0f ? length / 1000.0f : -1.0f;
+			ex.long_end = is_end;
+			ex.ResetPlayState();
 		}
-	}
-
-	// NOTE: Parse lines
-	for (std::string_view line : lines)
-	{
-		int32_t target_index = 0;
-		float length = 0.0f;
-		int32_t end = 0;
-		_snscanf(line.data(), line.size(), "%d,%f,%d", &target_index, &length, &end);
-
-		TargetStateEx& ex = state.target_ex.emplace_back();
-		ex.target_index = target_index;
-		ex.length = length / 1000.0f;
-		ex.long_end = end;
-		ex.ResetPlayState();
 	}
 
 	return true;
@@ -265,6 +278,13 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 				{
 					ex->next = next;
 					next->prev = ex;
+
+					// NOTE: Auto-calculate long note length if necessary
+					if (ex->length < 0.0f)
+					{
+						PvDscTargetGroup* next_group = &pv_game->pv_data.targets[next->target_index];
+						ex->length = static_cast<float>(next_group->hit_time - group->hit_time) / 1000000000.0f;
+					}
 				}
 			}
 			// NOTE: Resolve LinkStars
