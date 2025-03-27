@@ -514,7 +514,7 @@ struct PvGameTarget
 	int32_t dword10;
 	int32_t target_type;
 	float flying_time_remaining;
-	uint8_t gap1C[4];
+	float player_hit_time;
 	float flying_time;
 	float amplitude;
 	float freq;

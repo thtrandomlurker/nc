@@ -150,7 +150,7 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 			}
 
 			target->hit_state = hit_state;
-			target->hit_time = target->flying_time_remaining;
+			target->player_hit_time = target->flying_time_remaining;
 			ex->hit_state = hit_state;
 			ex->hit_time = target->flying_time_remaining;
 			ex->double_tapped = double_tapped;
