@@ -125,22 +125,32 @@ bool MacroState::GetStarHit() const
 
 bool MacroState::GetDoubleStarHit(bool* both_flicked) const
 {
+	if (diva::GetInputState(0)->GetDevice() != InputDevice_Keyboard)
+	{
+		bool hit = (buttons[Button_LStick].IsTapped() && buttons[Button_RStick].IsTappedInNearFrames()) ||
+			(buttons[Button_RStick].IsTapped() && buttons[Button_LStick].IsTappedInNearFrames());
+
+		if (both_flicked != nullptr)
+			*both_flicked = hit;
+		return hit;
+	}
+
 	const int32_t buttons_left[] = {
-		Button_L1, Button_L2, Button_L3, Button_L4, Button_LStick, Button_RStick
+		Button_L1, Button_L2, Button_L3, Button_L4
 	};
 
 	const int32_t buttons_right[] = {
-		Button_R1, Button_R2, Button_R3, Button_R4, Button_LStick, Button_RStick
+		Button_R1, Button_R2, Button_R3, Button_R4
 	};
 
 	const ButtonState* l = nullptr;
 	const ButtonState* r = nullptr;
 
-	for (int32_t i = 0; i < 6; i++)
+	for (int32_t i = 0; i < 4; i++)
 		if (buttons[buttons_left[i]].IsDown())
 			l = &buttons[buttons_left[i]];
 
-	for (int32_t i = 0; i < 6; i++)
+	for (int32_t i = 0; i < 4; i++)
 		if (buttons[buttons_right[i]].IsDown())
 			r = &buttons[buttons_right[i]];
 
