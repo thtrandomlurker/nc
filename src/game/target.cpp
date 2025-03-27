@@ -214,11 +214,19 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 			}
 		}
 	}
-	
+
 	if (ShouldUpdateTargets())
 	{
 		for (TargetStateEx* tgt : state.target_references)
 		{
+			if (tgt->IsLinkNoteStart())
+			{
+				UpdateLinkStar(data, tgt, dt);
+				UpdateLinkStarKiseki(data, tgt, dt);
+			}
+			else if (tgt->IsLongNoteStart() && tgt->holding)
+				UpdateLongNoteKiseki(data, nullptr, tgt, dt);
+
 			// NOTE: Update rush / long note length and timer
 			if (tgt->IsLongNoteStart() && tgt->holding)
 			{
@@ -261,17 +269,15 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 				tgt->length_remaining = fmaxf(tgt->length_remaining - dt, 0.0f);
 			}
 
-			if (tgt->IsLinkNoteStart())
+			for (TargetStateEx* chain = tgt; chain != nullptr; chain = chain->next)
 			{
-				UpdateLinkStar(data, tgt, dt);
-				UpdateLinkStarKiseki(data, tgt, dt);
+				if (chain->flying_time_max >= 0.0f)
+					chain->flying_time_remaining -= dt;
 			}
-			else if (tgt->IsLongNoteStart() && tgt->holding)
-				UpdateLongNoteKiseki(data, nullptr, tgt, dt);
 		}
 	}
 
-	return originalUpdateTargets(data, dt);
+	originalUpdateTargets(data, dt);
 }
 
 HOOK(void, __fastcall, UpdateKiseki, 0x14026F050, PVGameArcade* data, PvGameTarget* target, float dt)

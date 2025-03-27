@@ -67,19 +67,23 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 			}
 
 			// NOTE: Calculate alpha
+			const float appear_fade_length = 0.3f;
+			const float glow_fade_length = 0.2f;
+			const float glow_length = 0.3f;
+
 			switch (ex->step_state)
 			{
 			case LinkStepState_None:
 				if (ex->next != nullptr && ex->next->org != nullptr)
 				{
-					ex->kiseki_time = 0.3f;
+					ex->kiseki_time = appear_fade_length;
 					ex->alpha = 0.0f;
 					ex->step_state = LinkStepState_Normal;
 				}
 
 				break;
 			case LinkStepState_Normal:
-				ex->alpha = 1.0f - ex->kiseki_time / 0.3f;
+				ex->alpha = 1.0f - ex->kiseki_time / appear_fade_length;
 				ex->kiseki_time -= dt;
 
 				if (ex->alpha >= 1.0f)
@@ -91,12 +95,12 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 
 				break;
 			case LinkStepState_GlowStart:
-				ex->alpha = 1.0f - (ex->kiseki_time / 0.2f);
+				ex->alpha = 1.0f - (ex->kiseki_time / glow_fade_length);
 				ex->kiseki_time -= dt;
 
 				if (ex->kiseki_time <= 0.0f)
 				{
-					ex->kiseki_time = 0.5f;
+					ex->kiseki_time = glow_length;
 					ex->alpha = 1.0f;
 					ex->step_state = LinkStepState_Glow;
 				}
@@ -105,7 +109,7 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 			case LinkStepState_Glow:
 				if (ex->kiseki_time <= 0.0f)
 				{
-					ex->kiseki_time = 0.2f;
+					ex->kiseki_time = glow_fade_length;
 					ex->alpha = 1.0f;
 					ex->step_state = LinkStepState_GlowEnd;
 				}
@@ -113,7 +117,7 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 				ex->kiseki_time -= dt;
 				break;
 			case LinkStepState_GlowEnd:
-				ex->alpha = ex->kiseki_time / 0.2f;
+				ex->alpha = ex->kiseki_time / glow_fade_length;
 				ex->kiseki_time -= dt;
 
 				if (ex->kiseki_time <= 0.0f)
@@ -128,7 +132,7 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 				{
 					// NOTE: Begin the glow animation
 					//
-					ex->kiseki_time = 0.2f;
+					ex->kiseki_time = glow_fade_length;
 					ex->alpha = 0.0f;
 					ex->step_state = LinkStepState_GlowStart;
 				}
@@ -145,8 +149,6 @@ void UpdateLinkStar(PVGameArcade* data, TargetStateEx* chain, float dt)
 
 				break;
 			}
-
-			ex->flying_time_remaining -= dt;
 		}
 	}
 
