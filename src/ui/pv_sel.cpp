@@ -189,7 +189,9 @@ namespace pvsel
 			SprArgs args = { };
 			args.id = IsFutureToneMode() ? key_sprite_ids_ps4[device] : key_sprite_ids_nsw[device];
 			args.trans = it->second.position;
-			args.scale = { 1.0f, 1.0f, 1.0f };
+			args.scale.x = it->second.matrix.row0.x;
+			args.scale.y = it->second.matrix.row1.y;
+			args.scale.z = 1.0f;
 			args.resolution_mode_sprite = 14;
 			args.resolution_mode_screen = 14;
 			memset(args.color, 0xFF, 4);
