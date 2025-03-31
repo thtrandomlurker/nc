@@ -1,3 +1,4 @@
+#include <array>
 #include <stdint.h>
 #include <stdio.h>
 #define WIN32_LEAN_AND_MEAN
@@ -20,19 +21,22 @@ enum GameStyle : int32_t
 	GameStyle_Max
 };
 
-static std::string GetWindowLayerName(bool ps4)
+const char* style_names_internal[4] = { "arcade", "console", "mixed", "max" };
+
+static FUNCTION_PTR(bool, __fastcall, CheckCustomizeSelReady, 0x1401DE790);
+static bool IsFutureToneMode() { return *reinterpret_cast<bool*>(0x1414AB9E3); }
+
+static std::string GetModePrefix() { return IsFutureToneMode() ? "ps4_" : "nsw_"; }
+static std::string GetLanguageSuffix()
 {
-	return ps4 ? "ps4_game_style_win" : "nsw_game_style_win";
+	return "_en";
 }
 
-static std::string GetStyleLayerName(int32_t style, bool ps4)
+static std::string GetWindowLayerName() { return GetModePrefix() + "game_style_win"; }
+static std::string GetWindowTextLayerName() { return GetModePrefix() + "game_style_txt" + GetLanguageSuffix(); }
+static std::string GetStyleLayerName(int32_t style)
 {
-	if (style >= GameStyle_Max)
-		return "";
-
-	const char* nsw[3] = { "nsw_game_style_arcade", "nsw_game_style_console", "nsw_game_style_mixed" };
-	const char* ft[3] = { "ps4_game_style_arcade", "ps4_game_style_console", "ps4_game_style_mixed" };
-	return ps4 ? ft[style] : nsw[style];
+	return GetModePrefix() + "game_style_" + style_names_internal[style] + GetLanguageSuffix();
 }
 
 static bool CheckPVHasNC(int32_t id, int32_t diff_index, int32_t edition)
@@ -59,60 +63,145 @@ static bool CheckPVHasNC(int32_t id, int32_t diff_index, int32_t edition)
 
 namespace pvsel
 {
-	bool assets_loaded     = false;
-	int32_t sel_info_style = 0;
-	int32_t sel_info_win   = 0;
+	bool assets_loaded = false;
+	bool ui_visible    = true;
+	int32_t info_style_index  = 0;
+	int32_t sel_info_style[2] = { 0, 0 };
+	int32_t sel_info_win      = 0;
+	int32_t sel_info_txt      = 0;
 
-	int32_t cur_pv_id     = -1;
-	int32_t cur_diff      = -1;
-	int32_t cur_edition   = -1;
-	int32_t selected_mode = 0;
-	int32_t mode_count    = 0;
-	int32_t modes[3]      = { GameStyle_Max, GameStyle_Max, GameStyle_Max };
+	int32_t cur_pv_id      = -1;
+	int32_t cur_diff       = -1;
+	int32_t cur_edition    = -1;
+	int32_t prev_sel_mode  = GameStyle_Max;
+	int32_t selected_index = 0;
+	int32_t mode_count     = 0;
+	int32_t modes[3]       = { GameStyle_Max, GameStyle_Max, GameStyle_Max };
 
+	static bool IsModeChangeable() { return mode_count > 1; }
 	static void PopulateModes(int32_t pv, int32_t diff, int32_t ed)
 	{
 		// TODO: Change this so that songs don't necessarily need an arcade mode
 		//
 		modes[0] = GameStyle_Arcade;
 		mode_count = 1;
-		selected_mode = 0;
+		selected_index = 0;
 
 		if (CheckPVHasNC(pv, diff, ed))
 			modes[mode_count++] = GameStyle_Console;
+	}
+
+
+	static void ResetAet()
+	{
+		info_style_index = 0;
+		aet::Stop(&sel_info_style[0]);
+		aet::Stop(&sel_info_style[1]);
+		aet::Stop(&sel_info_win);
+		aet::Stop(&sel_info_txt);
 	}
 
 	static void SetAet()
 	{
 		if (mode_count < 1)
 		{
-			aet::Stop(&sel_info_win);
-			aet::Stop(&sel_info_style);
+			ResetAet();
 			return;
 		}
 
-		// TODO: Add support for PS4 UI
 		if (sel_info_win == 0)
 		{
-			std::string win = GetWindowLayerName(false);
+			std::string win = GetWindowLayerName();
 			sel_info_win = aet::PlayLayer(AetSelSceneID, 10, 0x10000, win.c_str(), nullptr, nullptr, nullptr);
 		}
 
-		// NOTE: This will change when BricOOtaku updates the aet
-		aet::Stop(&sel_info_style);
-		std::string st = GetStyleLayerName(modes[selected_mode], false);
-		sel_info_style = aet::PlayLayer(AetSelSceneID, 10, 0x10000, st.c_str(), nullptr, nullptr, nullptr);
+		if (sel_info_txt == 0)
+		{
+			std::string txt = GetWindowTextLayerName();
+			sel_info_txt = aet::PlayLayer(AetSelSceneID, 10, 0x10000, txt.c_str(), nullptr, nullptr, nullptr);
+		}
+		
+		if (modes[selected_index] != prev_sel_mode)
+		{
+			std::string layer = GetStyleLayerName(modes[selected_index]);
+
+			if (sel_info_style[info_style_index] != 0)
+			{
+				std::string prev_layer = GetStyleLayerName(prev_sel_mode);
+				aet::Stop(&sel_info_style[info_style_index]);
+				sel_info_style[info_style_index] = aet::PlayLayer(AetSelSceneID, 10, prev_layer.c_str(), AetAction_OutOnce);
+
+				if (++info_style_index > 1)
+					info_style_index = 0;
+			}
+
+			aet::Stop(&sel_info_style[info_style_index]);
+			sel_info_style[info_style_index] = aet::PlayLayer(AetSelSceneID, 10, layer.c_str(), AetAction_InLoop);
+		}
+
+		diva::vec3 offset;
+		offset.x = IsFutureToneMode() && !IsModeChangeable() ? -15.0f : 0.0f;
+		offset.y = 0.0f;
+		offset.z = 0.0f;
+		aet::SetPosition(sel_info_style[0], &offset);
+		aet::SetPosition(sel_info_style[1], &offset);
 	}
 
 	static void SetAetVisibility(bool visible)
 	{
-		aet::SetVisible(sel_info_style, visible);
+		aet::SetVisible(sel_info_style[0], visible);
+		aet::SetVisible(sel_info_style[1], visible);
 		aet::SetVisible(sel_info_win, visible);
+		aet::SetVisible(sel_info_txt, visible);
+		ui_visible = visible;
+	}
+
+	static void DrawKeyIcon()
+	{
+		if (sel_info_win == 0 || !ui_visible || !IsModeChangeable())
+			return;
+
+		const uint32_t key_sprite_ids_nsw[6] = {
+			3203571017, // Xbox
+			2779278485, // DualShock 4
+			2152960672, // JoyCon
+			312905805,  // Steam Deck
+			257587290,  // Keyboard
+			0
+		};
+
+		const uint32_t key_sprite_ids_ps4[6] = {
+			585831999,  // Xbox
+			1474623112, // DualShock 4
+			3007666668, // JoyCon
+			1166812452, // Steam Deck
+			2835797874, // Keyboard
+			0
+		};
+
+		int32_t device = diva::GetInputState(0)->GetDevice();
+
+		AetComposition comp;
+		aet::GetComposition(&comp, pvsel::sel_info_win);
+
+		if (auto it = comp.find("p_key_icon_c"); it != comp.end())
+		{
+			SprArgs args = { };
+			args.id = IsFutureToneMode() ? key_sprite_ids_ps4[device] : key_sprite_ids_nsw[device];
+			args.trans = it->second.position;
+			args.scale = { 1.0f, 1.0f, 1.0f };
+			args.resolution_mode_sprite = 14;
+			args.resolution_mode_screen = 14;
+			memset(args.color, 0xFF, 4);
+			args.attr = 0x400000; // SPR_ATTR_CTR_CC
+			args.priority = 11;
+			spr::DrawSprite(&args);
+		}
 	}
 
 	static void SetStateSelectedMode()
 	{
-		if (modes[selected_mode] == GameStyle_Console || modes[selected_mode] == GameStyle_Mixed)
+		if (modes[selected_index] == GameStyle_Console || modes[selected_index] == GameStyle_Mixed)
 			state.song_mode = SongMode_NC;
 		else
 			state.song_mode = SongMode_Original;
@@ -122,13 +211,13 @@ namespace pvsel
 	{
 		if (pv != cur_pv_id || diff != cur_diff || ed != cur_edition)
 		{
-			int32_t previous_mode = modes[selected_mode];
+			prev_sel_mode = modes[selected_index];
 			PopulateModes(pv, diff, ed);
 
 			for (int i = 0; i < mode_count; i++)
 			{
-				if (modes[i] == previous_mode)
-					selected_mode = i;
+				if (modes[i] == prev_sel_mode)
+					selected_index = i;
 			}
 
 			SetAet();
@@ -145,27 +234,49 @@ namespace pvsel
 		cur_pv_id = -1;
 		cur_diff = -1;
 		cur_edition = -1;
-		selected_mode = 0;
+		prev_sel_mode = GameStyle_Max;
+		selected_index = 0;
 		mode_count = 0;
+		modes[0] = GameStyle_Max;
+		modes[1] = GameStyle_Max;
+		modes[2] = GameStyle_Max;
 	}
 
 	static int32_t IterModeSelection()
 	{
 		if (mode_count == 0)
 		{
-			selected_mode = -1;
+			selected_index = -1;
 			return GameStyle_Max;
 		}
 
-		if (++selected_mode >= mode_count)
-			selected_mode = 0;
+		prev_sel_mode = modes[selected_index];
+		if (++selected_index >= mode_count)
+			selected_index = 0;
 
 		SetAet();
 		SetStateSelectedMode();
-		return modes[selected_mode];
+		return modes[selected_index];
 	}
 
-	static bool IsModeChangeable() { return mode_count > 1; }
+	static void UpdateCtrl(int32_t pv_id, int32_t difficulty, int32_t edition)
+	{
+		if (!CheckCustomizeSelReady())
+		{
+			pvsel::SetAetVisibility(true);
+			pvsel::SetSelectedSong(pv_id, difficulty, edition);
+
+			diva::InputState* is = diva::GetInputState(0);
+			if (is->IsButtonTapped(92) || is->IsButtonTapped(13)) // F7 or L2
+			{
+				pvsel::IterModeSelection();
+				if (pvsel::IsModeChangeable())
+					sound::PlaySoundEffect(1, "se_ft_music_selector_set_change_01", 1.0f);
+			}
+		}
+		else
+			pvsel::SetAetVisibility(false);
+	}
 
 	static void RequestAetLoad()
 	{
@@ -175,7 +286,7 @@ namespace pvsel
 		spr::LoadSprSet(SprSelSetID, &strv);
 	}
 
-	static bool CheckAssetsLoading()
+	static bool CheckAssetsLoaded()
 	{
 		assets_loaded = !aet::CheckAetSetLoading(AetSelSetID) && !spr::CheckSprSetLoading(SprSelSetID);
 		return assets_loaded;
@@ -183,14 +294,11 @@ namespace pvsel
 
 	static void UnloadAet()
 	{
-		aet::Stop(&sel_info_style);
-		aet::Stop(&sel_info_win);
+		ResetAet();
 		aet::UnloadAetSet(AetSelSetID);
 		spr::UnloadSprSet(SprSelSetID);
 	}
 }
-
-static FUNCTION_PTR(bool, __fastcall, CheckCustomizeSelReady, 0x1401DE790);
 
 HOOK(bool, __fastcall, PVSelectorSwitchInit, 0x1406ED9D0, uint64_t a1)
 {
@@ -207,30 +315,14 @@ HOOK(bool, __fastcall, PVSelectorSwitchCtrl, 0x1406EDC40, uint64_t a1)
 
 	if (*sel_state == 0)
 	{
-		if (!pvsel::CheckAssetsLoading())
+		if (!pvsel::CheckAssetsLoaded())
 			return false;
 	}
 
 	bool ret = originalPVSelectorSwitchCtrl(a1);
 
-	if (*sel_state == 6)
-	{
-		if (!CheckCustomizeSelReady())
-		{
-			pvsel::SetAetVisibility(true);
-			pvsel::SetSelectedSong(*pv_id, *difficulty, *edition);
-
-			diva::InputState* is = diva::GetInputState(0);
-			if (is->IsButtonTapped(92))
-			{
-				pvsel::IterModeSelection();
-				if (pvsel::IsModeChangeable())
-					sound::PlaySoundEffect(1, "se_ft_music_selector_set_change_01", 1.0f);
-			}
-		}
-		else
-			pvsel::SetAetVisibility(false);
-	}
+	if (*sel_state == 6 || *sel_state == 10)
+		pvsel::UpdateCtrl(*pv_id, *difficulty, *edition);
 
 	return ret;
 }
@@ -242,9 +334,61 @@ HOOK(bool, __fastcall, PVSelectorSwitchDest, 0x1406EE720, uint64_t a1)
 	return originalPVSelectorSwitchDest(a1);
 }
 
+HOOK(void, __fastcall, PVSelectorSwitchDisp, 0x1406EE7B0, uint64_t a1)
+{
+	originalPVSelectorSwitchDisp(a1);
+	pvsel::DrawKeyIcon();
+}
+
+// NOTE: FT UI hooks
+HOOK(bool, __fastcall, PVselPS4Init, 0x140202D50, uint64_t a1)
+{
+	pvsel::RequestAetLoad();
+	return originalPVselPS4Init(a1);
+}
+
+HOOK(bool, __fastcall, PVselPS4Ctrl, 0x1402033C0, uint64_t a1)
+{
+	int32_t sel_state = *reinterpret_cast<int32_t*>(a1 + 108);
+	int32_t pv_id = *reinterpret_cast<int32_t*>(a1 + 226268);
+	int32_t difficulty = *reinterpret_cast<int32_t*>(a1 + 226296);
+	int32_t edition = *reinterpret_cast<int32_t*>(a1 + 226300);
+
+	if (sel_state == 0)
+	{
+		if (!pvsel::CheckAssetsLoaded())
+			return false;
+	}
+
+	bool ret = originalPVselPS4Ctrl(a1);
+
+	if (sel_state == 6 || sel_state == 8)
+		pvsel::UpdateCtrl(pv_id, difficulty, edition);
+
+	return ret;
+}
+
+HOOK(bool, __fastcall, PVselPS4Dest, 0x140204DA0, uint64_t a1)
+{
+	pvsel::ResetSelectedSong();
+	pvsel::UnloadAet();
+	return originalPVselPS4Dest(a1);
+}
+
+HOOK(void, __fastcall, PVselPS4Disp, 0x140204EB0, uint64_t a1)
+{
+	originalPVselPS4Disp(a1);
+	pvsel::DrawKeyIcon();
+}
+
 void InstallPvSelHooks()
 {
 	INSTALL_HOOK(PVSelectorSwitchInit);
 	INSTALL_HOOK(PVSelectorSwitchCtrl);
 	INSTALL_HOOK(PVSelectorSwitchDest);
+	INSTALL_HOOK(PVSelectorSwitchDisp);
+	INSTALL_HOOK(PVselPS4Init);
+	INSTALL_HOOK(PVselPS4Ctrl);
+	INSTALL_HOOK(PVselPS4Dest);
+	INSTALL_HOOK(PVselPS4Disp);
 }

@@ -351,6 +351,17 @@ struct TextArgs
 };
 #pragma pack(pop)
 
+enum AetAction : int32_t
+{
+	AetAction_None = 0,
+	AetAction_InOnce = 1,
+	AetAction_InLoop = 2,
+	AetAction_Loop = 3,
+	AetAction_OutOnce = 4,
+	AetAction_SpecialOnce = 5,
+	AetAction_SpecialLoop = 6
+};
+
 struct AetArgs
 {
 	uint32_t scene_id;
@@ -852,6 +863,8 @@ namespace aet
 
 	int32_t PlayLayer(uint32_t scene_id, int32_t prio, int32_t flags, const char* layer, const diva::vec2* pos, int32_t index, const char* start_marker, const char* end_marker, float start_time, float end_time, int32_t a11, void* frmctl);
 	int32_t PlayLayer(uint32_t scene, int32_t prio, int32_t flags, const char* layer, const diva::vec2* pos, const char* start_marker, const char* end_marker);
+
+	int32_t PlayLayer(uint32_t scene_id, int32_t prio, const char* layer, int32_t action);
 }
 
 namespace spr
