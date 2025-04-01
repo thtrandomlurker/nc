@@ -294,6 +294,7 @@ constexpr uint32_t AetSceneID = 16014001;
 constexpr uint32_t SprSetID = 3068121241;
 
 constexpr float KisekiRate = 60.0f; // NOTE: Framerate where the long note kiseki will be updated
+constexpr float KisekiInterval = 1.0f / KisekiRate;
 
 // NOTE: Global state
 inline MacroState macro_state = { };

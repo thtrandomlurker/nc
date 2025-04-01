@@ -6,7 +6,7 @@
 #include "target.h"
 
 static void PatchCommonKiseki(PvGameTarget* target);
-static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, float dt);
+static void UpdateLongNoteKiseki(PVGameArcade* data, TargetStateEx* ex, float dt);
 static void DrawLongNoteKiseki(TargetStateEx* ex);
 static void DrawBalloonEffect(TargetStateEx* ex);
 
@@ -225,7 +225,7 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 				UpdateLinkStarKiseki(data, tgt, dt);
 			}
 			else if (tgt->IsLongNoteStart() && tgt->holding)
-				UpdateLongNoteKiseki(data, nullptr, tgt, dt);
+				UpdateLongNoteKiseki(data, tgt, dt);
 
 			// NOTE: Update rush / long note length and timer
 			if (tgt->IsLongNoteStart() && tgt->holding)
@@ -287,7 +287,7 @@ HOOK(void, __fastcall, UpdateKiseki, 0x14026F050, PVGameArcade* data, PvGameTarg
 	{
 		ex->kiseki_pos = target->button_pos;
 		ex->kiseki_dir = target->delta_pos_sq;
-		UpdateLongNoteKiseki(data, target, ex, dt);
+		UpdateLongNoteKiseki(data, ex, dt);
 	}
 	else
 	{
@@ -423,104 +423,91 @@ static void PatchCommonKiseki(PvGameTarget* target)
 	}
 }
 
-static void UpdateLongNoteKiseki(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, float dt)
+static diva::vec2 GetLongKisekiOffset(TargetStateEx* ex)
 {
-	const float width = 12.0f;
+	return ex->target_type == TargetType_TriangleLong ? diva::vec2(0.0f, 2.0f) : diva::vec2(0.0f, 0.0f);
+}
 
-	// NOTE: Initialize vertex buffer
-	if (ex->kiseki.size() < 1 && target != nullptr && ex->length > 0.0f)
+static void CreateLongNoteKisekiBuffer(TargetStateEx* ex)
+{
+	ex->vertex_count_max = ex->length * KisekiRate * 2 + 2;
+	if (ex->vertex_count_max % 2 != 0)
+		ex->vertex_count_max += 3;
+
+	ex->kiseki.resize(ex->vertex_count_max);
+
+	// TODO: Calculate width based on long note length to prevent texture blurriness
+	float uv_width  = 128.0f;
+	float uv_height = 64.0f;
+	float uv_pos_y  = uv_height / 2.0f;
+
+	for (size_t i = 0; i < ex->vertex_count_max; i += 2)
 	{
-		ex->vertex_count_max = ex->length * KisekiRate * 2;
-		if (ex->vertex_count_max % 2 != 0)
-			ex->vertex_count_max += 3;
+		diva::vec2 offset = GetLongKisekiOffset(ex);
 
-		ex->kiseki.resize(ex->vertex_count_max);
-
-		for (size_t i = 0; i < ex->vertex_count_max; i += 2)
-		{
-			ex->kiseki[i].pos = target->kiseki[0].pos;
-			ex->kiseki[i].uv = target->kiseki[0].uv;
-			ex->kiseki[i].color = 0xFFFFFFFF;
-			ex->kiseki[i + 1].pos = target->kiseki[1].pos;
-			ex->kiseki[i + 1].uv = target->kiseki[1].uv;
-			ex->kiseki[i + 1].color = 0xFFFFFFFF;
-		}
+		ex->kiseki[i].pos       = diva::vec3(GetScaledPosition(ex->kiseki_pos + offset), 0.0f);
+		ex->kiseki[i].uv        = diva::vec2(uv_width, uv_pos_y);
+		ex->kiseki[i].color     = 0xFFFFFFFF;
+		ex->kiseki[i + 1].pos   = diva::vec3(GetScaledPosition(ex->kiseki_pos + offset), 0.0f);
+		ex->kiseki[i + 1].uv    = diva::vec2(uv_width, uv_height);
+		ex->kiseki[i + 1].color = 0xFFFFFFFF;
 	}
+}
 
-	// NOTE: Update vertices
+static void UpdateLongNoteKiseki(PVGameArcade* data, TargetStateEx* ex, float dt)
+{
+	if (!ex->IsLongNoteStart() || ex->length <= 0.0f || !data || !ex)
+		return;
+
+	if (ex->kiseki.size() == 0)
+		CreateLongNoteKisekiBuffer(ex);
+
+	if (ex->vertex_count_max < 4)
+		return;
+
+	// NOTE: Push vertices out of the array for new ones to be inserted
 	ex->kiseki_time += dt;
-	size_t count = 0;
-	while (ex->kiseki_time >= 1.0f / KisekiRate)
+	size_t push_count = 0;
+
+	while (ex->kiseki_time >= KisekiInterval)
 	{
-		// NOTE: Move vertices back
-		if (ex->vertex_count_max >= 4)
-		{
-			for (int32_t i = static_cast<int32_t>(ex->vertex_count_max) - 4; i >= 0; i -= 2)
-			{
-				ex->kiseki[i + 2].pos = ex->kiseki[i].pos;
-				ex->kiseki[i + 3].pos = ex->kiseki[i + 1].pos;
-			}
+		for (size_t i = ex->vertex_count_max - 3; i > 0; i--)
+			ex->kiseki[i + 2].pos = ex->kiseki[i].pos;
+		ex->kiseki[2] = ex->kiseki[0];
 
-			count++;
-		}
-
-		ex->kiseki_time -= 1.0f / KisekiRate;
+		push_count++;
+		ex->kiseki_time -= KisekiInterval;
 	}
 
 	// NOTE: Snap kiseki to the target position when hitting too late
+	// TODO: Fix kiseki when hitting too early too (F does it by simulating the button position until the time the target should be reached)
 	if (ex->fix_long_kiseki)
 	{
 		if (ex->hit_time < 0.0f)
 		{
-			int32_t fix_count = fabsf(ex->hit_time) / (1.0f / KisekiRate) + 1;
-			diva::vec2 target_pos = GetScaledPosition(ex->target_pos);
-
-			for (int32_t i = count; i < fix_count + count; i++)
-			{
-				ex->kiseki[i * 2].pos.x = target_pos.x;
-				ex->kiseki[i * 2].pos.y = target_pos.y;
-				ex->kiseki[i * 2 + 1].pos.x = target_pos.x;
-				ex->kiseki[i * 2 + 1].pos.y = target_pos.y;
-			}
-
+			push_count += static_cast<size_t>(fabsf(ex->hit_time) / KisekiInterval);
 			ex->fix_long_kiseki = false;
 		}
 	}
 
-	// NOTE: Update position
-	for (size_t i = 0; i < count; i++)
+	const float uv_width = 128.0f;
+	const float px_width = 7.2f;
+	const diva::vec2 offset = GetLongKisekiOffset(ex);
+
+	for (size_t i = 0; i < push_count; i++)
 	{
-		float offset_x = ex->kiseki_dir.x * (width / 2.0f);
-		float offset_y = ex->kiseki_dir.y * (width / 2.0f);
+		// TODO: Rename kiseki_dir to target_normal or something like that
+		diva::vec2 size = ex->kiseki_dir * px_width;
+		diva::vec2 left = GetScaledPosition(ex->kiseki_pos + offset + -size);
+		diva::vec2 right = GetScaledPosition(ex->kiseki_pos + offset + size);
 
-		diva::vec2 left = {
-			ex->kiseki_pos.x - (ex->kiseki_dir.x * width) + offset_x,
-			ex->kiseki_pos.y - (ex->kiseki_dir.y * width) + offset_y
-		};
-
-		diva::vec2 right = {
-			ex->kiseki_pos.x + (ex->kiseki_dir.x * width) + offset_x,
-			ex->kiseki_pos.y + (ex->kiseki_dir.y * width) + offset_y
-		};
-
-		left = GetScaledPosition(left);
-		right = GetScaledPosition(right);
-
-		ex->kiseki[i * 2].pos.x = right.x;
-		ex->kiseki[i * 2].pos.y = right.y;
-		ex->kiseki[i * 2].pos.z = 0.0f;
-		ex->kiseki[i * 2].uv.y = 0.5f;
-		ex->kiseki[i * 2].color = 0xFFFFFFFF;
-		ex->kiseki[i * 2 + 1].pos.x = left.x;
-		ex->kiseki[i * 2 + 1].pos.y = left.y;
-		ex->kiseki[i * 2 + 1].pos.z = 0.0f;
-		ex->kiseki[i * 2 + 1].uv.y = 1.0f;
-		ex->kiseki[i * 2 + 1].color = 0xFFFFFFFF;
+		ex->kiseki[i * 2].pos       = diva::vec3(right, 0.0f);
+		ex->kiseki[i * 2 + 1].pos   = diva::vec3(left, 0.0f);
 	}
 
 	// NOTE: Update UV
 	for (size_t i = 0; i < ex->vertex_count_max; i++)
-		ex->kiseki[i].uv.x += dt * 128.0f;
+		ex->kiseki[i].uv.x += dt * uv_width;
 }
 
 static void DrawLongNoteKiseki(TargetStateEx* ex)

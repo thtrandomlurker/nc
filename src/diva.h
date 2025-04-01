@@ -135,29 +135,37 @@ namespace diva
 		float x;
 		float y;
 
+		vec2() { x = 0.0f; y = 0.0f; }
+		vec2(float x, float y) { this->x = x; this->y = y; }
+
 		inline float length() const { return sqrtf(x * x + y * y); }
 
-		inline vec2 operator+(const vec2& right)
+		inline vec2 operator+(const vec2& right) const
 		{
 			return { this->x + right.x, this->y + right.y };
 		}
 
-		inline vec2 operator-(const vec2& right)
+		inline vec2 operator-() const
+		{
+			return { -this->x, -this->y };
+		}
+
+		inline vec2 operator-(const vec2& right) const
 		{
 			return { this->x - right.x, this->y - right.y };
 		}
 
-		inline vec2 operator*(float scalar)
+		inline vec2 operator*(float scalar) const
 		{
 			return { this->x * scalar, this->y * scalar };
 		}
 
-		inline vec2 operator*(const vec2& right)
+		inline vec2 operator*(const vec2& right) const
 		{
 			return { this->x * right.x, this->y * right.y };
 		}
 
-		inline vec2 operator/(float scalar)
+		inline vec2 operator/(float scalar) const
 		{
 			return { this->x / scalar, this->y / scalar };
 		}
@@ -198,6 +206,11 @@ namespace diva
 			this->x = x;
 			this->y = y;
 			this->z = z;
+		}
+
+		inline vec3 operator+(const vec3& right)
+		{
+			return { this->x + right.x, this->y + right.y, this->z + right.z };
 		}
 	};
 
