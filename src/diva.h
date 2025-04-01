@@ -809,6 +809,19 @@ struct SoundEffect
 	prj::string chime;
 };
 
+enum GameLocale : int32_t
+{
+	GameLocale_JP = 0,
+	GameLocale_EN = 1,
+	GameLocale_ZH = 2,
+	GameLocale_TW = 3,
+	GameLocale_KR = 4,
+	GameLocale_FR = 5,
+	GameLocale_IT = 6,
+	GameLocale_DE = 7,
+	GameLocale_SP = 8,
+	GameLocale_Max
+};
 namespace diva
 {
 	struct InputState
@@ -943,6 +956,7 @@ inline FUNCTION_PTR(int32_t, __fastcall, FindNextCommand, 0x140257D50, PVGamePvD
 inline FUNCTION_PTR(PVGameData*, __fastcall, GetPVGameData, 0x140266720);
 inline FUNCTION_PTR(bool, __fastcall, IsInSongResults, 0x1401E8090);
 inline FUNCTION_PTR(int64_t, __fastcall, DrawTriangles, 0x1405B4C50, SpriteVertex* vertices, size_t vertex_count, int32_t res_mode, int32_t prio, uint32_t sprite_id);
+inline FUNCTION_PTR(int32_t, __fastcall, GetGameLocale, 0x1402C8D20);
 
 diva::vec2 GetScaledPosition(const diva::vec2& v);
 

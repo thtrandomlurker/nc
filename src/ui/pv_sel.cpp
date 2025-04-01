@@ -29,7 +29,11 @@ static bool IsFutureToneMode() { return *reinterpret_cast<bool*>(0x1414AB9E3); }
 static std::string GetModePrefix() { return IsFutureToneMode() ? "ps4_" : "nsw_"; }
 static std::string GetLanguageSuffix()
 {
-	return "_en";
+	if (GetGameLocale() >= GameLocale_Max)
+		return "_en";
+
+	const char* suffixes[GameLocale_Max] = { "_jp", "_en", "_zh", "_tw", "_kr", "_fr", "_it", "_de", "_sp" };
+	return suffixes[GetGameLocale()];
 }
 
 static std::string GetWindowLayerName() { return GetModePrefix() + "game_style_win"; }
@@ -140,7 +144,7 @@ namespace pvsel
 		}
 
 		diva::vec3 offset;
-		offset.x = IsFutureToneMode() && !IsModeChangeable() ? -15.0f : 0.0f;
+		offset.x = IsFutureToneMode() && !IsModeChangeable() ? -18.0f : 0.0f;
 		offset.y = 0.0f;
 		offset.z = 0.0f;
 		aet::SetPosition(sel_info_style[0], &offset);
@@ -310,12 +314,12 @@ HOOK(bool, __fastcall, PVSelectorSwitchInit, 0x1406ED9D0, uint64_t a1)
 
 HOOK(bool, __fastcall, PVSelectorSwitchCtrl, 0x1406EDC40, uint64_t a1)
 {
-	int32_t* sel_state = reinterpret_cast<int32_t*>(a1 + 108);
-	int32_t* pv_id = reinterpret_cast<int32_t*>(a1 + 0x262A4);
-	int32_t* difficulty = reinterpret_cast<int32_t*>(a1 + 0x262C8);
-	int32_t* edition = reinterpret_cast<int32_t*>(a1 + 0x262CC);
+	int32_t sel_state  = *reinterpret_cast<int32_t*>(a1 + 108);
+	int32_t pv_id      = *reinterpret_cast<int32_t*>(a1 + 0x262A4);
+	int32_t difficulty = *reinterpret_cast<int32_t*>(a1 + 0x262C8);
+	int32_t edition    = *reinterpret_cast<int32_t*>(a1 + 0x262CC);
 
-	if (*sel_state == 0)
+	if (sel_state == 0)
 	{
 		if (!pvsel::CheckAssetsLoaded())
 			return false;
@@ -323,8 +327,17 @@ HOOK(bool, __fastcall, PVSelectorSwitchCtrl, 0x1406EDC40, uint64_t a1)
 
 	bool ret = originalPVSelectorSwitchCtrl(a1);
 
-	if (*sel_state == 6 || *sel_state == 10)
-		pvsel::UpdateCtrl(*pv_id, *difficulty, *edition);
+	if (sel_state == 6 || sel_state == 8)
+	{
+		if (pv_id == -2)
+		{
+			int32_t** random_pv_data = *reinterpret_cast<int32_t***>(a1 + 0x261F8);
+			if (random_pv_data != nullptr && *random_pv_data != nullptr)
+				pv_id = **random_pv_data;
+		}
+
+		pvsel::UpdateCtrl(pv_id, difficulty, edition);
+	}
 
 	return ret;
 }
@@ -365,7 +378,16 @@ HOOK(bool, __fastcall, PVselPS4Ctrl, 0x1402033C0, uint64_t a1)
 	bool ret = originalPVselPS4Ctrl(a1);
 
 	if (sel_state == 6 || sel_state == 8)
+	{
+		if (pv_id == -2)
+		{
+			int32_t** random_pv_data = *reinterpret_cast<int32_t***>(a1 + 0x37328);
+			if (random_pv_data != nullptr && *random_pv_data != nullptr)
+				pv_id = **random_pv_data;
+		}
+
 		pvsel::UpdateCtrl(pv_id, difficulty, edition);
+	}
 
 	return ret;
 }
