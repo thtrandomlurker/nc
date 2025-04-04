@@ -21,9 +21,6 @@ const HMODULE MODULE_HANDLE = GetModuleHandle(nullptr);
 #define FUNCTION_PTR(returnType, callingConvention, function, location, ...) \
     returnType (callingConvention *function)(__VA_ARGS__) = (returnType(callingConvention*)(__VA_ARGS__))(location)
 
-#define FUNCTION_PTR_H(returnType, callingConvention, function, ...) \
-    extern returnType (callingConvention *function)(__VA_ARGS__)
-
 #define PROC_ADDRESS(libraryName, procName) \
     GetProcAddress(LoadLibrary(TEXT(libraryName)), procName)
 
