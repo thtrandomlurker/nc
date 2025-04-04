@@ -90,21 +90,6 @@ enum SEType : int32_t
 	SEType_Max         = 12
 };
 
-enum GameStyle : int32_t
-{
-	GameStyle_Arcade  = 0,
-	GameStyle_Console = 1,
-	GameStyle_Mixed   = 2,
-	GameStyle_Max
-};
-
-enum ScoreMode : int32_t
-{
-	ScoreMode_Arcade = 0,
-	ScoreMode_F2nd   = 1,
-	ScoreMode_Max
-};
-
 struct TargetStateEx
 {
 	// NOTE: Static data; Information about the target.

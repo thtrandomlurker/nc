@@ -11,6 +11,21 @@ constexpr size_t MaxEditionCount = 2;
 constexpr const char* DefaultStarSound = "scratch1_mmv";
 constexpr const char* DefaultCopySound = "(TARGET)";
 
+enum GameStyle : int32_t
+{
+	GameStyle_Arcade = 0,
+	GameStyle_Console = 1,
+	GameStyle_Mixed = 2,
+	GameStyle_Max
+};
+
+enum ScoreMode : int32_t
+{
+	ScoreMode_Arcade = 0,
+	ScoreMode_F2nd = 1,
+	ScoreMode_Max
+};
+
 namespace db
 {
 	struct ChartAttributes
