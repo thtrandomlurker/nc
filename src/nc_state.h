@@ -1,8 +1,10 @@
 #pragma once
 
+#include <optional>
 #include <list>
 #include "diva.h"
 #include "input.h"
+#include "db.h"
 
 enum TargetType : int32_t
 {
@@ -88,11 +90,19 @@ enum SEType : int32_t
 	SEType_Max         = 12
 };
 
-enum SongMode : int32_t
+enum GameStyle : int32_t
 {
-	SongMode_Original = 0,
-	SongMode_NC       = 1,
-	SongMode_Max
+	GameStyle_Arcade  = 0,
+	GameStyle_Console = 1,
+	GameStyle_Mixed   = 2,
+	GameStyle_Max
+};
+
+enum ScoreMode : int32_t
+{
+	ScoreMode_Arcade = 0,
+	ScoreMode_F2nd   = 1,
+	ScoreMode_Max
 };
 
 struct TargetStateEx
@@ -278,7 +288,8 @@ struct StateEx
 	UIState ui;
 	int32_t effect_buffer[MaxHitEffectCount] = { };
 	int32_t effect_index = 0;
-	int32_t song_mode = SongMode_Original;
+	std::optional<db::SongEntry> nc_song_entry;
+	std::optional<db::ChartEntry> nc_chart_entry;
 
 	void ResetPlayState();
 	void Reset();

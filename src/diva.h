@@ -579,7 +579,9 @@ struct PvGameTarget
 	bool b491;
 	bool b492;
 	bool b493;
-	uint8_t gap494[12];
+	float button_opacity;
+	float target_opacity;
+	float sudden_appear_frame;
 	float scaling_end_time;
 	uint8_t gap4A4[4];
 	int32_t sprite_index;
@@ -822,6 +824,7 @@ enum GameLocale : int32_t
 	GameLocale_SP = 8,
 	GameLocale_Max
 };
+
 namespace diva
 {
 	struct InputState
@@ -959,6 +962,11 @@ inline FUNCTION_PTR(int64_t, __fastcall, DrawTriangles, 0x1405B4C50, SpriteVerte
 inline FUNCTION_PTR(int32_t, __fastcall, GetGameLocale, 0x1402C8D20);
 
 diva::vec2 GetScaledPosition(const diva::vec2& v);
+
+inline prj::vector<prj::string>* GetRomDirectories()
+{
+	return reinterpret_cast<prj::vector<prj::string>*>(0x1414AB8A0);
+}
 
 // NOTE: File IO functions
 typedef void* FileHandler;

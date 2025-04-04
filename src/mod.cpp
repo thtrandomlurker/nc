@@ -12,19 +12,21 @@
 #include "nc_log.h"
 #include "game/game.h"
 #include "ui/pv_sel.h"
+#include "db.h"
+#include "util.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 const int32_t* life_table = reinterpret_cast<const int32_t*>(0x140BE9EA0);
 
-static bool ParseExtraCSV(const char* data, size_t size)
+static bool ParseExtraCSV(const void* data, size_t size)
 {
 	state.target_ex.clear();
 
 	if (data == nullptr || size == 0)
 		return false;
 
-	std::string_view view = std::string_view(data, size);
+	std::string_view view = std::string_view(static_cast<const char*>(data), size);
 	lazycsv::parser<std::string_view> parser { view };
 
 	auto header = parser.header();
@@ -140,70 +142,56 @@ HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
 //
 HOOK(bool, __fastcall, LoadDscCtrl, 0x14024E270, PVGamePvData* pv_data, prj::string* path, void* a3, bool a4)
 {
-	prj::string patched_path = *path;
+	prj::string dsc_file_path = *path;
+	prj::string csv_file_path = "";
 
-	if (state.song_mode == SongMode_NC)
+	if (state.nc_chart_entry.has_value())
 	{
-		// NOTE: Get filename without extension
-		const char* point = strchr(path->c_str(), '.');
-		size_t length = point != nullptr ? point - path->c_str() : path->size();
-
-		// NOTE: Patch DSC path
-		char patched_dsc_path[256] = { '\0' };
-		sprintf_s(patched_dsc_path, "%.*s_nc.dsc", static_cast<uint32_t>(length), path->c_str());
-		patched_path = patched_dsc_path;
-
-		// NOTE: Handle CSV reading
-		if (state.file_state == 0)
+		const std::string& script_file_name = state.nc_chart_entry.value().script_file_name;
+		if (!script_file_name.empty() && script_file_name != "(NULL)")
 		{
-			// NOTE: Format file name
-			char csv_path[256] = { '\0' };
-			sprintf_s(csv_path, "%.*s_nc.csv", static_cast<uint32_t>(length), path->c_str());
+			dsc_file_path = script_file_name;
+			csv_file_path = util::ChangeExtension(script_file_name, ".csv");
+		}
+	}
 
-			// NOTE: Check if file exists and start reading it
-			prj::string csv_path_str = csv_path;
-			prj::string fixed;
-			if (FileCheckExists(&csv_path_str, &fixed))
-			{
-				nc::Print("File (%s) exists! Found at (%s)\n", csv_path_str.c_str(), fixed.c_str());
-				if (!FileRequestLoad(&state.file_handler, csv_path_str.c_str(), 1))
-				{
-					state.file_handler = nullptr;
-					state.file_state = 2;
-				}
-				else
-					state.file_state = 1;
-			}
-			else
-			{
-				nc::Print("File (%s) does not exist!\n", csv_path_str.c_str());
-				state.file_handler = nullptr;
-				state.file_state = 2;
-			}
-		}
-		else if (state.file_state == 1)
+	switch (state.file_state)
+	{
+	case 0:
+		if (csv_file_path.empty())
 		{
-			if (!FileCheckNotReady(&state.file_handler))
-				state.file_state = 2;
+			state.file_state = 3;
+			break;
 		}
-		else if (state.file_state == 2 && state.file_handler != nullptr)
+
+		if (!FileRequestLoad(&state.file_handler, csv_file_path.c_str(), 1))
 		{
-			const void* data = FileGetData(&state.file_handler);
-			size_t size = FileGetSize(&state.file_handler);
-			ParseExtraCSV(static_cast<const char*>(data), size);
-			FileFree(&state.file_handler);
+			state.file_handler = nullptr;
+			state.file_state = 3;
+			break;
 		}
+
+		nc::Print("File (%s) exists!\n", csv_file_path.c_str());
+		state.file_state = 1;
+		break;
+	case 1:
+		if (!FileCheckNotReady(&state.file_handler))
+			state.file_state = 2;
+		break;
+	case 2:
+		ParseExtraCSV(FileGetData(&state.file_handler), FileGetSize(&state.file_handler));
+		FileFree(&state.file_handler);
+		state.file_handler = nullptr;
+		state.file_state = 3;
+		break;
+	case 3:
+		break;
 	}
 
 	if (!state.dsc_loaded)
-	{
-		state.dsc_loaded = originalLoadDscCtrl(pv_data, &patched_path, a3, a4);
-		return false;
-	}
+		state.dsc_loaded = originalLoadDscCtrl(pv_data, &dsc_file_path, a3, a4);
 
-	if (state.song_mode == SongMode_NC)
-		return state.file_state == 2;
-	return state.dsc_loaded;
+	return state.dsc_loaded && state.file_state == 3;
 }
 
 HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
@@ -441,5 +429,6 @@ extern "C"
 		InstallGameHooks();
 		InstallTargetHooks();
 		InstallPvSelHooks();
+		InstallDatabaseHooks();
 	}
 };

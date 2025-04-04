@@ -8,18 +8,11 @@
 #include <nc_log.h>
 #include <diva.h>
 #include <nc_state.h>
+#include <db.h>
 
 constexpr uint32_t AetSelSetID   = 14010050;
 constexpr uint32_t AetSelSceneID = 14010051;
 constexpr uint32_t SprSelSetID   = 14020050;
-
-enum GameStyle : int32_t
-{
-	GameStyle_Arcade  = 0,
-	GameStyle_Console = 1,
-	GameStyle_Mixed   = 2,
-	GameStyle_Max
-};
 
 const char* style_names_internal[4] = { "arcade", "console", "mixed", "max" };
 
@@ -85,14 +78,23 @@ namespace pvsel
 	static bool IsModeChangeable() { return mode_count > 1; }
 	static void PopulateModes(int32_t pv, int32_t diff, int32_t ed)
 	{
-		// TODO: Change this so that songs don't necessarily need an arcade mode
-		//
-		modes[0] = GameStyle_Arcade;
-		mode_count = 1;
-		selected_index = 0;
+		mode_count = 0;
 
-		if (CheckPVHasNC(pv, diff, ed))
-			modes[mode_count++] = GameStyle_Console;
+		if (const auto* entry = db::FindDifficultyEntry(pv, diff, ed); entry != nullptr)
+		{
+			for (const db::ChartEntry& chart : entry->charts)
+			{
+				if (chart.style == GameStyle_Max)
+					continue;
+
+				modes[mode_count++] = chart.style;
+			}
+		}
+		else
+		{
+			modes[0] = GameStyle_Arcade;
+			mode_count++;
+		}
 	}
 
 
@@ -207,10 +209,19 @@ namespace pvsel
 
 	static void SetStateSelectedMode()
 	{
-		if (modes[selected_index] == GameStyle_Console || modes[selected_index] == GameStyle_Mixed)
-			state.song_mode = SongMode_NC;
+		if (modes[selected_index] == GameStyle_Arcade)
+		{
+			state.nc_song_entry.reset();
+			state.nc_chart_entry.reset();
+		}
 		else
-			state.song_mode = SongMode_Original;
+		{
+			if (const db::SongEntry* song = db::FindSongEntry(cur_pv_id); song != nullptr)
+			{
+				state.nc_song_entry = *song;
+				state.nc_chart_entry = db::FindDifficultyEntry(cur_pv_id, cur_diff, cur_edition)->charts[selected_index];
+			}
+		}
 	}
 
 	static void SetSelectedSong(int32_t pv, int32_t diff, int32_t ed)
