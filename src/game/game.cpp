@@ -378,6 +378,33 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	return final_hit_state;
 }
 
+static float GetPercentageF2nd(const PVGameData* pv_game)
+{
+	int32_t target_count = static_cast<int32_t>(pv_game->pv_data.targets.size());
+	int32_t correct_hits = pv_game->judge_count_correct[BasicHitState_Cool] + pv_game->judge_count_correct[BasicHitState_Fine];
+
+	float targets_ratio = static_cast<float>(correct_hits) / static_cast<float>(target_count);
+	float completion_rate = targets_ratio * state.scoring_info.target_max_rate;
+
+	if (state.chance_time.IsValid() && state.chance_time.successful)
+		completion_rate += ChanceTimeRetainedRate;
+
+	return completion_rate * 100.0f;
+}
+
+HOOK(void, __fastcall, CalculatePercentage, 0x140246130, PVGameData* pv_game)
+{
+	switch (state.GetScoreMode())
+	{
+	case ScoreMode_F2nd:
+		pv_game->percentage = GetPercentageF2nd(pv_game);
+		break;
+	default:
+		originalCalculatePercentage(pv_game);
+		break;
+	}
+}
+
 HOOK(void, __fastcall, UpdateLife, 0x140245220, PVGameData* a1, int32_t hit_state, bool a3, bool is_challenge_time, int32_t a5, bool a6, bool a7, bool a8)
 {
 	originalUpdateLife(
@@ -416,4 +443,5 @@ void InstallGameHooks()
 	INSTALL_HOOK(UpdateLife);
 	INSTALL_HOOK(ExecuteModeSelect);
 	INSTALL_HOOK(UpdateGaugeFrame);
+	INSTALL_HOOK(CalculatePercentage);
 }

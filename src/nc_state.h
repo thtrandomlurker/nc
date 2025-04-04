@@ -6,6 +6,8 @@
 #include "input.h"
 #include "db.h"
 
+constexpr float ChanceTimeRetainedRate = 0.05; // 5%
+
 enum TargetType : int32_t
 {
 	// FT
@@ -201,6 +203,8 @@ struct ChanceState
 	bool enabled = false;
 	bool successful = false;
 
+	inline bool IsValid() { return first_target_index != -1 && last_target_index != -1; }
+
 	inline void ResetPlayState()
 	{
 		targets_hit = 0;
@@ -232,6 +236,11 @@ struct ChanceState
 	{
 		return index >= first_target_index && index <= last_target_index;
 	}
+};
+
+struct ScoringInfo
+{
+	float target_max_rate = 0.0f;
 };
 
 enum LayerUI : int32_t
@@ -275,6 +284,7 @@ struct StateEx
 	int32_t effect_index = 0;
 	std::optional<db::SongEntry> nc_song_entry;
 	std::optional<db::ChartEntry> nc_chart_entry;
+	ScoringInfo scoring_info = { };
 
 	void ResetPlayState();
 	void Reset();
@@ -282,6 +292,13 @@ struct StateEx
 	bool PopTarget(TargetStateEx* ex);
 	void PlaySoundEffect(int32_t type);
 	void PlayRushHitEffect(const diva::vec2& pos, float scale, bool pop);
+
+	inline int32_t GetScoreMode() const
+	{
+		if (nc_chart_entry.has_value())
+			return nc_chart_entry.value().score_mode;
+		return ScoreMode_Arcade;
+	}
 };
 
 // NOTE: Constants

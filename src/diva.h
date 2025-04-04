@@ -82,6 +82,15 @@ enum HitState : int32_t
 	HitState_None       = 21
 };
 
+enum BasicHitState : int32_t
+{
+	BasicHitState_Cool  = 0,
+	BasicHitState_Fine  = 1,
+	BasicHitState_Safe  = 2,
+	BasicHitState_Sad   = 3,
+	BasicHitState_Worst = 4
+};
+
 enum InputDevice : int32_t
 {
 	InputDevice_Xbox      = 0,
@@ -723,8 +732,8 @@ struct PVGameData
 	uint8_t gap2D250[8];
 	int32_t challenge_combo;
 	int32_t max_combo;
-	int32_t judge_count[5];
-	int32_t judge_count_correct[5];
+	int32_t judge_count[5];         // NOTE: Includes WRONG
+	int32_t judge_count_correct[5]; // NOTE: Does not include WRONG
 	uint8_t gap2D288[16];
 	float float2D298;
 	uint8_t gap2D29C[12];
@@ -743,7 +752,11 @@ struct PVGameData
 	prj::vector<int32_t> target_reference_scores;
 	uint8_t gap2D2F0[8];
 	int64_t qword2D2F8;
-	uint8_t gap2D300[29];
+	uint8_t gap2D300[4];
+	float percentage;
+	float float2D308;
+	float float2D30C;
+	uint8_t gap2D310[13];
 	uint8_t byte2D31D;
 	uint8_t gap2D31E;
 	uint8_t byte2D31F;
