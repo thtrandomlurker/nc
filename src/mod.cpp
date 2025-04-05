@@ -13,6 +13,7 @@
 #include "game/game.h"
 #include "ui/pv_sel.h"
 #include "db.h"
+#include "save_data.h"
 #include "util.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -441,5 +442,7 @@ extern "C"
 		InstallTargetHooks();
 		InstallPvSelHooks();
 		InstallDatabaseHooks();
+		nc::CreateDefaultSaveData();
+		nc::InstallSaveDataHooks();
 	}
 };

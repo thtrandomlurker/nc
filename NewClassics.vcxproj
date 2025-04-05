@@ -180,6 +180,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClCompile Include="src\mod.cpp" />
     <ClCompile Include="src\nc_log.cpp" />
     <ClCompile Include="src\nc_state.cpp" />
+    <ClCompile Include="src\save_data.cpp" />
     <ClCompile Include="src\thirdparty\toml.cpp" />
     <ClCompile Include="src\ui\pv_sel.cpp" />
     <ClCompile Include="src\util.cpp" />
@@ -196,6 +197,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClInclude Include="src\helpers.h" />
     <ClInclude Include="src\input.h" />
     <ClInclude Include="src\nc_log.h" />
+    <ClInclude Include="src\save_data.h" />
     <ClInclude Include="src\thirdparty\lazycsv.hpp" />
     <ClInclude Include="src\thirdparty\toml++\toml.hpp" />
     <ClInclude Include="src\thirdparty\toml.h" />
