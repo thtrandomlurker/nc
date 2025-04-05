@@ -90,6 +90,7 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	UpdateButtonState(&buttons[Button_R3], key_states, ButtonIndex_R, GameButton_R3);
 	UpdateButtonState(&buttons[Button_R4], key_states, ButtonIndex_R, GameButton_R4);
 
+	/*
 	buttons[Button_LStick].data[0].down = fabsf(sticks[StickAxis_LX].cur) >= sensivity ||
 		fabsf(sticks[StickAxis_LY].cur) >= sensivity;
 
@@ -98,11 +99,32 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 
 	buttons[Button_LStick].data[0].up = !buttons[Button_LStick].data[0].down;
 	buttons[Button_RStick].data[0].up = !buttons[Button_RStick].data[0].down;
+	*/
 
 	for (int i = 0; i < Button_Max; i++)
 	{
 		buttons[i].data[0].tapped = buttons[i].data[0].down && buttons[i].data[1].up;
 		buttons[i].data[0].released = buttons[i].data[0].up && buttons[i].data[1].down;
+	}
+
+	// NOTE: Update stick input
+	auto checkAxisFlicked = [this](const StickState& state)
+	{
+		if (fabsf(state.cur) > fabsf(state.prev))
+			return fabsf(state.delta) >= sensivity;
+
+		return false;
+	};
+
+	for (int i = 0; i < 2; i++)
+	{
+		const StickState& state_x = sticks[i * 2 + 0];
+		const StickState& state_y = sticks[i * 2 + 1];
+
+		buttons[Button_LStick + i].data[0].down     = state_x.cur >= hold_sensivity || state_y.cur >= hold_sensivity;
+		buttons[Button_LStick + i].data[0].up       = !buttons[Button_LStick + i].data[0].down;
+		buttons[Button_LStick + i].data[0].tapped   = checkAxisFlicked(state_x) || checkAxisFlicked(state_y);
+		buttons[Button_LStick + i].data[0].released = !buttons[Button_LStick + i].data[0].tapped;
 	}
 
 	return true;

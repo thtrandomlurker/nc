@@ -72,6 +72,7 @@ struct MacroState
 {
 	ButtonState buttons[Button_Max];
 	StickState sticks[StickAxis_Max];
+	float hold_sensivity;
 	float sensivity;
 	int32_t device;
 
@@ -79,7 +80,8 @@ struct MacroState
 	{
 		memset(buttons, 0, sizeof(buttons));
 		memset(sticks, 0, sizeof(sticks));
-		sensivity = 0.6f;
+		hold_sensivity = 0.75f;
+		sensivity = 0.5f;
 		device = InputDevice_Unknown;
 	}
 
