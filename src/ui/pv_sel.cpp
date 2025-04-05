@@ -13,8 +13,7 @@
 constexpr uint32_t AetSelSetID   = 14010050;
 constexpr uint32_t AetSelSceneID = 14010051;
 constexpr uint32_t SprSelSetID   = 14020050;
-
-const char* style_names_internal[4] = { "arcade", "console", "mixed", "max" };
+constexpr const char* StyleNamesInternal[4] = { "arcade", "console", "mixed", "max" };
 
 static FUNCTION_PTR(bool, __fastcall, CheckCustomizeSelReady, 0x1401DE790);
 static bool IsFutureToneMode() { return *reinterpret_cast<bool*>(0x1414AB9E3); }
@@ -33,29 +32,7 @@ static std::string GetWindowLayerName() { return GetModePrefix() + "game_style_w
 static std::string GetWindowTextLayerName() { return GetModePrefix() + "game_style_txt" + GetLanguageSuffix(); }
 static std::string GetStyleLayerName(int32_t style)
 {
-	return GetModePrefix() + "game_style_" + style_names_internal[style] + GetLanguageSuffix();
-}
-
-static bool CheckPVHasNC(int32_t id, int32_t diff_index, int32_t edition)
-{
-	// TODO: Change this to use the pv_db script path instead
-	//       (as that's how the script is loaded, this method creates some inconsistencies)
-	if (id > 0 && diff_index >= 0 && diff_index < 5 && edition >= 0 && edition < 2)
-	{
-		const char* difficulties[5] = { "easy", "normal", "hard", "extreme", "encore" };
-		char filename[256] = { 0 };
-
-		if (edition > 0)
-			sprintf_s(filename, "rom/script/pv_%03d_%s_%d_nc.dsc", id, difficulties[diff_index], edition);
-		else
-			sprintf_s(filename, "rom/script/pv_%03d_%s_nc.dsc", id, difficulties[diff_index]);
-
-		prj::string path = filename;
-		prj::string fixed;
-		return FileCheckExists(&path, &fixed);
-	}
-
-	return false;
+	return GetModePrefix() + "game_style_" + StyleNamesInternal[style] + GetLanguageSuffix();
 }
 
 namespace pvsel
