@@ -41,29 +41,26 @@ static bool ParseExtraCSV(const void* data, size_t size)
 		for (const auto cell : row)
 		{
 			std::string_view name = header.cells(cell_index)[0].trimed();
+			std::string value(cell.trimed()); // NOTE: Should usually be small enough that C++ does SSO
 
-			char value[128] = { 0 };
-			strncpy_s(value, cell.trimed().data(), cell.trimed().size());
-
-			if (strncmp("index", name.data(), name.size()) == 0)
-				index = strtol(value, nullptr, 10);
-			else if (strncmp("sub_index", name.data(), name.size()) == 0)
-				sub_index = strtol(value, nullptr, 10);
-			else if (strncmp("length", name.data(), name.size()) == 0)
-				length = strtof(value, nullptr);
-			else if (strncmp("end", name.data(), name.size()) == 0)
+			if (name == "index")
+				index = std::stoi(value);
+			else if (name == "sub_index")
+				sub_index = std::stoi(value);
+			else if (name == "length")
+				length = std::stof(value);
+			else if (name == "end")
 			{
-				if (strcmp(value, "true") == 0)
+				if (value == "true")
 					is_end = true;
-				else if (strcmp(value, "false") == 0)
+				else if (value == "false")
 					is_end = false;
 				else
 				{
-					int32_t i = strtol(value, nullptr, 10);
+					int32_t i = std::stoi(value);
 					is_end = i > 0;
 				}
 			}
-
 
 			cell_index++;
 		}
