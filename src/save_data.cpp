@@ -98,7 +98,7 @@ HOOK(void, __fastcall, LoadSaveData, 0x1401D7FB0, void* a1)
 		fseek(file, 0, SEEK_SET);
 
 		file_data.resize(size);
-		fread(file_data.data(), size, 0, file);
+		fread(file_data.data(), size, 1, file);
 		fclose(file);
 	}
 
