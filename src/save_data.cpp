@@ -19,7 +19,7 @@
 //   https://github.com/blueskythlikesclouds/DivaModLoader/blob/master/Source/DivaModLoader/SaveData.cpp
 
 constexpr int32_t MaxHeaderSize = 128;
-constexpr uint8_t CurrentFileVersion[2] = { 1, 1 };
+constexpr uint8_t CurrentFileVersion[2] = { 1, 2 };
 static const char* SaveFileName = "NewClassics.dat";
 
 struct DifficultyScore
