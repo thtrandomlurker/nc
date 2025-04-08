@@ -206,6 +206,7 @@ namespace pvsel
 		if (pv != cur_pv_id || diff != cur_diff || ed != cur_edition)
 		{
 			prev_sel_mode = modes[selected_index];
+			selected_index = 0;
 			PopulateModes(pv, diff, ed);
 
 			for (int i = 0; i < mode_count; i++)
