@@ -99,7 +99,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	int32_t* a5,
 	SoundEffect* se,
 	int32_t* multi_count,
-	int32_t* a8,
+	float* player_hit_time,
 	int32_t* target_index,
 	bool* is_success_note,
 	bool* slide,
@@ -231,6 +231,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 			final_hit_state = hit_state;
 			*multi_count = group_count;
 			*target_index = group[0]->target_index;
+			*player_hit_time = group[0]->player_hit_time;
 			
 			if (success)
 				GetPVGameData()->is_success_branch = true;
