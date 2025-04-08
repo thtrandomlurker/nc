@@ -1,3 +1,4 @@
+#include <array>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -9,28 +10,61 @@
 #include "Helpers.h"
 #include "diva.h"
 #include "nc_log.h"
+#include "nc_state.h"
 #include "save_data.h"
 
 // HEAVILY MODELED AFTER:
 //   https://github.com/blueskythlikesclouds/DivaModLoader/blob/master/Source/DivaModLoader/SaveData.cpp
 
 constexpr int32_t MaxHeaderSize = 128;
-constexpr uint8_t CurrentFileVersion[2] = { 1, 0 };
+constexpr uint8_t CurrentFileVersion[2] = { 1, 1 };
 static const char* SaveFileName = "NewClassics.dat";
 
-static std::unordered_map<int32_t, ConfigSet> config_sets;
-
-ConfigSet* nc::FindConfigSet(int32_t id, bool create_if_missing)
+struct DifficultyScore
 {
-	if (auto it = config_sets.find(id); it != config_sets.end())
-		return &it->second;
-	else if (create_if_missing)
+	uint8_t _data[288];
+};
+
+static std::unordered_map<int32_t, ConfigSet> config_sets;
+static std::unordered_map<int32_t, std::array<DifficultyScore, 10>> scores;
+
+namespace nc
+{
+	ConfigSet* FindConfigSet(int32_t id, bool create_if_missing)
 	{
-		config_sets[id] = { };
-		return &config_sets[id];
+		if (auto it = config_sets.find(id); it != config_sets.end())
+			return &it->second;
+		else if (create_if_missing)
+		{
+			config_sets[id] = { };
+			return &config_sets[id];
+		}
+
+		return nullptr;
 	}
 
-	return nullptr;
+	static FUNCTION_PTR(void, __fastcall, InitDifficultyScoreStruct, 0x1401D99A0, void* a1);
+	static DifficultyScore* FindOrCreateDifficultyScore(int32_t pv, int32_t difficulty, int32_t edition)
+	{
+		if (difficulty < 0 || difficulty > 5 || pv < 0)
+			return nullptr;
+
+		if (auto it = scores.find(pv); it != scores.end())
+			return &it->second[difficulty + (edition != 0 ? 5 : 0)];
+		
+		auto& score = scores[pv];
+		for (size_t i = 0; i < 10; i++)
+			InitDifficultyScoreStruct(&score[i]);
+
+		return &score[difficulty + (edition != 0 ? 5 : 0)];
+	}
+
+	void nc::CreateDefaultSaveData()
+	{
+		config_sets[-1] = { }; // NOTE: Shared Set A
+		config_sets[-2] = { }; // NOTE: Shared Set B
+		config_sets[-3] = { }; // NOTE: Shared Set C
+	}
 }
 
 // NOTE: Handle reading of save data file
@@ -45,6 +79,7 @@ struct SaveDataFile
 		uint16_t flags;
 		int32_t header_size;
 		size_t config_set_count;
+		size_t score_ex_count;
 
 		Header()
 		{
@@ -56,6 +91,12 @@ struct SaveDataFile
 			config_set_count = 0;
 		}
 	} header;
+
+	struct ScoreEx
+	{
+		int32_t pv;
+		DifficultyScore difficulties[10];
+	};
 
 	static_assert(sizeof(Header) <= MaxHeaderSize);
 	char _header_padding[MaxHeaderSize - sizeof(Header)];
@@ -79,6 +120,11 @@ struct SaveDataFile
 	inline const ConfigSet* GetConfigSets() const
 	{
 		return reinterpret_cast<const ConfigSet*>(reinterpret_cast<const uint8_t*>(this) + MaxHeaderSize);
+	}
+
+	inline const ScoreEx* GetScores() const
+	{
+		return reinterpret_cast<const ScoreEx*>(GetConfigSets() + header.config_set_count);
 	}
 };
 
@@ -119,6 +165,13 @@ HOOK(void, __fastcall, LoadSaveData, 0x1401D7FB0, void* a1)
 	{
 		const ConfigSet& set = data->GetConfigSets()[i];
 		config_sets[set.id] = set;
+	}
+
+	for (size_t i = 0; i < data->header.score_ex_count; i++)
+	{
+		const SaveDataFile::ScoreEx& score = data->GetScores()[i];
+		auto& score_new = scores[score.pv];
+		memcpy(score_new.data(), score.difficulties, sizeof(DifficultyScore) * 10);
 	}
 }
 
@@ -170,9 +223,13 @@ HOOK(void, __fastcall, SaveSaveData, 0x1401D8280, void* a1)
 
 	SaveDataFile::Header header;
 	header.config_set_count = config_sets.size();
+	header.score_ex_count = scores.size();
 
 	MemoryWriter writer = { };
-	writer.Resize(MaxHeaderSize + config_sets.size() * sizeof(ConfigSet));
+	writer.Resize(MaxHeaderSize +
+		config_sets.size() * sizeof(ConfigSet) +
+		scores.size() * sizeof(SaveDataFile::ScoreEx)
+	);
 	
 	// NOTE: Write header
 	writer.Write(&header, sizeof(SaveDataFile::Header));
@@ -186,6 +243,13 @@ HOOK(void, __fastcall, SaveSaveData, 0x1401D8280, void* a1)
 		writer.Write(&setw, sizeof(ConfigSet));
 	}
 
+	// NOTE: Write scores
+	for (const auto& [id, data] : scores)
+	{
+		writer.Write(&id, sizeof(int32_t));
+		writer.Write(data.data(), sizeof(DifficultyScore) * 10);
+	}
+
 	// NOTE: Dump data to file
 	prj::string path;
 	GetSaveDataPath(&path, SaveFileName);
@@ -195,15 +259,24 @@ HOOK(void, __fastcall, SaveSaveData, 0x1401D8280, void* a1)
 	}
 }
 
-void nc::CreateDefaultSaveData()
+// NOTE: This function is implemented in `save_data_imp.asm`
+HOOK(DifficultyScore*, __fastcall, GetSavedScoreDifficulty, 0x1401D9DF0, uint64_t, int32_t, int32_t, int32_t);
+
+DifficultyScore* GetSavedScoreDifficultyImp(uint64_t a1, int32_t mode, int32_t difficulty, int32_t edition)
 {
-	config_sets[-1] = { }; // NOTE: Shared Set A
-	config_sets[-2] = { }; // NOTE: Shared Set B
-	config_sets[-3] = { }; // NOTE: Shared Set C
+	if (mode == 0 && state.nc_chart_entry.has_value() && state.nc_chart_entry.value().style != GameStyle_Arcade)
+	{
+		int32_t pv = *reinterpret_cast<int32_t*>(a1);
+		if (auto* patched = nc::FindOrCreateDifficultyScore(pv, difficulty, edition); patched != nullptr)
+			return patched;
+	}
+
+	return originalGetSavedScoreDifficulty(a1, mode, difficulty, edition);
 }
 
 void nc::InstallSaveDataHooks()
 {
 	INSTALL_HOOK(LoadSaveData);
 	INSTALL_HOOK(SaveSaveData);
+	INSTALL_HOOK(GetSavedScoreDifficulty);
 }

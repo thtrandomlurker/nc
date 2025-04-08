@@ -23,7 +23,7 @@ struct ConfigSet
 namespace nc
 {
 	ConfigSet* FindConfigSet(int32_t id, bool create_if_missing = false);
-
 	void CreateDefaultSaveData();
+
 	void InstallSaveDataHooks();
 }
