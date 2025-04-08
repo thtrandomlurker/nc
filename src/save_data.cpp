@@ -13,6 +13,8 @@
 #include "nc_state.h"
 #include "save_data.h"
 
+#define SCORE_KEY(id, st) (id | (static_cast<uint64_t>(st) << 32))
+
 // HEAVILY MODELED AFTER:
 //   https://github.com/blueskythlikesclouds/DivaModLoader/blob/master/Source/DivaModLoader/SaveData.cpp
 
@@ -26,7 +28,7 @@ struct DifficultyScore
 };
 
 static std::unordered_map<int32_t, ConfigSet> config_sets;
-static std::unordered_map<int32_t, std::array<DifficultyScore, 10>> scores;
+static std::unordered_map<uint64_t, std::array<DifficultyScore, 10>> scores;
 
 namespace nc
 {
@@ -44,15 +46,15 @@ namespace nc
 	}
 
 	static FUNCTION_PTR(void, __fastcall, InitDifficultyScoreStruct, 0x1401D99A0, void* a1);
-	static DifficultyScore* FindOrCreateDifficultyScore(int32_t pv, int32_t difficulty, int32_t edition)
+	static DifficultyScore* FindOrCreateDifficultyScore(int32_t pv, int32_t difficulty, int32_t edition, int32_t style)
 	{
 		if (difficulty < 0 || difficulty > 5 || pv < 0)
 			return nullptr;
 
-		if (auto it = scores.find(pv); it != scores.end())
+		if (auto it = scores.find(SCORE_KEY(pv, style)); it != scores.end())
 			return &it->second[difficulty + (edition != 0 ? 5 : 0)];
 		
-		auto& score = scores[pv];
+		auto& score = scores[SCORE_KEY(pv, style)];
 		for (size_t i = 0; i < 10; i++)
 			InitDifficultyScoreStruct(&score[i]);
 
@@ -95,6 +97,7 @@ struct SaveDataFile
 	struct ScoreEx
 	{
 		int32_t pv;
+		int32_t style;
 		DifficultyScore difficulties[10];
 	};
 
@@ -170,7 +173,7 @@ HOOK(void, __fastcall, LoadSaveData, 0x1401D7FB0, void* a1)
 	for (size_t i = 0; i < data->header.score_ex_count; i++)
 	{
 		const SaveDataFile::ScoreEx& score = data->GetScores()[i];
-		auto& score_new = scores[score.pv];
+		auto& score_new = scores[SCORE_KEY(score.pv, score.style)];
 		memcpy(score_new.data(), score.difficulties, sizeof(DifficultyScore) * 10);
 	}
 }
@@ -244,10 +247,10 @@ HOOK(void, __fastcall, SaveSaveData, 0x1401D8280, void* a1)
 	}
 
 	// NOTE: Write scores
-	for (const auto& [id, data] : scores)
+	for (const auto& [key, value] : scores)
 	{
-		writer.Write(&id, sizeof(int32_t));
-		writer.Write(data.data(), sizeof(DifficultyScore) * 10);
+		writer.Write(&key, sizeof(uint64_t));
+		writer.Write(value.data(), sizeof(DifficultyScore) * 10);
 	}
 
 	// NOTE: Dump data to file
@@ -264,11 +267,15 @@ HOOK(DifficultyScore*, __fastcall, GetSavedScoreDifficulty, 0x1401D9DF0, uint64_
 
 DifficultyScore* GetSavedScoreDifficultyImp(uint64_t a1, int32_t mode, int32_t difficulty, int32_t edition)
 {
-	if (mode == 0 && state.nc_chart_entry.has_value() && state.nc_chart_entry.value().style != GameStyle_Arcade)
+	if (mode == 0 && state.nc_chart_entry.has_value())
 	{
-		int32_t pv = *reinterpret_cast<int32_t*>(a1);
-		if (auto* patched = nc::FindOrCreateDifficultyScore(pv, difficulty, edition); patched != nullptr)
-			return patched;
+		int32_t style = state.nc_chart_entry.value().style;
+		if (style != GameStyle_Arcade)
+		{
+			int32_t pv = *reinterpret_cast<int32_t*>(a1);
+			if (auto* patched = nc::FindOrCreateDifficultyScore(pv, difficulty, edition, style); patched != nullptr)
+				return patched;
+		}
 	}
 
 	return originalGetSavedScoreDifficulty(a1, mode, difficulty, edition);
