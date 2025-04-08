@@ -892,6 +892,7 @@ namespace aet
 	// NOTE: Sets if the layer object should play (1) or pause (0)
 	inline FUNCTION_PTR(void, __fastcall, SetPlay, 0x1402CA380, int32_t id, bool play);
 	inline FUNCTION_PTR(void, __fastcall, SetVisible, 0x1402CA390, int32_t id, bool visible);
+	inline FUNCTION_PTR(void, __fastcall, SetOpacity, 0x1402CA420, int32_t id, float opacity);
 
 	void CreateAetArgs(AetArgs* args, uint32_t scene_id, const char* layer_name, int32_t prio);
 	void CreateAetArgs(AetArgs* args, uint32_t scene_id, const char* layer_name, int32_t flags, int32_t layer, int32_t prio, const char* start_marker, const char* end_marker);
@@ -973,6 +974,8 @@ inline FUNCTION_PTR(PVGameData*, __fastcall, GetPVGameData, 0x140266720);
 inline FUNCTION_PTR(bool, __fastcall, IsInSongResults, 0x1401E8090);
 inline FUNCTION_PTR(int64_t, __fastcall, DrawTriangles, 0x1405B4C50, SpriteVertex* vertices, size_t vertex_count, int32_t res_mode, int32_t prio, uint32_t sprite_id);
 inline FUNCTION_PTR(int32_t, __fastcall, GetGameLocale, 0x1402C8D20);
+
+inline FUNCTION_PTR(bool, __fastcall, IsSuddenEquipped, 0x14024B720, PVGameData* pv_game);
 
 diva::vec2 GetScaledPosition(const diva::vec2& v);
 

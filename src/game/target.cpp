@@ -84,9 +84,15 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 	ex->org = target;
 	ex->target_pos = target->target_pos;
 
-	// NOTE: From here, call the original routine if this is not an NC note
 	if (target->target_type < TargetType_Custom || target->target_type >= TargetType_Max)
 		return originalCreateTargetAetLayers(target);
+
+	// NOTE: Call the original routine with a temporary note type to have it calculate
+	//       some other data (so that we don't have to duplicate all that code here)
+	int32_t type = target->target_type;
+	target->target_type = TargetType_Triangle;
+	originalCreateTargetAetLayers(target);
+	target->target_type = type;
 
 	// NOTE: Remove previously created aet objects, if present
 	aet::Stop(&target->target_aet);
@@ -141,10 +147,6 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 		target->button_aet = 0;
 	}
 
-	// NOTE: Initialize some information
-	target->out_start_time = 360.0f;
-	target->scaling_end_time = 31.0f;
-
 	if (ex->IsRushNote())
 	{
 		ex->bal_time = aet::GetMarkerTime(AetSceneID, button_layer, "bal");
@@ -153,6 +155,9 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 		ex->bal_effect_aet = aet::PlayLayer(AetSceneID, 12, 0x10000, "target_balloon_eff", nullptr, 0, nullptr, nullptr, -1.0f, -1.0f, 0, nullptr);
 		aet::SetPlay(ex->bal_effect_aet, false);
 	}
+
+	aet::SetOpacity(target->target_aet, target->target_opacity);
+	aet::SetOpacity(target->button_aet, target->button_opacity);
 }
 
 HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
@@ -440,6 +445,7 @@ static void CreateLongNoteKisekiBuffer(TargetStateEx* ex)
 	float uv_width  = 128.0f;
 	float uv_height = 64.0f;
 	float uv_pos_y  = uv_height / 2.0f;
+	uint32_t color = IsSuddenEquipped(GetPVGameData()) ? 0x00FFFFFF : 0xFFFFFFFF;
 
 	for (size_t i = 0; i < ex->vertex_count_max; i += 2)
 	{
@@ -447,10 +453,10 @@ static void CreateLongNoteKisekiBuffer(TargetStateEx* ex)
 
 		ex->kiseki[i].pos       = diva::vec3(GetScaledPosition(ex->kiseki_pos + offset), 0.0f);
 		ex->kiseki[i].uv        = diva::vec2(uv_width, uv_pos_y);
-		ex->kiseki[i].color     = 0xFFFFFFFF;
+		ex->kiseki[i].color     = color;
 		ex->kiseki[i + 1].pos   = diva::vec3(GetScaledPosition(ex->kiseki_pos + offset), 0.0f);
 		ex->kiseki[i + 1].uv    = diva::vec2(uv_width, uv_height);
-		ex->kiseki[i + 1].color = 0xFFFFFFFF;
+		ex->kiseki[i + 1].color = color;
 	}
 }
 
@@ -472,7 +478,7 @@ static void UpdateLongNoteKiseki(PVGameArcade* data, TargetStateEx* ex, float dt
 	while (ex->kiseki_time >= KisekiInterval)
 	{
 		for (size_t i = ex->vertex_count_max - 3; i > 0; i--)
-			ex->kiseki[i + 2].pos = ex->kiseki[i].pos;
+			ex->kiseki[i + 2] = ex->kiseki[i];
 		ex->kiseki[2] = ex->kiseki[0];
 
 		push_count++;
@@ -494,15 +500,21 @@ static void UpdateLongNoteKiseki(PVGameArcade* data, TargetStateEx* ex, float dt
 	const float px_width = 7.2f;
 	const diva::vec2 offset = GetLongKisekiOffset(ex);
 
+	if (ex->org != nullptr && ex->flying_time_remaining > 0.0f)
+		ex->alpha = ex->org->button_opacity;
+
 	for (size_t i = 0; i < push_count; i++)
 	{
 		// TODO: Rename kiseki_dir to target_normal or something like that
 		diva::vec2 size = ex->kiseki_dir * px_width;
 		diva::vec2 left = GetScaledPosition(ex->kiseki_pos + offset + -size);
 		diva::vec2 right = GetScaledPosition(ex->kiseki_pos + offset + size);
+		uint32_t color = 0x00FFFFFF | (static_cast<int32_t>(ex->alpha * 255.0f) << 24);
 
 		ex->kiseki[i * 2].pos       = diva::vec3(right, 0.0f);
+		ex->kiseki[i * 2].color     = color;
 		ex->kiseki[i * 2 + 1].pos   = diva::vec3(left, 0.0f);
+		ex->kiseki[i * 2 + 1].color = color;
 	}
 
 	// NOTE: Update UV
