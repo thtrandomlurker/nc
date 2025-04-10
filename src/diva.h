@@ -4,6 +4,7 @@
 #include <string_view>
 #include <vector>
 #include <map>
+#include <memory>
 #include <stdint.h>
 #include "Helpers.h"
 
@@ -13,6 +14,7 @@ namespace prj
 	inline FUNCTION_PTR(void*, __fastcall, operatorDelete, 0x1409B1E90, void*);
 
 	// FROM: https://github.com/blueskythlikesclouds/DivaModLoader/blob/master/Source/DivaModLoader/Allocator.h
+	//       https://github.com/blueskythlikesclouds/DivaModLoader/blob/master/Source/DivaModLoader/Types.h
 	//
 	template <class T>
 	class Allocator
@@ -31,6 +33,25 @@ namespace prj
 		void deallocate(value_type* p, size_t) noexcept
 		{
 			operatorDelete(reinterpret_cast<void*>(p));
+		}
+	};
+
+	template <class T>
+	struct default_delete
+	{
+		void operator()(T* ptr) const noexcept
+		{
+			operatorDelete(ptr);
+		}
+	};
+
+	template <class T>
+	struct default_delete<T[]>
+	{
+		void operator()(T* ptr) const noexcept
+		{
+			static_assert(std::is_trivially_destructible_v<T>);
+			operatorDelete(ptr);
 		}
 	};
 
@@ -54,6 +75,9 @@ namespace prj
 
 	template <typename _K, typename _V>
 	using map = std::map<_K, _V, std::less<_K>, Allocator<std::pair<const _K, _V>>>;
+
+	template<typename T>
+	using unique_ptr = std::unique_ptr<T, default_delete<T>>;
 }
 
 enum HitState : int32_t

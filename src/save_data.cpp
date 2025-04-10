@@ -132,32 +132,28 @@ struct SaveDataFile
 };
 
 static FUNCTION_PTR(void, __fastcall, GetSaveDataPath, 0x1401D70D0, prj::string* out, const prj::string& filename);
+static FUNCTION_PTR(bool, __fastcall, ReadDecryptedSaveData, 0x1401D7C90,
+	const prj::string& filename, prj::unique_ptr<uint8_t[]>& dst, size_t& dst_size);
+static FUNCTION_PTR(bool, __fastcall, EncryptSaveData, 0x1401D79D0,
+	const prj::string& key, const void* src, size_t size, prj::unique_ptr<uint8_t[]>& out, size_t& out_size);
+static FUNCTION_PTR(void, __fastcall, GetEncryptionKey, 0x1401D76F0, prj::string& key, const prj::string& filename, bool);
+
 HOOK(void, __fastcall, LoadSaveData, 0x1401D7FB0, void* a1)
 {
 	originalLoadSaveData(a1);
 
-	prj::string path;
-	GetSaveDataPath(&path, SaveFileName);
-
-	std::vector<uint8_t> file_data;
-	if (FILE* file = fopen(path.c_str(), "rb"); file != nullptr)
+	prj::unique_ptr<uint8_t[]> buffer;
+	size_t buffer_size = 0;
+	if (!ReadDecryptedSaveData(SaveFileName, buffer, buffer_size))
 	{
-		fseek(file, 0, SEEK_END);
-		size_t size = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		file_data.resize(size);
-		fread(file_data.data(), size, 1, file);
-		fclose(file);
-	}
-
-	if (file_data.size() == 0)
-	{
-		nc::Print("Unable to read save data file.\n");
+		nc::Print("Unable to read save data file\n");
 		return;
 	}
 
-	const SaveDataFile* data = reinterpret_cast<const SaveDataFile*>(file_data.data());
+	if (buffer_size == 0)
+		return;
+
+	const SaveDataFile* data = reinterpret_cast<const SaveDataFile*>(buffer.get());
 	if (!data->IsValid() || data->IsVersionUnsupported())
 	{
 		nc::Print("Unable to load save data file. The file may be corrupted or made by a newer version of this mod.\n");
@@ -206,11 +202,20 @@ struct MemoryWriter
 
 	bool Dump(const char* path)
 	{
+		prj::unique_ptr<uint8_t[]> encrypted;
+		size_t encrypted_size;
+
+		prj::string key;
+		GetEncryptionKey(key, SaveFileName, true);
+
+		if (!EncryptSaveData(key, data.data(), data.size(), encrypted, encrypted_size))
+			return false;
+
 		if (FILE* file = fopen(path, "wb"); file != nullptr)
 		{
-			size_t count = fwrite(data.data(), data.size(), 1, file); 
+			size_t write_count = fwrite(encrypted.get(), encrypted_size, 1, file);
 			fclose(file);
-			return count == 1;
+			return write_count == 1;
 		}
 
 		return false;
