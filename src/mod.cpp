@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <vector>
 #include <thirdparty/lazycsv.hpp>
-#include "Helpers.h"
+#include "hooks.h"
 #include "game/hit_state.h"
 #include "game/target.h"
 #include "game/chance_time.h"

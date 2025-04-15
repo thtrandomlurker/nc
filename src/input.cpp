@@ -1,5 +1,5 @@
 #include <string.h>
-#include "Helpers.h"
+#include "hooks.h"
 #include "diva.h"
 #include "input.h"
 #include "nc_log.h"

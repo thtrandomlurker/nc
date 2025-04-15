@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <detours.h>
+
 #define _CONCAT2(x, y) x##y
 #define CONCAT2(x, y) _CONCAT(x, y)
 #define INSERT_PADDING(length) \

@@ -6,7 +6,12 @@
 #include <map>
 #include <memory>
 #include <stdint.h>
-#include "Helpers.h"
+#include "hooks.h"
+
+// TODO: Re-organize this file completely. I think some stuff here could be moved into
+//       other files and maybe centralize all the addresses on a single place so that
+//       *if* the game ever updates it's easier to patch them up (actually the best thing 
+//       to do in this case would be adding sigscan -- Too lazy for that though lmao)
 
 namespace prj
 {

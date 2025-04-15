@@ -1,7 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <detours.h>
-#include <Helpers.h>
+#include <hooks.h>
 #include "note_link.h"
 #include "target.h"
 

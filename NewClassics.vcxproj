@@ -195,7 +195,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClInclude Include="src\game\hit_state.h" />
     <ClInclude Include="src\game\note_link.h" />
     <ClInclude Include="src\game\target.h" />
-    <ClInclude Include="src\helpers.h" />
+    <ClInclude Include="src\hooks.h" />
     <ClInclude Include="src\input.h" />
     <ClInclude Include="src\nc_log.h" />
     <ClInclude Include="src\save_data.h" />

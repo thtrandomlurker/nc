@@ -1,14 +1,12 @@
 #include <array>
 #include <stdint.h>
 #include <stdio.h>
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <detours.h>
-#include <Helpers.h>
+#include <hooks.h>
 #include <nc_log.h>
 #include <diva.h>
 #include <nc_state.h>
 #include <db.h>
+#include "pv_sel.h"
 
 constexpr uint32_t AetSelSetID   = 14010050;
 constexpr uint32_t AetSelSceneID = 14010051;
