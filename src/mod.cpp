@@ -440,9 +440,13 @@ extern "C"
 		INSTALL_HOOK(LoadDscCtrl);
 		InstallGameHooks();
 		InstallTargetHooks();
-		InstallPvSelHooks();
 		InstallDatabaseHooks();
 		nc::CreateDefaultSaveData();
 		nc::InstallSaveDataHooks();
+	}
+
+	void __declspec(dllexport) PostInit()
+	{
+		InstallPvSelHooks();
 	}
 };

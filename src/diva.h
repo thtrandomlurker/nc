@@ -468,6 +468,7 @@ struct AetLayout
 };
 
 using AetComposition = prj::map<prj::string, AetLayout>;
+using AetHandle = int32_t;
 
 // NOTE: Koren named this struct "struc_14" so I have no idea what it's real name is. But PvGameplayInfo sounds fitting.
 struct PvGameplayInfo
@@ -1011,6 +1012,15 @@ diva::vec2 GetScaledPosition(const diva::vec2& v);
 inline prj::vector<prj::string>* GetRomDirectories()
 {
 	return reinterpret_cast<prj::vector<prj::string>*>(0x1414AB8A0);
+}
+
+namespace game
+{
+	inline bool IsFutureToneMode() { return *reinterpret_cast<bool*>(0x1414AB9E3); }
+
+	// NOTE: The CustomizeSel doesn't have duplicated code for the Switch version
+	//       like other UI screens, so this is valid for both Switch and PS4 mode.
+	inline FUNCTION_PTR(bool, __fastcall, IsCustomizeSelTaskReady, 0x1401DE790);
 }
 
 // NOTE: File IO functions

@@ -13,29 +13,221 @@ constexpr uint32_t AetSelSceneID = 14010051;
 constexpr uint32_t SprSelSetID   = 14020050;
 constexpr const char* StyleNamesInternal[4] = { "arcade", "console", "mixed", "max" };
 
-static FUNCTION_PTR(bool, __fastcall, CheckCustomizeSelReady, 0x1401DE790);
-static bool IsFutureToneMode() { return *reinterpret_cast<bool*>(0x1414AB9E3); }
+constexpr const char* SetChangeSoundName = "se_ft_music_selector_set_change_01";
+constexpr const char* SortFilterSoundName = "se_ft_music_selector_sortfilter_change_01";
 
-static std::string GetModePrefix() { return IsFutureToneMode() ? "ps4_" : "nsw_"; }
-static std::string GetLanguageSuffix()
+namespace pvsel
 {
-	if (GetGameLocale() >= GameLocale_Max)
-		return "_en";
+	std::string GSWindow::GetModePrefix() { return game::IsFutureToneMode() ? "ps4_" : "nsw_"; }
+	std::string GSWindow::GetLanguageSuffix()
+	{
+		if (GetGameLocale() >= GameLocale_Max)
+			return "_en";
 
-	const char* suffixes[GameLocale_Max] = { "_jp", "_en", "_zh", "_tw", "_kr", "_fr", "_it", "_de", "_sp" };
-	return suffixes[GetGameLocale()];
-}
+		const char* suffixes[GameLocale_Max] = { "_jp", "_en", "_zh", "_tw", "_kr", "_fr", "_it", "_de", "_sp" };
+		return suffixes[GetGameLocale()];
+	}
 
-static std::string GetWindowLayerName() { return GetModePrefix() + "game_style_win"; }
-static std::string GetWindowTextLayerName() { return GetModePrefix() + "game_style_txt" + GetLanguageSuffix(); }
-static std::string GetStyleLayerName(int32_t style)
-{
-	return GetModePrefix() + "game_style_" + StyleNamesInternal[style] + GetLanguageSuffix();
+	std::string GSWindow::GetBaseLayerName() { return GetModePrefix() + "game_style_win"; }
+	std::string GSWindow::GetBaseTextLayerName() { return GetModePrefix() + "game_style_txt" + GetLanguageSuffix(); }
+	std::string GSWindow::GetStyleTextLayerName(int32_t style)
+	{
+		return GetModePrefix() + "game_style_" + StyleNamesInternal[style] + GetLanguageSuffix();
+	}
+
+	void GSWindow::Reset()
+	{
+		option_count = 0;
+		memset(options, GameStyle_Max, MaxOptionCount);
+		aet::Stop(&base_win);
+		aet::Stop(&base_txt);
+		aet::Stop(&style_txt_buffer[0]);
+		aet::Stop(&style_txt_buffer[1]);
+		style_txt_index = 0;
+		selected_index = 0;
+		previous_option = GameStyle_Max;
+	}
+
+	void GSWindow::SetOptions(const uint8_t* opts, int32_t count, bool clean)
+	{
+		if (count < 0 || count > MaxOptionCount || !opts)
+			return;
+
+		int32_t new_index = 0;
+		for (int32_t i = 0; i < count; i++)
+			if (opts[i] == options[selected_index])
+				new_index = i;
+
+		selected_index = new_index;
+		memcpy(options, opts, count);
+		option_count = count;
+		dirty = !clean;
+	}
+
+	void GSWindow::ForceSetOption(int32_t opt)
+	{
+		uint8_t option = opt;
+		SetOptions(&option, 1);
+	}
+
+	void GSWindow::UpdateAet()
+	{
+		if (base_win == 0)
+		{
+			base_win = aet::PlayLayer(
+				AetSelSceneID, 
+				10,
+				0x10000,
+				GetBaseLayerName().c_str(),
+				nullptr,
+				nullptr,
+				nullptr
+			);
+		}
+
+		if (base_txt == 0)
+		{
+			base_txt = aet::PlayLayer(
+				AetSelSceneID,
+				10,
+				0x10000,
+				GetBaseTextLayerName().c_str(),
+				nullptr,
+				nullptr,
+				nullptr
+			);
+		}
+
+		if (options[selected_index] != previous_option)
+		{
+			AetHandle* txt = &style_txt_buffer[style_txt_index];
+			if (*txt != 0)
+			{
+				aet::Stop(txt);
+				*txt = aet::PlayLayer(
+					AetSelSceneID,
+					10,
+					GetStyleTextLayerName(previous_option).c_str(),
+					AetAction_OutOnce
+				);
+
+				if (++style_txt_index > 1)
+					style_txt_index = 0;
+			}
+
+			aet::Stop(&style_txt_buffer[style_txt_index]);
+			style_txt_buffer[style_txt_index] = aet::PlayLayer(
+				AetSelSceneID,
+				10,
+				GetStyleTextLayerName(options[selected_index]).c_str(),
+				AetAction_InLoop
+			);
+		}
+
+		diva::vec3 offset;
+		offset.x = game::IsFutureToneMode() && !IsToggleable() ? -18.0f : 0.0f;
+		offset.y = 0.0f;
+		offset.z = 0.0f;
+		aet::SetPosition(style_txt_buffer[0], &offset);
+		aet::SetPosition(style_txt_buffer[1], &offset);
+
+		previous_option = options[selected_index];
+	}
+
+	void GSWindow::SetVisible(bool visible)
+	{
+		hidden = !visible;
+		aet::SetVisible(base_win, visible);
+		aet::SetVisible(base_txt, visible);
+		aet::SetVisible(style_txt_buffer[0], visible);
+		aet::SetVisible(style_txt_buffer[1], visible);
+	}
+
+	bool GSWindow::Ctrl()
+	{
+		if (game::IsCustomizeSelTaskReady())
+		{
+			SetVisible(false);
+			return false;
+		}
+
+		diva::InputState* is = diva::GetInputState(0);
+		if (IsToggleable() && (is->IsButtonTapped(92) || is->IsButtonTapped(13)))
+		{
+			if (++selected_index >= option_count)
+				selected_index = 0;
+
+			dirty = true;
+			MakeAetDirty();
+			sound::PlaySoundEffect(1, is_sort_mode ? SortFilterSoundName : SetChangeSoundName, 1.0f);
+		}
+
+		SetVisible(true);
+
+		if (aet_dirty)
+		{
+			aet_dirty = false;
+			UpdateAet();
+		}
+
+		// NOTE: Reset dirty flag and return it's value
+		bool dirty = this->dirty;
+		this->dirty = false;
+		return dirty;
+	}
+
+	void GSWindow::Disp() const
+	{
+		if (base_win == 0 || hidden || !IsToggleable())
+			return;
+
+		const uint32_t key_sprite_ids_nsw[6] = {
+			3203571017, // Xbox
+			2779278485, // DualShock 4
+			2152960672, // JoyCon
+			312905805,  // Steam Deck
+			257587290,  // Keyboard
+			0
+		};
+
+		const uint32_t key_sprite_ids_ps4[6] = {
+			585831999,  // Xbox
+			1474623112, // DualShock 4
+			3007666668, // JoyCon
+			1166812452, // Steam Deck
+			2835797874, // Keyboard
+			0
+		};
+
+		const uint32_t* sprites = game::IsFutureToneMode() ? key_sprite_ids_ps4 : key_sprite_ids_nsw;
+
+		AetComposition comp;
+		aet::GetComposition(&comp, base_win);
+
+		if (auto it = comp.find("p_key_icon_c"); it != comp.end())
+		{
+			SprArgs args = { };
+			args.id = sprites[diva::GetInputState(0)->GetDevice()];
+			args.trans = it->second.position;
+			args.scale.x = it->second.matrix.row0.x;
+			args.scale.y = it->second.matrix.row1.y;
+			args.scale.z = 1.0f;
+			args.resolution_mode_sprite = 14;
+			args.resolution_mode_screen = 14;
+			memset(args.color, 0xFF, 4);
+			args.attr = 0x400000; // SPR_ATTR_CTR_CC
+			args.priority = 11;
+			spr::DrawSprite(&args);
+		}
+	}
 }
 
 namespace pvsel
 {
-	bool assets_loaded = false;
+	static bool assets_loaded = false;
+
+
+	/*
 	bool ui_visible    = true;
 	int32_t info_style_index  = 0;
 	int32_t sel_info_style[2] = { 0, 0 };
@@ -121,7 +313,7 @@ namespace pvsel
 		}
 
 		diva::vec3 offset;
-		offset.x = IsFutureToneMode() && !IsModeChangeable() ? -18.0f : 0.0f;
+		offset.x = game::IsFutureToneMode() && !IsModeChangeable() ? -18.0f : 0.0f;
 		offset.y = 0.0f;
 		offset.z = 0.0f;
 		aet::SetPosition(sel_info_style[0], &offset);
@@ -168,7 +360,7 @@ namespace pvsel
 		if (auto it = comp.find("p_key_icon_c"); it != comp.end())
 		{
 			SprArgs args = { };
-			args.id = IsFutureToneMode() ? key_sprite_ids_ps4[device] : key_sprite_ids_nsw[device];
+			args.id = game::IsFutureToneMode() ? key_sprite_ids_ps4[device] : key_sprite_ids_nsw[device];
 			args.trans = it->second.position;
 			args.scale.x = it->second.matrix.row0.x;
 			args.scale.y = it->second.matrix.row1.y;
@@ -254,7 +446,7 @@ namespace pvsel
 
 	static void UpdateCtrl(int32_t pv_id, int32_t difficulty, int32_t edition)
 	{
-		if (!CheckCustomizeSelReady())
+		if (!game::IsCustomizeSelTaskReady())
 		{
 			pvsel::SetAetVisibility(true);
 			pvsel::SetSelectedSong(pv_id, difficulty, edition);
@@ -270,8 +462,9 @@ namespace pvsel
 		else
 			pvsel::SetAetVisibility(false);
 	}
+	*/
 
-	static void RequestAetLoad()
+	void RequestAssetsLoad()
 	{
 		prj::string str;
 		prj::string_view strv;
@@ -279,127 +472,134 @@ namespace pvsel
 		spr::LoadSprSet(SprSelSetID, &strv);
 	}
 
-	static bool CheckAssetsLoaded()
+	bool CheckAssetsLoaded()
 	{
 		assets_loaded = !aet::CheckAetSetLoading(AetSelSetID) && !spr::CheckSprSetLoading(SprSelSetID);
 		return assets_loaded;
 	}
 
-	static void UnloadAet()
+	void UnloadAssets()
 	{
-		ResetAet();
+		// ResetAet();
 		aet::UnloadAetSet(AetSelSetID);
 		spr::UnloadSprSet(SprSelSetID);
 	}
-}
 
-HOOK(bool, __fastcall, PVSelectorSwitchInit, 0x1406ED9D0, uint64_t a1)
-{
-	pvsel::RequestAetLoad();
-	return originalPVSelectorSwitchInit(a1);
-}
-
-HOOK(bool, __fastcall, PVSelectorSwitchCtrl, 0x1406EDC40, uint64_t a1)
-{
-	int32_t sel_state  = *reinterpret_cast<int32_t*>(a1 + 108);
-	int32_t pv_id      = *reinterpret_cast<int32_t*>(a1 + 0x262A4);
-	int32_t difficulty = *reinterpret_cast<int32_t*>(a1 + 0x262C8);
-	int32_t edition    = *reinterpret_cast<int32_t*>(a1 + 0x262CC);
-
-	if (sel_state == 0)
+	std::vector<uint8_t> FindAvailableStyles(const PvData* const* pvs, size_t count, int32_t difficulty, int32_t edition)
 	{
-		if (!pvsel::CheckAssetsLoaded())
-			return false;
-	}
+		std::vector<uint8_t> data;
+		data.reserve(GameStyle_Max);
 
-	bool ret = originalPVSelectorSwitchCtrl(a1);
-
-	if (sel_state == 6 || sel_state == 8)
-	{
-		if (pv_id == -2)
+		for (size_t i = 0; i < count; i++)
 		{
-			int32_t** random_pv_data = *reinterpret_cast<int32_t***>(a1 + 0x261F8);
-			if (random_pv_data != nullptr && *random_pv_data != nullptr)
-				pv_id = **random_pv_data;
+			if (pvs[i] == nullptr || pvs[i]->data2 == nullptr)
+				continue;
+
+			const PvData& pv = *pvs[i];
+			int32_t pv_id = *pv.data2->pv_db_entry;
+			if (auto* entry = db::FindDifficultyEntry(pv_id, difficulty, edition); entry != nullptr)
+			{
+				for (auto& chart : entry->charts)
+				{
+					for (int32_t i = 0; i < GameStyle_Max; i++)
+					{
+						if (chart.style == i && std::find(data.begin(), data.end(), i) == data.end())
+							data.push_back(i);
+					}
+				}
+			}
 		}
 
-		pvsel::UpdateCtrl(pv_id, difficulty, edition);
+		if (data.empty())
+			data.push_back(GameStyle_Arcade);
+
+		return data;
+	}
+
+	bool IsSongAvailableInCurrentStyle(const PvData* pv_data, int32_t difficulty, int32_t edition)
+	{
+		if (!pv_data || !pv_data->data2 || !pv_data->data2->pv_db_entry)
+			return false;
+
+		auto* entry = db::FindDifficultyEntry(*pv_data->data2->pv_db_entry, difficulty, edition);
+		if (entry != nullptr)
+		{
+			for (auto& chart : entry->charts)
+				if (chart.style == GetSelectedStyleOrDefault())
+					return true;
+		}
+
+		return false;
+	}
+}
+
+struct SelPvData
+{
+	uint8_t data[0x48];
+};
+
+struct PvData2
+{
+	int32_t* pv_db_entry;
+	uint8_t gap08[120];
+	int32_t name_sort_index;
+};
+
+static bool force_console_style_only = true;
+
+HOOK(bool, __fastcall, CheckSongElligibleInCategory, 0x140582140,
+	PvData2* pv, int32_t a2, int32_t a3, int32_t sort_mode, int32_t difficulty, int32_t edition)
+{
+	/*
+	nc::Print("INFO: pv=%d sort_index=%d\n",
+		*pv->pv_db_entry,
+		pv->name_sort_index
+	);
+	*/
+
+	bool ret = originalCheckSongElligibleInCategory(pv, a2, a3, sort_mode, difficulty, edition);
+
+	nc::Print("INFO: pv=%d diff=%d(%d) sort_index=%d info=%d/%d sort_mode=%d include=%d\n",
+		*pv->pv_db_entry,
+		difficulty,
+		edition,
+		pv->name_sort_index,
+		a2,
+		a3,
+		sort_mode,
+		ret
+	);
+
+	/*
+	nc::Print("INFO: %d <-> %d\n",
+		**reinterpret_cast<int32_t**>(a1 + 0x26240),
+		*reinterpret_cast<int32_t*>(a1 + 0x2629C)
+	);
+	*/
+
+	if (force_console_style_only)
+	{
+		const db::DifficultyEntry* nc_entry = db::FindDifficultyEntry(*pv->pv_db_entry, difficulty, edition);
+		if (nc_entry != nullptr)
+		{
+			for (auto& chart : nc_entry->charts)
+				if (chart.style == GameStyle_Console)
+					return ret;
+		}
+
+		return false;
 	}
 
 	return ret;
 }
 
-HOOK(bool, __fastcall, PVSelectorSwitchDest, 0x1406EE720, uint64_t a1)
-{
-	pvsel::ResetSelectedSong();
-	pvsel::UnloadAet();
-	return originalPVSelectorSwitchDest(a1);
-}
-
-HOOK(void, __fastcall, PVSelectorSwitchDisp, 0x1406EE7B0, uint64_t a1)
-{
-	originalPVSelectorSwitchDisp(a1);
-	pvsel::DrawKeyIcon();
-}
-
-// NOTE: FT UI hooks
-HOOK(bool, __fastcall, PVselPS4Init, 0x140202D50, uint64_t a1)
-{
-	pvsel::RequestAetLoad();
-	return originalPVselPS4Init(a1);
-}
-
-HOOK(bool, __fastcall, PVselPS4Ctrl, 0x1402033C0, uint64_t a1)
-{
-	int32_t sel_state = *reinterpret_cast<int32_t*>(a1 + 108);
-	int32_t pv_id = *reinterpret_cast<int32_t*>(a1 + 226268);
-	int32_t difficulty = *reinterpret_cast<int32_t*>(a1 + 226296);
-	int32_t edition = *reinterpret_cast<int32_t*>(a1 + 226300);
-
-	if (sel_state == 0)
-	{
-		if (!pvsel::CheckAssetsLoaded())
-			return false;
-	}
-
-	bool ret = originalPVselPS4Ctrl(a1);
-
-	if (sel_state == 6 || sel_state == 8)
-	{
-		if (pv_id == -2)
-		{
-			int32_t** random_pv_data = *reinterpret_cast<int32_t***>(a1 + 0x37328);
-			if (random_pv_data != nullptr && *random_pv_data != nullptr)
-				pv_id = **random_pv_data;
-		}
-
-		pvsel::UpdateCtrl(pv_id, difficulty, edition);
-	}
-
-	return ret;
-}
-
-HOOK(bool, __fastcall, PVselPS4Dest, 0x140204DA0, uint64_t a1)
-{
-	pvsel::ResetSelectedSong();
-	pvsel::UnloadAet();
-	return originalPVselPS4Dest(a1);
-}
-
-HOOK(void, __fastcall, PVselPS4Disp, 0x140204EB0, uint64_t a1)
-{
-	originalPVselPS4Disp(a1);
-	pvsel::DrawKeyIcon();
-}
+void InstallPvSelSwitchHooks(); // NOTE: Defined in pv_sel_switch.cpp
+void InstallPvSelPS4Hooks();    // NOTE: Defined in pv_sel_ps4.cpp
 
 void InstallPvSelHooks()
 {
-	INSTALL_HOOK(PVSelectorSwitchInit);
-	INSTALL_HOOK(PVSelectorSwitchCtrl);
-	INSTALL_HOOK(PVSelectorSwitchDest);
-	INSTALL_HOOK(PVSelectorSwitchDisp);
-	INSTALL_HOOK(PVselPS4Init);
-	INSTALL_HOOK(PVselPS4Ctrl);
-	INSTALL_HOOK(PVselPS4Dest);
-	INSTALL_HOOK(PVselPS4Disp);
+	if (game::IsFutureToneMode())
+		InstallPvSelPS4Hooks();
+	else
+		InstallPvSelSwitchHooks();
 }

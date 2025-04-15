@@ -68,6 +68,7 @@ namespace db
 
 	const SongEntry* FindSongEntry(int32_t pv);
 	const DifficultyEntry* FindDifficultyEntry(int32_t pv, int32_t difficulty, int32_t edition);
+	const ChartEntry* FindChart(int32_t pv, int32_t difficulty, int32_t edition, int32_t style);
 }
 
 void InstallDatabaseHooks();

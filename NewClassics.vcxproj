@@ -184,6 +184,8 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClCompile Include="src\save_data.cpp" />
     <ClCompile Include="src\thirdparty\toml.cpp" />
     <ClCompile Include="src\ui\pv_sel.cpp" />
+    <ClCompile Include="src\ui\pv_sel_ps4.cpp" />
+    <ClCompile Include="src\ui\pv_sel_switch.cpp" />
     <ClCompile Include="src\util.cpp" />
   </ItemGroup>
   <ItemGroup>

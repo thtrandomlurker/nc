@@ -60,9 +60,15 @@
     <ClCompile Include="src\save_data.cpp">
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
+    <ClCompile Include="src\ui\pv_sel_switch.cpp">
+      <Filter>Arquivos de Origem</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\pv_sel_ps4.cpp">
+      <Filter>Arquivos de Origem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\helpers.h">
+    <ClInclude Include="src\hooks.h">
       <Filter>Arquivos de Cabeçalho</Filter>
     </ClInclude>
     <ClInclude Include="src\diva.h">
@@ -113,5 +119,10 @@
     <ClInclude Include="src\save_data.h">
       <Filter>Arquivos de Cabeçalho</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="src\save_data_imp.asm">
+      <Filter>Arquivos de Origem</Filter>
+    </MASM>
   </ItemGroup>
 </Project>

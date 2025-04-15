@@ -209,6 +209,21 @@ const db::DifficultyEntry* db::FindDifficultyEntry(int32_t pv, int32_t difficult
 	return nullptr;
 }
 
+const db::ChartEntry* db::FindChart(int32_t pv, int32_t difficulty, int32_t edition, int32_t style)
+{
+	if (style < 0 || style >= GameStyle_Max)
+		return nullptr;
+
+	if (auto* entry = FindDifficultyEntry(pv, difficulty, edition); entry != nullptr)
+	{
+		for (auto& chart : entry->charts)
+			if (chart.style == style)
+				return &chart;
+	}
+	
+	return nullptr;
+}
+
 void InstallDatabaseHooks()
 {
 	INSTALL_HOOK(TaskPvDBCtrl);
