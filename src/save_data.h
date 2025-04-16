@@ -5,14 +5,19 @@
 // NOTE: Shared sets or song-specific configuration
 struct ConfigSet
 {
-	int8_t button_w_se_id = -1;
-	int8_t button_l_se_id = -1;
-	int8_t star_se_id = 0;
-	int8_t star_w_se_id = -1;
-	int8_t star_l_se_id = -1;
-	int8_t link_se_id = -1;
-	int8_t rush_se_id = 0;
-	int8_t tech_zone_style = 1;
+	// + ----------------------------------- +
+	// |    -2 = Song Default                |
+	// |    -1 = Same as <Button / Star>     |
+	// |    >0 = Sound DB ID                 |
+	// + ----------------------------------- +
+	int8_t button_w_se_id  = -1;
+	int8_t button_l_se_id  = -1;
+	int8_t star_se_id      = -2;
+	int8_t star_w_se_id    = -1;
+	int8_t star_l_se_id    = -1;
+	int8_t link_se_id      = -1;
+	int8_t rush_se_id      = -1; // NOTE: No real reason to make this modifiable, I think
+	int8_t tech_zone_style =  1;
 	// NOTE: Negative IDs are shared sets (-1 = Set A; -2 = Set B; -3 = Set C)
 	//       Positive IDs are treated as PV IDs.
 	//       This is only relevant when writing and parsing the file.
