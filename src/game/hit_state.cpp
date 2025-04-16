@@ -7,8 +7,8 @@
 #include "target.h"
 #include "hit_state.h"
 
-const float NormalWindow[5]  = { 0.03f, 0.07f, 0.1f, 0.13f };
-const float StarWindow[5]    = { 0.03f, 0.07f, 0.1f, 0.13f }; // TODO: CHANGE
+const float NormalWindow[5]  = { 0.03f, 0.07f, 0.1f,  0.13f };
+const float StarWindow[5]    = { 0.03f, 0.12f, 0.13f, 0.13f };
 
 namespace nc
 {
@@ -96,7 +96,7 @@ namespace nc
 			return HitState_Worst;
 		
 		if (hit)
-			return nc::JudgeTiming(target->flying_time_remaining, ex->IsStarLikeNote(), wrong);
+			return nc::JudgeTiming(target->flying_time_remaining, ex->IsStarLikeNote() || ex->target_type == TargetType_StarW, wrong);
 
 		return HitState_None;
 	}
