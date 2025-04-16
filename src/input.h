@@ -44,7 +44,7 @@ enum Stick : int32_t
 
 struct ButtonState
 {
-	static constexpr size_t MaxKeepStates = 16;
+	static constexpr size_t MaxKeepStates = 32;
 
 	struct StateData
 	{
@@ -67,7 +67,7 @@ struct ButtonState
 	inline bool IsTapped() const { return data[0].tapped; }
 	inline bool IsUp() const { return data[0].up; }
 	inline bool IsReleased() const { return data[0].released; }
-	inline bool IsTappedInNearFrames() const { return data[0].tapped || data[1].tapped || data[2].tapped; }
+	bool IsTappedInNearFrames() const;
 };
 
 struct StickState

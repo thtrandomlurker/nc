@@ -4,6 +4,9 @@
 #include "input.h"
 #include "nc_log.h"
 
+constexpr int32_t NearFramesBaseCount = 3;
+constexpr float NearFramesBaseRate = 60.0f;
+
 enum ButtonIndex : int32_t
 {
 	ButtonIndex_Circle = 0,
@@ -38,6 +41,22 @@ enum GameButton : int32_t
 
 static FUNCTION_PTR(int64_t, __fastcall, GetPvKeyStateDown, 0x140274930, void* handler, int32_t key);
 static FUNCTION_PTR(int64_t, __fastcall, GetPvKeyStateTapped, 0x140274960, void* handler, int32_t key);
+
+bool ButtonState::IsTappedInNearFrames() const
+{
+	int32_t lookup_count = NearFramesBaseCount * (game::GetFramerate() / NearFramesBaseRate);
+	bool mask = false;
+
+	for (int32_t i = 0; i < lookup_count; i++)
+	{
+		if (i >= MaxKeepStates)
+			break;
+
+		mask = mask || data[i].tapped;
+	}
+
+	return mask;
+}
 
 static void UpdateButtonState(ButtonState* state, const int64_t* buffer, int32_t index, int32_t mask)
 {
