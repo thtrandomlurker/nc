@@ -1,4 +1,4 @@
-#include <stdint.h>
+﻿#include <stdint.h>
 #include <hooks.h>
 #include <save_data.h>
 #include "pv_sel.h"
@@ -96,8 +96,19 @@ HOOK(void, __fastcall, PVselPS4ChangeDifficulty, 0x140207550, PVselPS4* sel, int
 		cur_data = reinterpret_cast<uint64_t*>(&data[48 * sel->sort_mode * 4 + 48 * sel->difficulty + 24 * sel->edition]);
 		*reinterpret_cast<void**>(&data[768]) = cur_data;
 	} while (!((cur_data[1] - cur_data[0]) / 80));
-	
+
+	// NOTE: Call change sort filter once before looking for available game styles,
+	//       so the game properly changes the sort filter index if needed.
+	//       This prevents crashes when, for example, sorting for 8☆ Extremes and
+	//       changing the difficulty to Hard, which doesn't have the 8☆ filter.
+	//       Since the PS4 menus have a little bit less error checking, we have to
+	//       force the arcade mode here to prevent a crash.
 	int32_t cur_style = pvsel::GetSelectedStyleOrDefault();
+	if (cur_style != GameStyle_Arcade)
+		pvsel::gs_win->ForceSetOption(GameStyle_Arcade);
+	sub_140206C30(sel);
+
+	// NOTE: Now we can properly check for the available styles
 	do
 	{
 		if (pvsel::gs_win)
@@ -112,8 +123,11 @@ HOOK(void, __fastcall, PVselPS4ChangeDifficulty, 0x140207550, PVselPS4* sel, int
 			cur_style = GameStyle_Arcade;
 	} while (sel->song_counts[*sel->cur_sort_index] == 0);
 
+	// NOTE: Call change sort filter again, which now will properly pull the correct
+	//       list of PVs for the selected game style.
 	RefreshAvailableStyles(sel);
 	sub_140206C30(sel);
+
 	if (dir)
 		sub_1402066C0(sel, false, false, true);
 }

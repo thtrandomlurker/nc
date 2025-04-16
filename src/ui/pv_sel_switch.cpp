@@ -1,4 +1,4 @@
-#include <stdint.h>
+﻿#include <stdint.h>
 #include <hooks.h>
 #include <save_data.h>
 #include "pv_sel.h"
@@ -33,6 +33,7 @@ struct PVSelectorSwitch
 struct StateKeepSwitch
 {
 	bool style_dirty = false;
+	bool disable_refresh = false;
 	int32_t pv_id = -1;
 } static state_tmp;
 
@@ -94,6 +95,13 @@ HOOK(void, __fastcall, PVSelectorSwitchChangeDifficulty, 0x1406F3A20, PVSelector
 		sel->cur_pv_list = &sel->sorted_pv_lists[sel->edition + 2 * (sel->sort_mode * 4 + sel->difficulty)];
 	} while (sel->cur_pv_list->size() == 0);
 
+	// NOTE: Call change sort filter once before looking for available game styles,
+	//       so the game properly changes the sort filter index if needed.
+	//       This prevents crashes when, for example, sorting for 8☆ Extremes and
+	//       changing the difficulty to Hard, which doesn't have the 8☆ filter.
+	state_tmp.disable_refresh = true;
+	PVSelectorSwitchChangeSortFilter(sel, 0);
+
 	int32_t cur_style = pvsel::GetSelectedStyleOrDefault();
 	do
 	{
@@ -109,7 +117,11 @@ HOOK(void, __fastcall, PVSelectorSwitchChangeDifficulty, 0x1406F3A20, PVSelector
 			cur_style = GameStyle_Arcade;
 	} while (sel->song_counts[*sel->cur_sort_index] == 0);
 
+	// NOTE: Call change sort filter again, which now will properly pull the correct
+	//       list of PVs for the selected game style.
+	state_tmp.disable_refresh = false;
 	PVSelectorSwitchChangeSortFilter(sel, 0);
+
 	UpdateBelt(sub_1406DE410(reinterpret_cast<uint64_t>(sel) + 6736), sel->difficulty, sel->edition);
 	sub_1406F2670(sel, false, false, true);
 }
@@ -117,7 +129,8 @@ HOOK(void, __fastcall, PVSelectorSwitchChangeDifficulty, 0x1406F3A20, PVSelector
 HOOK(void, __fastcall, PVSelectorSwitchChangeSortFilterImp, 0x1406F2F40, PVSelectorSwitch* sel, int32_t dir)
 {
 	originalPVSelectorSwitchChangeSortFilterImp(sel, dir);
-	RefreshAvailableStyles(sel);
+	if (!state_tmp.disable_refresh)
+		RefreshAvailableStyles(sel);
 }
 
 HOOK(bool, __fastcall, PVSelectorSwitchCheckSongPertainsInCategory, 0x1406F3D40, 
