@@ -19,7 +19,7 @@
 //   https://github.com/blueskythlikesclouds/DivaModLoader/blob/master/Source/DivaModLoader/SaveData.cpp
 
 constexpr int32_t MaxHeaderSize = 128;
-constexpr uint8_t CurrentFileVersion[2] = { 1, 2 };
+constexpr uint8_t CurrentFileVersion[2] = { 1, 3 };
 static const char* SaveFileName = "NewClassics.dat";
 
 struct DifficultyScore
@@ -29,6 +29,7 @@ struct DifficultyScore
 
 static std::unordered_map<int32_t, ConfigSet> config_sets;
 static std::unordered_map<uint64_t, std::array<DifficultyScore, 10>> scores;
+static SharedData shared_data;
 
 namespace nc
 {
@@ -61,11 +62,16 @@ namespace nc
 		return &score[difficulty + (edition != 0 ? 5 : 0)];
 	}
 
-	void nc::CreateDefaultSaveData()
+	void CreateDefaultSaveData()
 	{
 		config_sets[-1] = { }; // NOTE: Shared Set A
 		config_sets[-2] = { }; // NOTE: Shared Set B
 		config_sets[-3] = { }; // NOTE: Shared Set C
+	}
+
+	SharedData& GetSharedData()
+	{
+		return shared_data;
 	}
 }
 
@@ -82,6 +88,9 @@ struct SaveDataFile
 		int32_t header_size;
 		size_t config_set_count;
 		size_t score_ex_count;
+		// NOTE: This could be a bool because there's ever only one, but I'm just doing it
+		//       like this to follow the existing code pattern
+		size_t shared_data_count;
 
 		Header()
 		{
@@ -91,6 +100,8 @@ struct SaveDataFile
 			flags = 0;
 			header_size = MaxHeaderSize;
 			config_set_count = 0;
+			score_ex_count = 0;
+			shared_data_count = 0;
 		}
 	} header;
 
@@ -128,6 +139,11 @@ struct SaveDataFile
 	inline const ScoreEx* GetScores() const
 	{
 		return reinterpret_cast<const ScoreEx*>(GetConfigSets() + header.config_set_count);
+	}
+
+	inline const SharedData* GetSharedData() const
+	{
+		return reinterpret_cast<const SharedData*>(GetScores() + header.score_ex_count);
 	}
 };
 
@@ -172,6 +188,9 @@ HOOK(void, __fastcall, LoadSaveData, 0x1401D7FB0, void* a1)
 		auto& score_new = scores[SCORE_KEY(score.pv, score.style)];
 		memcpy(score_new.data(), score.difficulties, sizeof(DifficultyScore) * 10);
 	}
+
+	if (data->header.shared_data_count > 0)
+		shared_data = *data->GetSharedData();
 }
 
 // NOTE: Handle writing of save data file
@@ -232,11 +251,13 @@ HOOK(void, __fastcall, SaveSaveData, 0x1401D8280, void* a1)
 	SaveDataFile::Header header;
 	header.config_set_count = config_sets.size();
 	header.score_ex_count = scores.size();
+	header.shared_data_count = 1;
 
 	MemoryWriter writer = { };
 	writer.Resize(MaxHeaderSize +
 		config_sets.size() * sizeof(ConfigSet) +
-		scores.size() * sizeof(SaveDataFile::ScoreEx)
+		scores.size() * sizeof(SaveDataFile::ScoreEx) +
+		sizeof(SharedData)
 	);
 	
 	// NOTE: Write header
@@ -257,6 +278,9 @@ HOOK(void, __fastcall, SaveSaveData, 0x1401D8280, void* a1)
 		writer.Write(&key, sizeof(uint64_t));
 		writer.Write(value.data(), sizeof(DifficultyScore) * 10);
 	}
+
+	// NOTE: Write shared data
+	writer.Write(&shared_data, sizeof(SharedData));
 
 	// NOTE: Dump data to file
 	prj::string path;

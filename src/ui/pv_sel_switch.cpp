@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <hooks.h>
+#include <save_data.h>
 #include "pv_sel.h"
 
 struct PVSelectorSwitch
@@ -141,7 +142,10 @@ HOOK(bool, __fastcall, PVSelectorSwitchInit, 0x1406ED9D0, uint64_t a1)
 	state.nc_song_entry.reset();
 	state.nc_song_entry.reset();
 
-	return originalPVSelectorSwitchInit(a1);
+	bool ret = originalPVSelectorSwitchInit(a1);
+	pvsel::gs_win->TrySetSelectedOption(nc::GetSharedData().pv_sel_selected_style);
+
+	return ret;
 }
 
 HOOK(bool, __fastcall, PVSelectorSwitchCtrl, 0x1406EDC40, PVSelectorSwitch* sel)
@@ -161,6 +165,7 @@ HOOK(bool, __fastcall, PVSelectorSwitchCtrl, 0x1406EDC40, PVSelectorSwitch* sel)
 	}
 	
 	SetGlobalStateSelectedData(sel);
+	nc::GetSharedData().pv_sel_selected_style = pvsel::GetSelectedStyleOrDefault();
 	return ret;
 }
 

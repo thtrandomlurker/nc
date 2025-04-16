@@ -70,6 +70,22 @@ namespace pvsel
 		SetOptions(&option, 1);
 	}
 
+	bool GSWindow::TrySetSelectedOption(int32_t opt)
+	{
+		for (int32_t i = 0; i < option_count; i++)
+		{
+			if (options[i] == opt)
+			{
+				selected_index = i;
+				dirty = true;
+				MakeAetDirty();
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	void GSWindow::UpdateAet()
 	{
 		if (base_win == 0)

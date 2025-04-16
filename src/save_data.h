@@ -18,12 +18,30 @@ struct ConfigSet
 	//       This is only relevant when writing and parsing the file.
 	int32_t id = 0;
 	uint8_t reserved[52];
+
+	ConfigSet() { memset(reserved, 0, sizeof(reserved)); }
 };
+
+struct SharedData
+{
+	int32_t pv_sel_selected_style;
+	uint8_t reserved[252];
+
+	SharedData()
+	{
+		pv_sel_selected_style = 0;
+		memset(reserved, 0, sizeof(reserved));
+	}
+};
+
+static_assert(sizeof(ConfigSet) == 64, "ConfigSet struct size mismatch.");
+static_assert(sizeof(SharedData) == 256, "SharedData struct size mismatch.");
 
 namespace nc
 {
 	ConfigSet* FindConfigSet(int32_t id, bool create_if_missing = false);
 	void CreateDefaultSaveData();
+	SharedData& GetSharedData();
 
 	void InstallSaveDataHooks();
 }

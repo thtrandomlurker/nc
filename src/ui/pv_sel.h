@@ -76,6 +76,7 @@ namespace pvsel
 		void Reset();
 		void SetOptions(const uint8_t* opts, int32_t count, bool clean = false);
 		void ForceSetOption(int32_t opt);
+		bool TrySetSelectedOption(int32_t opt);
 		void UpdateAet();
 		void SetVisible(bool visible);
 		bool Ctrl();

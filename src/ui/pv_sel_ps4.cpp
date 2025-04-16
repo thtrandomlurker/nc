@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <hooks.h>
+#include <save_data.h>
 #include "pv_sel.h"
 
 struct PVselPS4
@@ -148,6 +149,7 @@ HOOK(bool, __fastcall, PVselPS4Init, 0x140202D50, PVselPS4* sel)
 	state.nc_song_entry.reset();
 	state.nc_chart_entry.reset();
 	RefreshAvailableStyles(sel);
+	pvsel::gs_win->TrySetSelectedOption(nc::GetSharedData().pv_sel_selected_style);
 
 	return ret;
 }
@@ -169,6 +171,7 @@ HOOK(bool, __fastcall, PVselPS4Ctrl, 0x1402033C0, PVselPS4* sel)
 	}
 
 	SetGlobalStateSelectedData(sel);
+	nc::GetSharedData().pv_sel_selected_style = pvsel::GetSelectedStyleOrDefault();
 	return ret;
 }
 
