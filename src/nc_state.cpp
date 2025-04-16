@@ -19,9 +19,6 @@ void TargetStateEx::ResetPlayState()
 	current_step = false;
 	step_state = LinkStepState_None;
 	link_ending = false;
-	aet::Stop(&target_aet);
-	aet::Stop(&button_aet);
-	aet::Stop(&bal_effect_aet);
 	kiseki_pos = { 0.0f, 0.0f };
 	kiseki_dir = { 0.0f, 0.0f };
 	kiseki_dir_norot = { 0.0f, 0.0f };
@@ -34,6 +31,15 @@ void TargetStateEx::ResetPlayState()
 	double_tapped = false;
 	bal_hit_count = 0;
 	bal_scale = 0.0f;
+	ResetAetData();
+}
+
+void TargetStateEx::ResetAetData()
+{
+	aet::Stop(&target_aet);
+	aet::Stop(&button_aet);
+	aet::Stop(&bal_effect_aet);
+	kiseki.clear();
 }
 
 bool TargetStateEx::IsChainSucessful()
@@ -155,9 +161,15 @@ void StateEx::ResetPlayState()
 	for (TargetStateEx& ex : target_ex)
 		ex.ResetPlayState();
 	chance_time.ResetPlayState();
+	ResetAetData();
+}
+
+void StateEx::ResetAetData()
+{
 	for (int i = 0; i < MaxHitEffectCount; i++)
 		aet::Stop(&effect_buffer[i]);
 	effect_index = 0;
+	ui.ResetAllLayers();
 }
 
 void StateEx::Reset()

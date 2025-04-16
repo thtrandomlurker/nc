@@ -137,6 +137,12 @@ HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
 	originalPVGameReset(pv_game);
 }
 
+HOOK(void, __fastcall, PVGameArcadeReset, 0x14026AE80, PVGameArcade* game)
+{
+	state.ResetAetData();
+	originalPVGameArcadeReset(game);
+}
+
 // NOTE: Hook LoadDscCtrl to handle loading our external CSV file
 //
 HOOK(bool, __fastcall, LoadDscCtrl, 0x14024E270, PVGamePvData* pv_data, prj::string* path, void* a3, bool a4)
@@ -449,6 +455,7 @@ extern "C"
 		INSTALL_HOOK(TaskPvGameCtrl);
 		INSTALL_HOOK(TaskPvGameDest);
 		INSTALL_HOOK(PVGameReset);
+		INSTALL_HOOK(PVGameArcadeReset);
 		INSTALL_HOOK(ParseTargets);
 		INSTALL_HOOK(LoadDscCtrl);
 		InstallGameHooks();

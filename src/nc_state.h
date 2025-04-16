@@ -150,6 +150,7 @@ struct TargetStateEx
 	float bal_scale = 0.0f;
 
 	void ResetPlayState();
+	void ResetAetData();
 	bool IsChainSucessful();
 	void StopAet(bool button = true, bool target = true, bool kiseki = true);
 	bool SetLongNoteAet();
@@ -287,6 +288,7 @@ struct StateEx
 	ScoringInfo scoring_info = { };
 
 	void ResetPlayState();
+	void ResetAetData();
 	void Reset();
 	bool PushTarget(TargetStateEx* ex);
 	bool PopTarget(TargetStateEx* ex);
