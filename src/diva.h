@@ -177,6 +177,7 @@ namespace diva
 		vec2(float x, float y) { this->x = x; this->y = y; }
 
 		inline float length() const { return sqrtf(x * x + y * y); }
+		inline vec2 abs() const { return vec2(fabsf(x), fabsf(y)); }
 
 		inline vec2 operator+(const vec2& right) const
 		{
@@ -206,6 +207,26 @@ namespace diva
 		inline vec2 operator/(float scalar) const
 		{
 			return { this->x / scalar, this->y / scalar };
+		}
+
+		inline bool operator>(const vec2& right) const
+		{
+			return x > right.x && y > right.y;
+		}
+
+		inline bool operator>=(const vec2& right) const
+		{
+			return x >= right.x && y >= right.y;
+		}
+
+		inline bool operator<(const vec2& right) const
+		{
+			return x < right.x && y < right.y;
+		}
+
+		inline bool operator<=(const vec2& right) const
+		{
+			return x <= right.x && y <= right.y;
 		}
 
 		inline vec2 rotated(float angle)

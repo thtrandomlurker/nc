@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "diva.h"
 
 enum Button : int32_t
 {
@@ -34,24 +35,33 @@ enum Button : int32_t
 	Button_None
 };
 
-enum StickAxis : int32_t
+enum Stick : int32_t
 {
-	StickAxis_LX = 0,
-	StickAxis_LY = 1,
-	StickAxis_RX = 2,
-	StickAxis_RY = 3,
-	StickAxis_Max
+	Stick_L   = 0,
+	Stick_R   = 1,
+	Stick_Max = 2
 };
 
 struct ButtonState
 {
-	struct StateInternal
+	static constexpr size_t MaxKeepStates = 16;
+
+	struct StateData
 	{
 		bool down;
 		bool up;
 		bool tapped;
 		bool released;
-	} data[16];
+	} data[MaxKeepStates];
+
+	inline StateData& Push()
+	{
+		for (int32_t i = MaxKeepStates - 2; i >= 0; i--)
+			data[i + 1] = data[i];
+
+		memset(&data[0], 0, sizeof(StateData));
+		return data[0];
+	}
 	
 	inline bool IsDown() const { return data[0].down; }
 	inline bool IsTapped() const { return data[0].tapped; }
@@ -62,19 +72,21 @@ struct ButtonState
 
 struct StickState
 {
-	float prev;
-	float cur;
-	float delta;
-	float dist;
+	float distance;      // NOTE: Distance from rest position (0.0, 0.0)
+	float prev_distance;
+	bool returning;      // NOTE: Stick is travelling towards rest position
+	bool flicked;        // NOTE: Stick was flicked in this frame
+	bool flick_block;    // NOTE: Flick action has already been registered
 };
 
 struct MacroState
 {
 	ButtonState buttons[Button_Max];
-	StickState sticks[StickAxis_Max];
+	StickState sticks[2];
 	float hold_sensivity;
 	float sensivity;
 	int32_t device;
+	diva::vec2 stick_deadzone;
 
 	MacroState()
 	{
@@ -83,9 +95,11 @@ struct MacroState
 		hold_sensivity = 0.75f;
 		sensivity = 0.5f;
 		device = InputDevice_Unknown;
+		stick_deadzone = { 0.15f, 0.15f };
 	}
 
 	bool Update(void* internal_handler, int32_t player_index);
+	void UpdateSticks(diva::InputState* input_state);
 	bool GetStarHit() const;
 	bool GetDoubleStarHit(bool* both_flicked) const;
 };

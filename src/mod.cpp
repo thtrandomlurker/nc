@@ -15,6 +15,7 @@
 #include "db.h"
 #include "save_data.h"
 #include "util.h"
+#include <thirdparty/toml.h>
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -422,11 +423,23 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 	return pv_game->reference_score;
 }
 
+static void LoadConfig()
+{
+	auto res = toml::parse_file("config.toml");
+	if (!res.succeeded())
+		return;
+
+	float stick_sensivity = fmaxf(fminf(res.table()["controller"]["stick_sensitivity"].value_or(50.0f), 100.0f), 0.0f);
+	macro_state.sensivity = 1.0f - stick_sensivity / 100.0f;
+}
+
 extern "C"
 {
 	void __declspec(dllexport) Init()
 	{
 		freopen("CONOUT$", "w", stdout);
+
+		LoadConfig();
 
 		// NOTE: Patch target type check in PVGameTarget::CreateAet (0x150D54750)
 		WRITE_MEMORY(0x150D54766, uint8_t, TargetType_Max - 12);

@@ -53,21 +53,9 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	diva::InputState* diva_input = diva::GetInputState(player_index);
 	device = diva_input->GetDevice();
 
-	// NOTE: Update sticks
-	for (int i = 0; i < StickAxis_Max; i++)
-	{
-		sticks[i].prev  = sticks[i].cur;
-		sticks[i].cur   = diva_input->GetPosition(0x14 + i);
-		sticks[i].delta = sticks[i].cur - sticks[i].prev;
-		sticks[i].dist  = fabsf(sticks[i].cur) - fabsf(sticks[i].prev);
-	}
-
 	// NOTE: Update buttons
 	for (int32_t i = 0; i < Button_Max; i++)
-	{
-		for (int32_t j = 14; j >= 0; j--)
-			buttons[i].data[j + 1] = buttons[i].data[j];
-	}
+		buttons[i].Push();
 
 	int64_t key_states[8];
 	for (int i = 0; i < 8; i++)
@@ -90,44 +78,65 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	UpdateButtonState(&buttons[Button_R3], key_states, ButtonIndex_R, GameButton_R3);
 	UpdateButtonState(&buttons[Button_R4], key_states, ButtonIndex_R, GameButton_R4);
 
-	/*
-	buttons[Button_LStick].data[0].down = fabsf(sticks[StickAxis_LX].cur) >= sensivity ||
-		fabsf(sticks[StickAxis_LY].cur) >= sensivity;
-
-	buttons[Button_RStick].data[0].down = fabsf(sticks[StickAxis_RX].cur) >= sensivity ||
-		fabsf(sticks[StickAxis_RY].cur) >= sensivity;
-
-	buttons[Button_LStick].data[0].up = !buttons[Button_LStick].data[0].down;
-	buttons[Button_RStick].data[0].up = !buttons[Button_RStick].data[0].down;
-	*/
-
 	for (int i = 0; i < Button_Max; i++)
 	{
 		buttons[i].data[0].tapped = buttons[i].data[0].down && buttons[i].data[1].up;
 		buttons[i].data[0].released = buttons[i].data[0].up && buttons[i].data[1].down;
 	}
 
-	// NOTE: Update stick input
-	auto checkAxisFlicked = [this](const StickState& state)
-	{
-		if (fabsf(state.cur) > fabsf(state.prev))
-			return fabsf(state.delta) >= sensivity;
+	UpdateSticks(diva_input);
+	return true;
+}
 
-		return false;
+void MacroState::UpdateSticks(diva::InputState* input_state)
+{
+	auto checkDeadzoned = [&](const diva::vec2& pos)
+	{
+		return pos.x <= stick_deadzone.x && pos.y <= stick_deadzone.y
+			&& pos.x >= -stick_deadzone.x && pos.y >= -stick_deadzone.y;
 	};
 
-	for (int i = 0; i < 2; i++)
+	auto updateStick = [&](int32_t index)
 	{
-		const StickState& state_x = sticks[i * 2 + 0];
-		const StickState& state_y = sticks[i * 2 + 1];
+		StickState* state = &sticks[index];
+		diva::vec2 pos = {
+			input_state->GetPosition(0x14 + index * 2 + 0),
+			input_state->GetPosition(0x14 + index * 2 + 1)
+		};
 
-		buttons[Button_LStick + i].data[0].down     = state_x.cur >= hold_sensivity || state_y.cur >= hold_sensivity;
-		buttons[Button_LStick + i].data[0].up       = !buttons[Button_LStick + i].data[0].down;
-		buttons[Button_LStick + i].data[0].tapped   = checkAxisFlicked(state_x) || checkAxisFlicked(state_y);
-		buttons[Button_LStick + i].data[0].released = !buttons[Button_LStick + i].data[0].tapped;
-	}
+		state->prev_distance = state->distance;
+		state->distance = checkDeadzoned(pos) ? 0.0f : pos.length();
+		state->returning = state->distance < state->prev_distance;
+		state->flicked = false;
 
-	return true;
+		if (!state->returning)
+		{
+			state->flicked = state->distance >= sensivity && !state->flick_block;
+			if (state->flicked)
+				state->flick_block = true;
+		}
+		else
+		{
+			if (state->distance < sensivity)
+				state->flick_block = false;
+		}
+	};
+
+	auto updateStickButtonState = [&](int32_t index)
+	{
+		StickState* state = &sticks[index];
+		auto& button = buttons[Button_LStick + index].data[0];
+
+		button.down = state->distance >= sensivity;
+		button.up = !button.down;
+		button.tapped = state->flicked;
+		// button.released = !button.tapped;
+	};
+
+	updateStick(Stick_L);
+	updateStick(Stick_R);
+	updateStickButtonState(Stick_L);
+	updateStickButtonState(Stick_R);
 }
 
 bool MacroState::GetStarHit() const
