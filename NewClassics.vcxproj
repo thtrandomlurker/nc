@@ -199,6 +199,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\db.h" />
+    <ClInclude Include="src\helpers.h" />
     <ClInclude Include="src\nc_state.h" />
     <ClInclude Include="src\diva.h" />
     <ClInclude Include="src\game\chance_time.h" />

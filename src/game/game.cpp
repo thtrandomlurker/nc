@@ -113,6 +113,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 
 	// NOTE: Update input manager
 	macro_state.Update(game->ptr08, 0);
+	state.sound_effects.SetSoundEffects(*se);
 
 	if (ShouldUpdateTargets())
 	{

@@ -5,24 +5,9 @@
 #include <nc_log.h>
 #include <sound_db.h>
 #include <save_data.h>
+#include <helpers.h>
 #include <thirdparty/imgui/imgui.h>
 #include "customize_sel.h"
-
-// NOTE: Helper functions
-template <typename T>
-const T* FindWithID(const std::vector<T>& vec, int32_t id)
-{
-	for (const auto& data : vec)
-		if (data.id == id)
-			return &data;
-	return nullptr;
-}
-
-static int32_t GetConfigSetID()
-{
-	int32_t set = *reinterpret_cast<int32_t*>(game::GetSaveData() + 0x169410);
-	return set < 3 ? -(set + 1) : game::GetGlobalPVInfo()->pv_id;
-}
 
 namespace customize_sel
 {
@@ -87,7 +72,7 @@ namespace customize_sel
 	static void OpenWindow()
 	{
 		cs_state.window_open = true;
-		cs_state.selected_set = GetConfigSetID();
+		cs_state.selected_set = nc::GetConfigSetID();
 		RepopulateSetNodes();
 		RepopulateSoundNodes();
 

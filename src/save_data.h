@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string.h>
 
 // NOTE: Shared sets or song-specific configuration
 struct ConfigSet
@@ -47,6 +48,9 @@ namespace nc
 	ConfigSet* FindConfigSet(int32_t id, bool create_if_missing = false);
 	void CreateDefaultSaveData();
 	SharedData& GetSharedData();
+
+	int32_t GetConfigSetID();
+	ConfigSet& GetConfigSet();
 
 	void InstallSaveDataHooks();
 }

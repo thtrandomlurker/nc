@@ -269,6 +269,22 @@ struct UIState
 	void ResetAllLayers();
 };
 
+struct SoundEffects
+{
+	std::string w_button;
+	std::string l_button_on;
+	std::string l_button_off;
+	std::string star;
+	std::string w_star;
+	// std::string l_star_on;
+	// std::string l_star_off;
+	std::string link;
+	std::string rush_on;
+	std::string rush_off;
+
+	void SetSoundEffects(const SoundEffect& org);
+};
+
 struct StateEx
 {
 	static constexpr int32_t MaxHitEffectCount = 4;
@@ -286,6 +302,7 @@ struct StateEx
 	std::optional<db::SongEntry> nc_song_entry;
 	std::optional<db::ChartEntry> nc_chart_entry;
 	ScoringInfo scoring_info = { };
+	SoundEffects sound_effects;
 
 	void ResetPlayState();
 	void ResetAetData();
