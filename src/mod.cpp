@@ -1,5 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <Shlwapi.h>
+#include <d3d11.h>
 #include <detours.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -12,12 +14,17 @@
 #include "nc_log.h"
 #include "game/game.h"
 #include "ui/pv_sel.h"
+#include "ui/customize_sel.h"
 #include "db.h"
 #include "save_data.h"
 #include "util.h"
 #include <thirdparty/toml.h>
+#include <thirdparty/imgui/imgui_impl_dx11.h>
+#include <thirdparty/imgui/imgui_impl_win32.h>
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 const int32_t* life_table = reinterpret_cast<const int32_t*>(0x140BE9EA0);
 
@@ -441,6 +448,11 @@ static void LoadConfig()
 
 extern "C"
 {
+	static ID3D11DeviceContext* ctx = nullptr;
+	static ID3D11RenderTargetView* main_render_target = nullptr;
+	static WNDPROC wnd_proc = nullptr;
+	static std::string path = ".\\";
+
 	void __declspec(dllexport) Init()
 	{
 		freopen("CONOUT$", "w", stdout);
@@ -463,10 +475,102 @@ extern "C"
 		InstallDatabaseHooks();
 		nc::CreateDefaultSaveData();
 		nc::InstallSaveDataHooks();
+
+		// NOTE: Get the full path of this DLL file
+		HMODULE handle = NULL;
+		GetModuleHandleEx(
+			GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			(LPCTSTR)Init,
+			&handle
+		);
+
+		TCHAR buffer[MAX_PATH] = { 0 };
+		GetModuleFileName(handle, buffer, MAX_PATH);
+		PathRemoveFileSpecW(buffer);
+
+		char narrow_buffer[512] = { 0 };
+		::WideCharToMultiByte(CP_UTF8, 0, buffer, -1, narrow_buffer, 512, nullptr, nullptr);
+		path = narrow_buffer;
 	}
 
 	void __declspec(dllexport) PostInit()
 	{
 		InstallPvSelHooks();
+		InstallCustomizeSelHooks();
+	}
+
+	LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+		if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
+			return true;
+		if (ImGui::GetCurrentContext() != 0 && ImGui::GetIO().WantCaptureMouse) {
+			switch (uMsg) {
+			case WM_LBUTTONDOWN:
+			case WM_LBUTTONDBLCLK:
+			case WM_LBUTTONUP:
+			case WM_RBUTTONDOWN:
+			case WM_RBUTTONDBLCLK:
+			case WM_RBUTTONUP:
+			case WM_MOUSEWHEEL:
+				return true;
+			}
+		}
+
+		return CallWindowProc(wnd_proc, hWnd, uMsg, wParam, lParam);
+	}
+
+	void __declspec(dllexport) D3DInit(IDXGISwapChain* sc, ID3D11Device* dev, ID3D11DeviceContext* ctx)
+	{
+		DXGI_SWAP_CHAIN_DESC scd = { };
+		sc->GetDesc(&scd);
+
+		// NOTE: Retrieve render texture and create render target
+		ID3D11Texture2D* back_buffer = nullptr;
+		sc->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
+		if (back_buffer != nullptr)
+		{
+			dev->CreateRenderTargetView(back_buffer, nullptr, &main_render_target);
+			back_buffer->Release();
+		}
+
+		// NOTE: Create WndProc
+		wnd_proc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(
+			scd.OutputWindow,
+			GWLP_WNDPROC,
+			reinterpret_cast<LONG_PTR>(WndProc)
+		));
+		
+		// NOTE: Create our ImGui context
+		ImGui::CreateContext();
+		ImGui::StyleColorsDark();
+		ImGuiIO& io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+		// NOTE: Load fonts
+		io.Fonts->AddFontDefault();
+
+		ImFontConfig config;
+		config.MergeMode = true;
+		config.GlyphOffset.y = 3.5f;
+		static const ImWchar icon_ranges[] = { 0xE000, 0xE0FF };
+		io.Fonts->AddFontFromFileTTF((::path + "\\ram\\OpenFontIcons.ttf").c_str(), 13.0f, &config, icon_ranges);
+
+		ImGui_ImplWin32_Init(scd.OutputWindow);
+		ImGui_ImplDX11_Init(dev, ctx);
+
+		::ctx = ctx;
+	}
+
+	void __declspec(dllexport) OnFrame(IDXGISwapChain* sc)
+	{
+		ImGui_ImplDX11_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+
+		customize_sel::ShowWindow();
+
+		ImGui::Render();
+		ctx->OMSetRenderTargets(1, &main_render_target, nullptr);
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 	}
 };

@@ -1037,13 +1037,23 @@ inline prj::vector<prj::string>* GetRomDirectories()
 
 namespace game
 {
+	struct GlobalPVInfo
+	{
+		int32_t unknown0;
+		int32_t pv_id;
+	};
+
 	inline bool IsFutureToneMode() { return *reinterpret_cast<bool*>(0x1414AB9E3); }
 	inline bool IsPvMode() { return GetPvGameplayInfo()->type == 3 || GetPvGameplayInfo()->type == 6; }
 	inline int32_t GetFramerate() { return *reinterpret_cast<int32_t*>(0x1414ABBB8); }
+	//inline GlobalPVInfo& GetGlobalPVInfo() { *reinterpret_cast<GlobalPVInfo*>(0x1401D6520); }
 
 	// NOTE: The CustomizeSel doesn't have duplicated code for the Switch version
 	//       like other UI screens, so this is valid for both Switch and PS4 mode.
 	inline FUNCTION_PTR(bool, __fastcall, IsCustomizeSelTaskReady, 0x1401DE790);
+
+	inline FUNCTION_PTR(GlobalPVInfo*, __fastcall, GetGlobalPVInfo, 0x1401D6520);
+	inline FUNCTION_PTR(char*, __fastcall, GetSaveData, 0x1401D6510);
 }
 
 // NOTE: File IO functions
