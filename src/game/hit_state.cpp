@@ -80,7 +80,7 @@ namespace nc
 		else if (ex->IsStarLikeNote())
 			hit = macro_state.GetStarHit();
 		else if (target->target_type == TargetType_StarW)
-			hit = macro_state.GetDoubleStarHit(double_tapped);
+			hit = macro_state.GetDoubleStarHit();
 		else if (ex->IsRushNote())
 		{
 			// NOTE: Star rush input is handled right up there

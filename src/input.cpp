@@ -173,16 +173,12 @@ bool MacroState::GetStarHit() const
 		buttons[Button_R4].IsTapped();
 }
 
-bool MacroState::GetDoubleStarHit(bool* both_flicked) const
+bool MacroState::GetDoubleStarHit() const
 {
 	if (diva::GetInputState(0)->GetDevice() != InputDevice_Keyboard)
 	{
-		bool hit = (buttons[Button_LStick].IsTapped() && buttons[Button_RStick].IsTappedInNearFrames()) ||
+		return (buttons[Button_LStick].IsTapped() && buttons[Button_RStick].IsTappedInNearFrames()) ||
 			(buttons[Button_RStick].IsTapped() && buttons[Button_LStick].IsTappedInNearFrames());
-
-		if (both_flicked != nullptr)
-			*both_flicked = hit;
-		return hit;
 	}
 
 	const int32_t buttons_left[] = {
@@ -206,19 +202,9 @@ bool MacroState::GetDoubleStarHit(bool* both_flicked) const
 
 	if (l != nullptr && r != nullptr)
 	{
-		if (l->IsTapped() || r->IsTapped())
-		{
-			if (both_flicked != nullptr)
-			{
-				*both_flicked = (l->IsTapped() && r->IsTappedInNearFrames()) ||
-					(r->IsTapped() && l->IsTappedInNearFrames());
-			}
-
-			return true;
-		}
+		return (l->IsTapped() && r->IsTappedInNearFrames()) ||
+			(r->IsTapped() && l->IsTappedInNearFrames());
 	}
 
-	if (both_flicked != nullptr)
-		*both_flicked = false;
 	return false;
 }
