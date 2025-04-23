@@ -80,7 +80,7 @@ namespace nc
 		return set < 3 ? -(set + 1) : game::GetGlobalPVInfo()->pv_id;
 	}
 
-	ConfigSet& GetConfigSet() { return *FindConfigSet(GetConfigSetID(), true); }
+	ConfigSet* GetConfigSet() { return FindConfigSet(GetConfigSetID(), true); }
 }
 
 // NOTE: Handle reading of save data file

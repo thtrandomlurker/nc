@@ -181,7 +181,7 @@ void SoundEffects::SetSoundEffects(const SoundEffect& org)
 		return fallback;
 	};
 
-	const auto& config = nc::GetConfigSet();
+	const auto& config = *nc::GetConfigSet();
 	w_button = tryFindSound(config.button_w_se_id, *sound_db::GetButtonWSoundDB(), org.button.c_str());
 	l_button_on = tryFindSound(config.button_l_se_id, *sound_db::GetButtonLongOnSoundDB(), org.button.c_str());
 	l_button_off = tryFindSound(config.button_l_se_id, *sound_db::GetButtonLongOffSoundDB(), org.button.c_str());

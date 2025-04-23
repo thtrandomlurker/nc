@@ -373,6 +373,20 @@ struct FontInfo
 	float unk44;
 };
 
+enum TextFlags : int32_t
+{
+	TextFlags_AlignLeft = 0x1,
+	TextFlags_AlignRight = 0x2,
+	TextFlags_AlignHCenter = 0x4,
+	TextFlags_AutoAlignHCenter = 0x8,
+	TextFlags_AlignVCenter = 0x10,
+	TextFlags_AutoAlignVCenter = 0x20,
+	TextFlags_Clip = 0x200,
+	TextFlags_Font = 0x10000,
+
+	TextFlags_AutoAlignCenter = TextFlags_Font | TextFlags_AutoAlignHCenter | TextFlags_AutoAlignVCenter
+};
+
 #pragma pack(push, 1)
 struct PrintWork
 {
@@ -380,7 +394,7 @@ struct PrintWork
 	uint8_t fill_color[4];
 	bool clip;
 	int8_t gap9[3];
-	diva::vec4 clipData;
+	diva::vec4 clip_data;
 	int32_t prio;
 	int32_t layer;
 	int32_t res_mode;
@@ -408,7 +422,7 @@ struct PrintWork
 // TODO: Clean-up this struct. I think the struct might be actually smaller than this.
 struct TextArgs
 {
-	float unk00;
+	float max_width; // NOTE: Text will get squished to fit once it goes past this limit
 	PrintWork print_work;
 	uint32_t unk60;
 	uint32_t unk64;
@@ -436,37 +450,43 @@ enum AetAction : int32_t
 
 struct AetArgs
 {
-	uint32_t scene_id;
-	char* layer_name;
+	uint32_t scene_id = 0;
+	const char* layer_name = nullptr;
 	prj::string start_marker;
 	prj::string end_marker;
 	prj::string loop_marker;
-	float start_time;
-	float end_time;
-	int32_t flags;
-	int32_t index;
-	int32_t layer;
-	int32_t prio;
-	int32_t res_mode;
-	diva::vec3 pos;
-	diva::vec3 rot;
-	diva::vec3 scale;
-	diva::vec3 anchor;
-	float frame_speed;
-	diva::vec4 color;
-	uint8_t gapD0[16];
+	float start_time = -1.0f;
+	float end_time = -1.0f;
+	int32_t flags = 0x0;
+	int32_t index = 0;
+	int32_t layer = 0;
+	int32_t prio = 0;
+	int32_t res_mode = 13;
+	diva::vec3 pos = { 0.0f, 0.0f, 0.0f };
+	diva::vec3 rot = { 0.0f, 0.0f, 0.0f };
+	diva::vec3 scale = { 1.0f, 1.0f, 1.0f };
+	diva::vec3 anchor = { 0.0f, 0.0f, 0.0f };
+	float frame_speed = 1.0f;
+	diva::vec4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
+	prj::map<prj::string, int32_t> layer_sprites;
 	prj::string sound_path;
-	uint8_t gapE4[16];
-	int32_t sound_queue_index;
-	uint8_t gap114[16];
-	uint8_t gap124[16];
-	uint8_t gap134[16];
-	void* frame_rate_control;
-	bool sound_voice;
-	uint8_t gap151[35];
+	prj::map<prj::string, prj::string> sound_replace;
+	int32_t sound_queue_index = 0;
+	prj::map<uint32_t, uint32_t> sprite_replace;
+	prj::map<uint32_t, void*> sprite_texture;
+	prj::map<uint32_t, uint32_t> sprite_discard;
+	void* frame_rate_control = nullptr;
+	bool sound_voice = false;
+	int32_t dword154 = 0;
+	int32_t dword158 = 0;
+	int32_t dword15C = 0;
+	int32_t id = 0;
+	int32_t dword164 = 0;
+	diva::vec3 pos_2 = { 0.0f, 0.0f, 0.0f };
 
-	AetArgs();
-	~AetArgs();
+	AetArgs() = default;
+	AetArgs(uint32_t scene, const char* layer, int32_t prio, int32_t marker_mode);
+	~AetArgs() = default;
 };
 
 struct AetLayout
@@ -909,9 +929,14 @@ namespace diva
 		int32_t GetDevice();
 		bool IsButtonDown(int32_t key);
 		bool IsButtonTapped(int32_t key);
+		bool IsButtonTappedAbs(int32_t key);
+		bool IsButtonTappedOrRepeat(int32_t key);
+		inline bool IsInputBlocked() { return *reinterpret_cast<bool*>(&_data[0x1A28]); }
 	};
 
 	inline FUNCTION_PTR(InputState*, __fastcall, GetInputState, 0x1402AC970, int32_t index);
+	inline FUNCTION_PTR(bool, __fastcall, CheckButtonDelegate, 0x1402AB1A0,
+		InputState* state, int32_t key, bool(__fastcall* func)(InputState*, int32_t));
 }
 
 namespace aet
@@ -935,9 +960,9 @@ namespace aet
 	inline FUNCTION_PTR(int32_t, __fastcall, PlayGamCmnLayer, 0x14027B2C0, int32_t prio, void* a2, const char* layer, const diva::vec2* pos);
 
 	// NOTE: Sets the position of the layer object
-	inline FUNCTION_PTR(void, __fastcall, SetPosition, 0x1402CA3F0, int32_t id, diva::vec3* pos);
+	inline FUNCTION_PTR(void, __fastcall, SetPosition, 0x1402CA3F0, int32_t id, const diva::vec3* pos);
 	// NOTE: Sets the scale of the layer object
-	inline FUNCTION_PTR(void, __fastcall, SetScale, 0x1402CA400, int32_t id, diva::vec3* scale);
+	inline FUNCTION_PTR(void, __fastcall, SetScale, 0x1402CA400, int32_t id, const diva::vec3* scale);
 	// NOTE: Sets the current frame of the layer objects
 	inline FUNCTION_PTR(void, __fastcall, SetFrame, 0x1402CA4B0, int32_t id, float frame);
 	// NOTE: Sets if the layer object should play (1) or pause (0)
@@ -975,9 +1000,11 @@ namespace spr
 
 	// NOTE: Retrieves a font from the font list
 	inline FUNCTION_PTR(FontInfo*, __fastcall, GetFont, 0x1402C4DC0, FontInfo* font, int32_t font_id);
+	inline FUNCTION_PTR(FontInfo*, __fastcall, GetLocaleFont, 0x1402C4E10, FontInfo* font, int32_t id, bool a3);
 	inline FUNCTION_PTR(void, __fastcall, SetFontSize, 0x1402C5240, FontInfo* font, float w, float h);
 	// NOTE: Draw text to the screen (UTF-8, char*)
 	inline FUNCTION_PTR(void, __fastcall, DrawTextA, 0x1402C57B0, TextArgs* params, uint32_t flags, const char* text);
+	inline FUNCTION_PTR(void**, __fastcall, DrawSimpleText, 0x14027B160, float x, float y, int32_t res, int32_t prio, const char* text, bool center, uint32_t color, const diva::vec4* clip);
 }
 
 namespace sound
@@ -1001,6 +1028,21 @@ namespace sound
 	// NOTE: Unloads a sound farc from memory
 	//
 	inline FUNCTION_PTR(bool, __fastcall, UnloadFarc, 0x1405AA480, const char* path);
+
+	inline FUNCTION_PTR(void, __fastcall, PlayEnterSE, 0x1401A7F00);
+	inline FUNCTION_PTR(void, __fastcall, PlayCancelSE, 0x1401A7F20);
+	inline FUNCTION_PTR(void, __fastcall, PlaySelectSE, 0x1401A7F60);
+}
+
+namespace loc
+{
+	inline FUNCTION_PTR(const char*, __fastcall, GetStrArrayString, 0x140239BC0, int32_t id);
+	inline std::string_view GetString(int32_t id)
+	{
+		if (const char* data = GetStrArrayString(id); data != nullptr)
+			return std::string_view(data, strlen(data));
+		return std::string_view();
+	}
 }
 
 namespace dsc

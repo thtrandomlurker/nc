@@ -7,6 +7,8 @@
 constexpr int32_t NearFramesBaseCount = 3;
 constexpr float NearFramesBaseRate = 60.0f;
 
+static bool inputs_blocked = false;
+
 enum ButtonIndex : int32_t
 {
 	ButtonIndex_Circle = 0,
@@ -221,4 +223,16 @@ bool MacroState::GetDoubleStarHit(bool* both_flicked) const
 	if (both_flicked != nullptr)
 		*both_flicked = false;
 	return false;
+}
+
+HOOK(bool, __fastcall, ShouldDisableInputDispatch, 0x1406083B0)
+{
+	return originalShouldDisableInputDispatch() || inputs_blocked;
+}
+
+void nc::BlockInputs() { inputs_blocked = true; }
+void nc::UnblockInputs() { inputs_blocked = false; }
+void nc::InstallInputHooks()
+{
+	INSTALL_HOOK(ShouldDisableInputDispatch);
 }

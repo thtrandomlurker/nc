@@ -1,11 +1,11 @@
 #include "sound_db.h"
 
 static std::vector<SoundInfo> button_w_sounds = {
-    { 1, "W Button A", "button_w1_mmv" },
-    { 2, "W Button B", "button_w2_mmv" },
-    { 3, "W Button C", "button_w3_mmv" },
-    { 4, "W Button D", "button_w4_mmv" },
-    { 5, "W Button E", "button_w5_mmv" }
+    { 1, "Double A", "button_w1_mmv" },
+    { 2, "Double B", "button_w2_mmv" },
+    { 3, "Double C", "button_w3_mmv" },
+    { 4, "Double D", "button_w4_mmv" },
+    { 5, "Double E", "button_w5_mmv" }
 };
 
 static std::vector<SoundInfo> star_sounds = {
@@ -21,11 +21,11 @@ static std::vector<SoundInfo> star_sounds = {
 };
 
 static std::vector<SoundInfo> star_w_sounds = {
-    { 1, "W Star A", "scratch_w1_mmv" },
-    { 2, "W Star B", "scratch_w2_mmv" },
-    { 3, "W Star C", "scratch_w3_mmv" },
-    { 4, "W Star D", "scratch_w4_mmv" },
-    { 5, "W Star E", "scratch_w5_mmv" }
+    { 1, "D-Star A", "scratch_w1_mmv" },
+    { 2, "D-Star B", "scratch_w2_mmv" },
+    { 3, "D-Star C", "scratch_w3_mmv" },
+    { 4, "D-Star D", "scratch_w4_mmv" },
+    { 5, "D-Star E", "scratch_w5_mmv" }
 };
 
 static std::vector<SoundInfo> button_lon_sounds = {

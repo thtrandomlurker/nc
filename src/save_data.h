@@ -30,12 +30,14 @@ struct ConfigSet
 
 struct SharedData
 {
-	int32_t pv_sel_selected_style;
-	uint8_t reserved[252];
+	int32_t pv_sel_selected_style    = 0;
+	uint8_t default_stick_se_arcade  = 0;
+	uint8_t default_stick_se_console = 1;
+	uint8_t default_stick_se_mixed   = 1;
+	uint8_t reserved[249];
 
 	SharedData()
 	{
-		pv_sel_selected_style = 0;
 		memset(reserved, 0, sizeof(reserved));
 	}
 };
@@ -50,7 +52,7 @@ namespace nc
 	SharedData& GetSharedData();
 
 	int32_t GetConfigSetID();
-	ConfigSet& GetConfigSet();
+	ConfigSet* GetConfigSet();
 
 	void InstallSaveDataHooks();
 }

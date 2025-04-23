@@ -103,3 +103,10 @@ struct MacroState
 	bool GetStarHit() const;
 	bool GetDoubleStarHit(bool* both_flicked) const;
 };
+
+namespace nc
+{
+	void BlockInputs();
+	void UnblockInputs();
+	void InstallInputHooks();
+}
