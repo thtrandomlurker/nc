@@ -209,6 +209,31 @@ bool MacroState::GetDoubleStarHit() const
 	return false;
 }
 
+bool MacroState::GetStarHitCancel() const
+{
+	uint64_t left = GetButtonMask(Button_L1) |
+		GetButtonMask(Button_L2) |
+		GetButtonMask(Button_L3) |
+		GetButtonMask(Button_L4) |
+		GetButtonMask(Button_LStick);
+
+	uint64_t right = GetButtonMask(Button_R1) |
+		GetButtonMask(Button_R2) |
+		GetButtonMask(Button_R3) |
+		GetButtonMask(Button_R4) |
+		GetButtonMask(Button_RStick);
+
+	return (GetDownBitfield() & left) != 0 && (GetDownBitfield() & right) != 0;
+}
+
+uint64_t MacroState::GetDownBitfield() const
+{
+	uint64_t mask = 0;
+	for (size_t i = 0; i < Button_Max; i++)
+		mask |= static_cast<uint64_t>(buttons[i].IsDown()) << i;
+	return mask;
+}
+
 uint64_t MacroState::GetTappedBitfield() const
 {
 	uint64_t mask = 0;

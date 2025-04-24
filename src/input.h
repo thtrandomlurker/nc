@@ -102,7 +102,9 @@ struct MacroState
 	void UpdateSticks(diva::InputState* input_state);
 	bool GetStarHit() const;
 	bool GetDoubleStarHit() const;
+	bool GetStarHitCancel() const;
 
+	uint64_t GetDownBitfield() const;
 	uint64_t GetTappedBitfield() const;
 	uint64_t GetReleasedBitfield() const;
 	uint64_t GetTappedInNearFramesBitfield() const;

@@ -33,7 +33,7 @@ namespace nc
 		return HitState_None;
 	}
 
-	static int32_t GetHitStateInternal(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, ButtonState** hold_button, bool* double_tapped)
+	static int32_t GetHitStateInternal(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, ButtonState** hold_button, bool* double_tapped, bool* no_success)
 	{
 		if (ex->force_hit_state != HitState_None)
 			return ex->force_hit_state;
@@ -122,7 +122,11 @@ namespace nc
 			}
 		}
 		else if (ex->IsStarLikeNote())
+		{
 			hit = macro_state.GetStarHit();
+			if (target->target_type == TargetType_ChanceStar)
+				*no_success = macro_state.GetStarHitCancel();
+		}
 		else if (target->target_type == TargetType_StarW)
 			hit = macro_state.GetDoubleStarHit();
 		else if (ex->IsRushNote())
@@ -157,6 +161,14 @@ bool nc::CheckHit(int32_t hit_state, bool wrong, bool worst)
 	return cond;
 }
 
+bool nc::CheckGoodHit(int32_t hit_state)
+{
+	return hit_state == HitState_Cool || hit_state == HitState_Fine ||
+		hit_state == HitState_CoolDouble || hit_state == HitState_FineDouble ||
+		hit_state == HitState_CoolTriple || hit_state == HitState_FineTriple ||
+		hit_state == HitState_CoolQuad || hit_state == HitState_FineQuad;
+}
+
 int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx** extras, int32_t group_count, bool* success)
 {
 	if (group_count < 1)
@@ -170,7 +182,8 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 		// NOTE: Evaluate note hit
 		ButtonState* hold_button = nullptr;
 		bool double_tapped = false;
-		int32_t hit_state = nc::GetHitStateInternal(game, target, ex, &hold_button, &double_tapped);
+		bool no_success = false;
+		int32_t hit_state = nc::GetHitStateInternal(game, target, ex, &hold_button, &double_tapped, &no_success);
 
 		if (hit_state != HitState_None)
 		{
@@ -188,8 +201,11 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 					ex->holding = true;
 				else if (target->target_type == TargetType_ChanceStar)
 				{
-					*success = state.chance_time.GetFillRate() == 15;
-					state.chance_time.successful = *success;
+					if (CheckGoodHit(hit_state) && state.chance_time.GetFillRate() == 15)
+					{
+						*success = !no_success;
+						state.chance_time.successful = true;
+					}
 				}
 			}
 
