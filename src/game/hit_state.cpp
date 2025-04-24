@@ -38,44 +38,88 @@ namespace nc
 		if (ex->force_hit_state != HitState_None)
 			return ex->force_hit_state;
 
+		if (target->flying_time_remaining < -NormalWindow[HitState_Sad])
+			return HitState_Worst;
+
 		bool hit = false;
 		bool wrong = false;
+
+		uint64_t button_mask = 0;
+		uint64_t wrong_mask = 0;
+		switch (target->target_type)
+		{
+		case TargetType_UpW:
+		case TargetType_TriangleLong:
+		case TargetType_TriangleRush:
+			button_mask = GetButtonMask(Button_Triangle) | GetButtonMask(Button_Up);
+			wrong_mask = ~button_mask & GetButtonMask(Button_Max);
+			break;
+		case TargetType_RightW:
+		case TargetType_CircleLong:
+		case TargetType_CircleRush:
+			button_mask = GetButtonMask(Button_Circle) | GetButtonMask(Button_Right);
+			wrong_mask = ~button_mask & GetButtonMask(Button_Max);
+			break;
+		case TargetType_DownW:
+		case TargetType_CrossLong:
+		case TargetType_CrossRush:
+			button_mask = GetButtonMask(Button_Cross) | GetButtonMask(Button_Down);
+			wrong_mask = ~button_mask & GetButtonMask(Button_Max);
+			break;
+		case TargetType_LeftW:
+		case TargetType_SquareLong:
+		case TargetType_SquareRush:
+			button_mask = GetButtonMask(Button_Square) | GetButtonMask(Button_Left);
+			wrong_mask = ~button_mask & GetButtonMask(Button_Max);
+			break;
+		}
 
 		// NOTE: Check input for double notes
 		if (target->target_type >= TargetType_UpW && target->target_type <= TargetType_LeftW)
 		{
-			int32_t base_index = target->target_type - TargetType_UpW;
-			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
-			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
+			ButtonState& face = macro_state.buttons[Button_Triangle + (target->target_type - TargetType_UpW)];
+			ButtonState& arrow = macro_state.buttons[Button_Up + (target->target_type - TargetType_UpW)];
 
-			*double_tapped = (face->IsTapped() && arrow->IsTappedInNearFrames()) ||
-				(arrow->IsTapped() && face->IsTappedInNearFrames());
-			hit = (face->IsDown() && arrow->IsTapped()) || (arrow->IsDown() && face->IsTapped());
-			
-
-			// TODO: Add logic for WRONG
-			//
-			//
+			if ((face.IsTapped() && arrow.IsDown()) || (arrow.IsTapped() && face.IsDown()))
+			{
+				hit = true;
+				wrong = false;
+				*double_tapped = (face.IsTapped() && arrow.IsTappedInNearFrames()) ||
+					(arrow.IsTapped() && face.IsTappedInNearFrames());
+			}
+			else if ((macro_state.GetTappedBitfield() & wrong_mask) != 0)
+			{
+				hit = true;
+				wrong = true;
+			}
 		}
 		else if (target->target_type >= TargetType_TriangleLong && target->target_type <= TargetType_SquareLong)
 		{
-			int32_t base_index = target->target_type - TargetType_TriangleLong;
-			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
-			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
+			ButtonState& face = macro_state.buttons[Button_Triangle + (target->target_type - TargetType_TriangleLong)];
+			ButtonState& arrow = macro_state.buttons[Button_Up + (target->target_type - TargetType_TriangleLong)];
 
 			if (!ex->long_end)
 			{
-				hit = face->IsTapped() || arrow->IsTapped();
-				*hold_button = face->IsTapped() ? face : arrow;
+				if (face.IsTapped() || arrow.IsTapped())
+				{
+					hit = true;
+					wrong = false;
+					*hold_button = face.IsTapped() ? &face : &arrow;
+				}
+				else if ((macro_state.GetTappedBitfield() & wrong_mask) != 0)
+				{
+					hit = true;
+					wrong = true;
+				}
 			}
-			else if (ex->long_end)
+			else
 			{
 				if (ex->prev->hold_button != nullptr)
+				{
 					hit = ex->prev->hold_button->IsReleased();
+					wrong = false;
+				}
 			}
-
-			// TODO: Add logic for WRONG
-			//
 		}
 		else if (ex->IsStarLikeNote())
 			hit = macro_state.GetStarHit();
@@ -83,17 +127,17 @@ namespace nc
 			hit = macro_state.GetDoubleStarHit();
 		else if (ex->IsRushNote())
 		{
-			// NOTE: Star rush input is handled right up there
-			//
-			int32_t base_index = target->target_type - TargetType_TriangleRush;
-			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
-			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
-
-			hit = face->IsTapped() || arrow->IsTapped();
+			if ((macro_state.GetTappedBitfield() & button_mask) != 0)
+			{
+				hit = true;
+				wrong = false;
+			}
+			else if ((macro_state.GetTappedBitfield() & wrong_mask) != 0)
+			{
+				hit = true;
+				wrong = true;
+			}
 		}
-
-		if (target->flying_time_remaining < -NormalWindow[HitState_Sad])
-			return HitState_Worst;
 		
 		if (hit)
 			return nc::JudgeTiming(target->flying_time_remaining, ex->IsStarLikeNote() || ex->target_type == TargetType_StarW, wrong);

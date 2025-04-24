@@ -208,3 +208,42 @@ bool MacroState::GetDoubleStarHit() const
 
 	return false;
 }
+
+uint64_t MacroState::GetTappedBitfield() const
+{
+	uint64_t mask = 0;
+	for (size_t i = 0; i < Button_Max; i++)
+		mask |= static_cast<uint64_t>(buttons[i].IsTapped()) << i;
+	return mask;
+}
+
+uint64_t MacroState::GetReleasedBitfield() const
+{
+	uint64_t mask = 0;
+	for (size_t i = 0; i < Button_Max; i++)
+		mask |= static_cast<uint64_t>(buttons[i].IsReleased()) << i;
+	return mask;
+}
+
+uint64_t MacroState::GetTappedInNearFramesBitfield() const
+{
+	uint64_t mask = 0;
+	for (size_t i = 0; i < Button_Max; i++)
+		mask |= static_cast<uint64_t>(buttons[i].IsTappedInNearFrames()) << i;
+	return mask;
+}
+
+uint64_t GetButtonMask(int32_t button)
+{
+	if (button < 0 || button > Button_Max)
+		return 0;
+	else if (button == Button_Max)
+	{
+		uint64_t mask = 0;
+		for (size_t i = 0; i < Button_Max; i++)
+			mask |= static_cast<uint64_t>(1) << i;
+		return mask;
+	}
+
+	return static_cast<uint64_t>(1) << static_cast<uint64_t>(button);
+}
