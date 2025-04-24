@@ -340,11 +340,21 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 			if (time != -1)
 				last_time = time;
 
-			// TODO: Add difficulty check
-			if (pv_game->pv_data.script_buffer[pos + 2] == 4)
-				chance_start_time = static_cast<int64_t>(last_time) * 10000;
-			else if (pv_game->pv_data.script_buffer[pos + 2] == 5)
-				chance_end_time = static_cast<int64_t>(last_time) * 10000;
+			int32_t difficulty = pv_game->pv_data.script_buffer[pos + 1];
+			int32_t mode = pv_game->pv_data.script_buffer[pos + 2];
+
+			if ((difficulty & (1 << GetPvGameplayInfo()->difficulty)) != 0)
+			{
+				switch (mode)
+				{
+				case 4:
+					chance_start_time = static_cast<int64_t>(last_time) * 10000;
+					break;
+				case 5:
+					chance_end_time = static_cast<int64_t>(last_time) * 10000;
+					break;
+				}
+			}
 
 			pos += dsc::GetOpcodeInfo(26)->length + 1;
 			continue;
