@@ -166,11 +166,11 @@ void HorizontalSelector::OnActionPressedOrRepeat(int32_t action)
 	{
 	case KeyAction_MoveLeft:
 		ChangeValue(-1);
-		sound::PlaySelectSE();
+		sound::PlaySoundEffect(1, "se_ft_music_selector_select_01", 1.0f);
 		break;
 	case KeyAction_MoveRight:
 		ChangeValue(1);
-		sound::PlaySelectSE();
+		sound::PlaySoundEffect(1, "se_ft_music_selector_select_01", 1.0f);
 		break;
 	}
 }
@@ -183,7 +183,7 @@ void HorizontalSelector::OnActionPressed(int32_t action)
 	case KeyAction_Preview:
 		if (preview_notify.has_value())
 		{
-			preview_notify.value()(this, -1, extra_data);
+			preview_notify.value()(this, extra_data);
 			enter_anim_state = 0;
 		}
 		break;
@@ -272,5 +272,23 @@ void HorizontalSelectorMulti::ChangeValue(int32_t dir)
 		selected_index = 0;
 
 	if (notify.has_value())
-		notify.value()(selected_index, values[selected_index]);
+		notify.value()(selected_index);
+}
+
+std::string HorizontalSelectorNumber::GetSelectedValue()
+{
+	return util::Format(format_string.c_str(), value);
+}
+
+void HorizontalSelectorNumber::ChangeValue(int32_t dir)
+{
+	value += dir * value_step;
+
+	if (travel_mode == LimitMode_Clamp)
+		value = util::Clamp(value, value_min, value_max);
+	else if (travel_mode == LimitMode_Wrap)
+		value = util::Wrap(value, value_min, value_max);
+
+	if (notify.has_value())
+		notify.value()(value);
 }

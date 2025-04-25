@@ -32,7 +32,7 @@ struct SelectorExtraData
 	std::vector<SoundOptionInfo> sounds;
 };
 
-static void PlayPreviewSoundEffect(HorizontalSelector* sel_base, int32_t index, const void* extra)
+static void PlayPreviewSoundEffect(HorizontalSelector* sel_base, const void* extra)
 {
 	HorizontalSelectorMulti* sel = dynamic_cast<HorizontalSelectorMulti*>(sel_base);
 	const auto* ex_data = reinterpret_cast<const SelectorExtraData*>(extra);
@@ -143,14 +143,15 @@ public:
 		}
 	}
 
-	HorizontalSelectorMulti* CreateMultiOptionElement(int32_t id, int32_t loc_id, std::function<void(int32_t, const std::string&)> func = nullptr)
+	template <typename T, typename F>
+	T* CreateOptionElement(int32_t id, int32_t loc_id, F func = nullptr)
 	{
 		diva::vec3 pos = { 0.0f, 0.0f, 0.0f };
 
 		if (auto layout = sub_menu_base.GetLayout(util::Format("p_nc_submenu_%02d_c", loc_id)); layout.has_value())
 			pos = layout.value().position;
 
-		auto opt = std::make_unique<HorizontalSelectorMulti>(
+		auto opt = std::make_unique<T>(
 			cs_state.aet_scene_id,
 			util::Format("option_submenu_nc_%02d__f", id),
 			WindowPrio,
@@ -164,7 +165,7 @@ public:
 			opt->SetOnChangeNotifier(func);
 
 		selectors.push_back(std::move(opt));
-		return dynamic_cast<HorizontalSelectorMulti*>(selectors.back().get());
+		return dynamic_cast<T*>(selectors.back().get());
 	}
 
 	void ChangeTab(int32_t dir)
@@ -184,10 +185,10 @@ public:
 			auto& ex_data = user_data.emplace_back();
 			size_t index = selectors.size();
 
-			auto* opt = CreateMultiOptionElement(
+			auto* opt = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(
 				id,
 				loc_id,
-				[this, index, selected_id](int32_t i, const std::string&) { StoreSoundEffectConfig(i, user_data[index], selected_id); }
+				[this, index, selected_id](int32_t i) { StoreSoundEffectConfig(i, user_data[index], selected_id); }
 			);
 
 			if (same_id > 0)

@@ -19,6 +19,13 @@ enum KeyAction : int32_t
 	KeyAction_Preview   = 9
 };
 
+enum LimitMode : int32_t
+{
+	LimitMode_Disabled = 0,
+	LimitMode_Clamp = 1,
+	LimitMode_Wrap = 2
+};
+
 class AetElement
 {
 public:
@@ -81,6 +88,8 @@ protected:
 class HorizontalSelector : public AetControl
 {
 public:
+	using PreviewNotifier = std::function<void(HorizontalSelector*, const void*)>;
+
 	float font_scale = 0.85f;
 	float text_opacity = 1.0f;
 	bool bold_text = true;
@@ -104,13 +113,13 @@ public:
 	virtual void Disp() override;
 
 	inline void SetExtraData(const void* data) { extra_data = data; }
-	inline void SetPreviewNotifier(std::function<void(HorizontalSelector*, int32_t, const void*)> func) { preview_notify = func; }
+	inline void SetPreviewNotifier(PreviewNotifier func) { preview_notify = func; }
 protected:
 	virtual std::string GetSelectedValue() = 0;
 	virtual void ChangeValue(int32_t dir) = 0;
 
 private:
-	std::optional<std::function<void(HorizontalSelector*, int32_t, const void*)>> preview_notify;
+	std::optional<PreviewNotifier> preview_notify;
 	const void* extra_data = nullptr;
 	bool focused_old = false;
 	int32_t enter_anim_state = -1;
@@ -119,6 +128,8 @@ private:
 class HorizontalSelectorMulti : public HorizontalSelector
 {
 public:
+	using Notifier = std::function<void(int32_t)>;
+
 	std::vector<std::string> values;
 	int32_t selected_index = 0;
 
@@ -126,9 +137,34 @@ public:
 	HorizontalSelectorMulti(uint32_t scene_id, std::string layer_name, int32_t prio, int32_t res_mode) :
 		HorizontalSelector(scene_id, layer_name, prio, res_mode) { }
 
-	inline void SetOnChangeNotifier(std::function<void(int32_t, const std::string&)> func) { notify = func; }
+	inline void SetOnChangeNotifier(Notifier func) { notify = func; }
 protected:
-	std::optional<std::function<void(int32_t, const std::string&)>> notify;
+	std::optional<Notifier> notify;
+
+	std::string GetSelectedValue() override;
+	void ChangeValue(int32_t dir) override;
+};
+
+class HorizontalSelectorNumber : public HorizontalSelector
+{
+public:
+	using Notifier = std::function<void(float)>;
+
+	float value_step = 1.0f;
+	float value_min = -1.0f;
+	float value_max = -1.0f;
+	int32_t travel_mode = LimitMode_Clamp;
+	std::string format_string = "%.2f";
+
+	HorizontalSelectorNumber() = default;
+	HorizontalSelectorNumber(uint32_t scene_id, std::string layer_name, int32_t prio, int32_t res_mode) :
+		HorizontalSelector(scene_id, layer_name, prio, res_mode) { }
+
+	inline void SetOnChangeNotifier(Notifier func) { notify = func; }
+	inline void SetValue(float v) { value = v; }
+protected:
+	float value = 0.0f;
+	std::optional<Notifier> notify;
 
 	std::string GetSelectedValue() override;
 	void ChangeValue(int32_t dir) override;

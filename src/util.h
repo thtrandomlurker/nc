@@ -21,16 +21,23 @@ namespace util
 		return default_value;
 	}
 
-	inline int32_t Clamp(int32_t value, int32_t min, int32_t max)
+	template <typename T>
+	inline T Clamp(T value, T min, T max)
 	{
 		return value < min ? min : value > max ? max : value;
 	}
 
+	template <typename T>
+	inline T Wrap(T value, T min, T max)
+	{
+		return value < min ? max : value > max ? min : value;
+	}
+
 	inline int32_t ColorF32I32(float r, float g, float b, float a)
 	{
-		return Clamp(r * 255.0f, 0, 255) |
-			(Clamp(g * 255.0f, 0, 255) << 8) |
-			(Clamp(b * 255.0f, 0, 255) << 16) |
-			(Clamp(a * 255.0f, 0, 255) << 24);
+		return Clamp<int32_t>(r * 255, 0, 255) |
+			(Clamp<int32_t>(g * 255.0f, 0, 255) << 8) |
+			(Clamp<int32_t>(b * 255.0f, 0, 255) << 16) |
+			(Clamp<int32_t>(a * 255.0f, 0, 255) << 24);
 	}
 }
