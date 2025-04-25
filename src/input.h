@@ -108,5 +108,9 @@ namespace nc
 {
 	void BlockInputs();
 	void UnblockInputs();
+
+	// NOTE: These functions return input even when it's blocked
+	bool IsButtonTappedOrRepeat(diva::InputState* input_state, int32_t key);
+
 	void InstallInputHooks();
 }

@@ -1,5 +1,6 @@
 #include <initializer_list>
 #include <util.h>
+#include <input.h>
 #include "common.h"
 
 void AetElement::Ctrl() { }
@@ -132,12 +133,9 @@ void AetControl::Ctrl()
 			else
 			{
 				tapped = tapped || is->IsButtonTappedAbs(key);
-
-				// TODO: Add actual repeat code
-				repeat = repeat || is->IsButtonTappedAbs(key);
+				repeat = repeat || nc::IsButtonTappedOrRepeat(is, key);
 			}
 		}
-
 
 		if (tapped)
 			OnActionPressed(action);

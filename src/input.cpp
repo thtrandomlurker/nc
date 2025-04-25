@@ -1,3 +1,6 @@
+#include <unordered_map>
+#include <bitset>
+#include <array>
 #include <string.h>
 #include "hooks.h"
 #include "diva.h"
@@ -6,8 +9,53 @@
 
 constexpr int32_t NearFramesBaseCount = 3;
 constexpr float NearFramesBaseRate = 60.0f;
+constexpr size_t MaxKeyCount = 0xA2;
 
-static bool inputs_blocked = false;
+struct RepeatTapMemory
+{
+	float float00;
+	float float04;
+	int32_t dword08;
+	int32_t dword0C;
+
+	RepeatTapMemory()
+	{
+		float00 = 3.0f;
+		float04 = 40.0f;
+		dword08 = 0;
+		dword0C = 0;
+	}
+};
+
+struct InputStateExData
+{
+	std::bitset<MaxKeyCount> down;
+	std::bitset<MaxKeyCount> repeat_tap;
+	std::array<RepeatTapMemory, MaxKeyCount> repeat_tap_memory;
+	bool blocked;
+
+	InputStateExData()
+	{
+		repeat_tap_memory.fill(RepeatTapMemory());
+		blocked = false;
+	}
+
+	void ResetMultiFrameInputs()
+	{
+		for (int i = 0; i < MaxKeyCount; i++)
+		{
+			repeat_tap_memory[i].dword08 = 0;
+			repeat_tap_memory[i].dword0C = 0;
+		}
+	}
+};
+
+static_assert(sizeof(std::bitset<MaxKeyCount>) == 0x18);
+
+// NOTE: Using a pointer as key is kinda hacky I guess, but the input state buffer
+//       is allocated on the heap at startup and only freed on exit, so if the pointer
+//       becomes invalid in this period that isn't a issue for us to deal with!
+static std::unordered_map<diva::InputState*, InputStateExData> input_ex_data;
 
 enum ButtonIndex : int32_t
 {
@@ -43,6 +91,7 @@ enum GameButton : int32_t
 
 static FUNCTION_PTR(int64_t, __fastcall, GetPvKeyStateDown, 0x140274930, void* handler, int32_t key);
 static FUNCTION_PTR(int64_t, __fastcall, GetPvKeyStateTapped, 0x140274960, void* handler, int32_t key);
+static FUNCTION_PTR(bool, __fastcall, PollRepeatTapInput, 0x1402AA650, RepeatTapMemory* a1, float a2, bool is_down);
 
 bool ButtonState::IsTappedInNearFrames() const
 {
@@ -225,14 +274,61 @@ bool MacroState::GetDoubleStarHit(bool* both_flicked) const
 	return false;
 }
 
-HOOK(bool, __fastcall, ShouldDisableInputDispatch, 0x1406083B0)
+HOOK(void, __fastcall, SetInputNotDispatchable, 0x1402AC250, diva::InputState* input_state, bool blocked)
 {
-	return originalShouldDisableInputDispatch() || inputs_blocked;
+	originalSetInputNotDispatchable(input_state, blocked || input_ex_data[input_state].blocked);
 }
 
-void nc::BlockInputs() { inputs_blocked = true; }
-void nc::UnblockInputs() { inputs_blocked = false; }
+// NOTE: Blocking inputs break repeat and other multi-frame inputs, so we have to handle that externally
+HOOK(void, __fastcall, PollInputRepeatAndDouble, 0x1402ABD90, diva::InputState* input_state, float a2)
+{
+	originalPollInputRepeatAndDouble(input_state, a2);
+
+	auto& ex = input_ex_data[input_state];
+	memcpy(&ex.down, &input_state->_data[0x30], 0x18);
+	memcpy(&ex.repeat_tap, &input_state->_data[0x90], 0x18);
+
+	if (ex.blocked)
+	{
+		memset(&ex.repeat_tap, 0, sizeof(ex.repeat_tap));
+		for (int32_t i = 0; i < MaxKeyCount; i++)
+		{
+			if (PollRepeatTapInput(&ex.repeat_tap_memory[i], a2, ex.down[i]))
+				ex.repeat_tap[i] = true;
+		}
+	}
+	else
+		ex.ResetMultiFrameInputs();
+}
+
+void nc::BlockInputs()
+{
+	for (auto& [ptr, state] : input_ex_data)
+		state.blocked = true;
+}
+
+void nc::UnblockInputs()
+{
+	for (auto& [ptr, state] : input_ex_data)
+		state.blocked = false;
+}
+
+static bool IsButtonTappedOrRepeatImp(diva::InputState* input_state, int32_t key)
+{
+	if (key >= 0xA2)
+		return false;
+	return input_ex_data[input_state].repeat_tap[key];
+}
+
+bool nc::IsButtonTappedOrRepeat(diva::InputState* input_state, int32_t key)
+{
+	if (!input_ex_data[input_state].blocked)
+		return input_state->IsButtonTappedOrRepeat(key);
+	return diva::CheckButtonDelegate(input_state, key, IsButtonTappedOrRepeatImp);
+}
+
 void nc::InstallInputHooks()
 {
-	INSTALL_HOOK(ShouldDisableInputDispatch);
+	INSTALL_HOOK(SetInputNotDispatchable);
+	INSTALL_HOOK(PollInputRepeatAndDouble);
 }
