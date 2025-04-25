@@ -60,6 +60,12 @@ static std::string GetGameSoundEffect(int32_t kind)
 			if (auto* se = game::GetButtonSE(id); se != nullptr)
 				return std::string(se->se_name);
 		}
+		else if (kind == 3)
+		{
+			// NOTE: This is actually hardcoded into the original CustomizeSel code so
+			//       I don't feel bad about hardcoding it here
+			return id == 1 ? "se_ft_option_preview_laser" : "se_ft_option_preview_windchime";
+		}
 	}
 
 	return "";
@@ -88,6 +94,29 @@ static void PlayPreviewSoundEffect(HorizontalSelector* sel_base, const void* ext
 	else
 		se_name = ex_data->sounds[sel->selected_index].preview_name;
 	
+	if (!se_name.empty())
+	{
+		sound::ReleaseAllCues(PreviewQueueIndex);
+		sound::PlaySoundEffect(PreviewQueueIndex, se_name.c_str(), 1.0f);
+	}
+}
+
+static void PlayControlSEPreview(HorizontalSelector* sel_base, const void*)
+{
+	HorizontalSelectorMulti* sel = dynamic_cast<HorizontalSelectorMulti*>(sel_base);
+	std::string se_name;
+
+	switch (sel->selected_index)
+	{
+	case 0:
+		se_name = GetGameSoundEffect(3);
+		break;
+	case 1:
+		if (const auto* snd = FindWithID(*sound_db::GetStarSoundDB(), nc::GetConfigSet()->star_se_id); snd != nullptr)
+			se_name = snd->se_name;
+		break;
+	}
+
 	if (!se_name.empty())
 	{
 		sound::ReleaseAllCues(PreviewQueueIndex);
@@ -305,6 +334,7 @@ public:
 			ctrl_se->values.push_back("Star");
 			ctrl_se->selected_index = nc::GetSharedData().stick_control_se;
 			ctrl_se->SetOnChangeNotifier([](int32_t index) { nc::GetSharedData().stick_control_se = index; });
+			ctrl_se->SetPreviewNotifier(PlayControlSEPreview);
 
 			auto* tz = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(8, 3);
 			tz->values.push_back("F");
