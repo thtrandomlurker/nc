@@ -89,7 +89,9 @@ enum SEType : int32_t
 	SEType_RushStart   = 9,
 	SEType_RushPop     = 10,
 	SEType_RushFail    = 11,
-	SEType_Max         = 12
+	SEType_LinkStart   = 12,
+	SEType_LinkEnd     = 13,
+	SEType_Max         = 14
 };
 
 struct TargetStateEx

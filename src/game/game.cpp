@@ -334,9 +334,11 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					case TargetType_SquareLong:
 						state.PlaySoundEffect(ex->IsLongNoteStart() ? SEType_LongStart : SEType_LongRelease);
 						break;
+					case TargetType_LinkStar:
+						if (ex->IsLinkNoteStart()) { state.PlaySoundEffect(SEType_LinkStart); }
+						[[fallthrough]];
 					case TargetType_Star:
 					case TargetType_StarRush:
-					case TargetType_LinkStar:
 					case TargetType_LinkStarEnd:
 						state.PlaySoundEffect(SEType_Star);
 						game->mute_slide_chime = true;
@@ -356,6 +358,9 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 				}
 				else if (ex->IsLongNoteEnd())
 					state.PlaySoundEffect(SEType_LongFail);
+
+				if (ex->IsLinkNoteEnd())
+					state.PlaySoundEffect(SEType_LinkEnd);
 			}
 		}
 	}

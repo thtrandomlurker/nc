@@ -28,6 +28,14 @@ static std::vector<SoundInfo> star_w_sounds = {
     { 5, "D-Star E", "scratch_w5_mmv" }
 };
 
+static std::vector<SoundInfo> link_star_sounds = {
+    { 1, "Link A", "scratch_l1_mmv", "se_nc_option_preview_sl1" },
+    { 2, "Link B", "scratch_l2_mmv", "se_nc_option_preview_sl2" },
+    { 3, "Link C", "scratch_l3_mmv", "se_nc_option_preview_sl3" },
+    { 4, "Link D", "scratch_l4_mmv", "se_nc_option_preview_sl4" },
+    { 5, "Link E", "scratch_l5_mmv", "se_nc_option_preview_sl5" }
+};
+
 static std::vector<SoundInfo> button_lon_sounds = {
     { 1, "Sustain A", "button_l1_on_mmv", "se_nc_option_preview_l1" },
     { 2, "Sustain B", "button_l2_on_mmv", "se_nc_option_preview_l2" },
@@ -52,6 +60,11 @@ const std::vector<SoundInfo>* sound_db::GetStarSoundDB()
 const std::vector<SoundInfo>* sound_db::GetStarWSoundDB()
 {
     return &star_w_sounds;
+}
+
+const std::vector<SoundInfo>* sound_db::GetLinkSoundDB()
+{
+    return &link_star_sounds;
 }
 
 const std::vector<SoundInfo>* sound_db::GetButtonWSoundDB()

@@ -187,6 +187,7 @@ void SoundEffects::SetSoundEffects(const SoundEffect& org)
 	l_button_off = tryFindSound(config.button_l_se_id, *sound_db::GetButtonLongOffSoundDB(), org.button.c_str());
 	star = tryFindSound(config.star_se_id, *sound_db::GetStarSoundDB(), "", 0);
 	w_star = tryFindSound(config.star_w_se_id, *sound_db::GetStarWSoundDB(), star);
+	link = tryFindSound(config.link_se_id, *sound_db::GetLinkSoundDB(), "");
 	rush_on = "se_pv_button_rush1_on";
 	rush_off = "se_pv_button_rush1_off";
 }
@@ -278,6 +279,14 @@ void StateEx::PlaySoundEffect(int32_t type)
 		break;
 	case SEType_RushFail:
 		sound::ReleaseCue(3, sound_effects.rush_on.c_str(), false);
+		break;
+	case SEType_LinkStart:
+		if (!sound_effects.link.empty())
+			sound::PlaySoundEffect(3, sound_effects.link.c_str(), 1.0f);
+		break;
+	case SEType_LinkEnd:
+		if (!sound_effects.link.empty())
+			sound::ReleaseCue(3, sound_effects.link.c_str(), false);
 		break;
 	}
 }
