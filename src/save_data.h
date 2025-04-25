@@ -30,14 +30,15 @@ struct ConfigSet
 
 struct SharedData
 {
-	int32_t pv_sel_selected_style    = 0;
-	uint8_t default_stick_se_arcade  = 0;
-	uint8_t default_stick_se_console = 1;
-	uint8_t default_stick_se_mixed   = 1;
-	uint8_t reserved[249];
+	int32_t pv_sel_selected_style = 0;
+	uint8_t stick_control_se = 0; // NOTE: Applies to console and mixed styles; Arcade is forced to slidechime.
+	uint8_t _padding1[3]; // NOTE: Do not use this data; May be set from previous versions of the format.
+	int32_t stick_sensitivity = 50;
+	uint8_t reserved[244];
 
 	SharedData()
 	{
+		memset(_padding1, 0, sizeof(_padding1));
 		memset(reserved, 0, sizeof(reserved));
 	}
 };

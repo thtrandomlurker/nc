@@ -1017,6 +1017,10 @@ namespace sound
 	//
 	inline FUNCTION_PTR(void, __fastcall, ReleaseCue, 0x1405AAD00, int32_t queue_index, const char* name, bool force_release);
 
+	// NOTE: Releases every cue in a sound queue.
+	//
+	inline FUNCTION_PTR(void, __fastcall, ReleaseAllCues, 0x1405AADD0, int32_t queue_index);
+
 	// NOTE: Requests SoundWork to load a sound farc. Returns false if the queue is full.
 	//
 	inline FUNCTION_PTR(bool, __fastcall, RequestFarcLoad, 0x1405AA250, const char* path);
@@ -1081,8 +1085,15 @@ namespace game
 {
 	struct GlobalPVInfo
 	{
-		int32_t unknown0;
+		int32_t difficulty; // NOTE: Extra-extreme is set here as 4, and not 3 with edition 1!
 		int32_t pv_id;
+	};
+
+	struct NoteSE
+	{
+		int32_t id;
+		prj::string name;
+		prj::string se_name;
 	};
 
 	inline bool IsFutureToneMode() { return *reinterpret_cast<bool*>(0x1414AB9E3); }
@@ -1095,7 +1106,36 @@ namespace game
 	inline FUNCTION_PTR(bool, __fastcall, IsCustomizeSelTaskReady, 0x1401DE790);
 
 	inline FUNCTION_PTR(GlobalPVInfo*, __fastcall, GetGlobalPVInfo, 0x1401D6520);
+
 	inline FUNCTION_PTR(char*, __fastcall, GetSaveData, 0x1401D6510);
+	inline FUNCTION_PTR(void*, __fastcall, GetConfigSet, 0x1401D5F40, void* save_data, int32_t pv, bool a3);
+
+	inline FUNCTION_PTR(NoteSE*, __fastcall, GetButtonSE, 0x1403F7540, int32_t id);
+}
+
+namespace pv_db
+{
+	struct PvDBDifficulty
+	{
+		int32_t difficulty;
+		int32_t gap04;
+		int32_t edition;
+		int32_t gap0C[5];
+		prj::string script_file_name;
+		int32_t level;
+		prj::string button_se;
+		prj::string success_se;
+		prj::string slide_se;
+		prj::string slidechain_start_se;
+		prj::string slidechain_se;
+		prj::string slidechain_success_se;
+		prj::string slidechain_failure_se;
+		prj::string slide_touch_se;
+		uint8_t gap[1000];
+	};
+
+	inline FUNCTION_PTR(void*, __fastcall, FindPVEntry, 0x1404BC500, int32_t pv_id);
+	inline FUNCTION_PTR(PvDBDifficulty*, __fastcall, FindDifficulty, 0x1404BCA70, void* entry, int32_t difficulty, int32_t edition);
 }
 
 // NOTE: File IO functions

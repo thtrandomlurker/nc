@@ -11,6 +11,8 @@
 #include "common.h"
 #include "customize_sel.h"
 
+constexpr int32_t PreviewQueueIndex = 3;
+
 struct CSStateConfigNC
 {
 	bool window_open = false;
@@ -29,15 +31,68 @@ struct SelectorExtraData
 	int32_t same_index = -1;
 	int32_t song_default_index = -1;
 	int32_t base_index = 0;
+	int32_t same_id = 0;
 	std::vector<SoundOptionInfo> sounds;
 };
+
+static std::string GetGameSoundEffect(int32_t kind)
+{
+	if (kind < 0 || kind >= 6)
+		return "";
+
+	int32_t pv_id = game::GetGlobalPVInfo()->pv_id;
+	int32_t difficulty = util::Clamp(game::GetGlobalPVInfo()->difficulty, 0, 3);
+
+	if (auto* data = static_cast<int32_t*>(game::GetConfigSet(game::GetSaveData(), pv_id, false)); data != nullptr)
+	{
+		int32_t id = data[kind];
+		if (kind == 0)
+		{
+			if (id == 0)
+			{
+				if (auto* pv_entry = pv_db::FindPVEntry(pv_id); pv_entry != nullptr)
+				{
+					if (auto* diff_entry = pv_db::FindDifficulty(pv_entry, difficulty, 0); diff_entry != nullptr)
+						return std::string(diff_entry->button_se);
+				}
+			}
+
+			if (auto* se = game::GetButtonSE(id); se != nullptr)
+				return std::string(se->se_name);
+		}
+	}
+
+	return "";
+}
 
 static void PlayPreviewSoundEffect(HorizontalSelector* sel_base, const void* extra)
 {
 	HorizontalSelectorMulti* sel = dynamic_cast<HorizontalSelectorMulti*>(sel_base);
 	const auto* ex_data = reinterpret_cast<const SelectorExtraData*>(extra);
 
-	sound::PlaySoundEffect(3, ex_data->sounds[sel->selected_index].preview_name.c_str(), 1.0f);
+	std::string se_name;
+
+	if (sel->selected_index == ex_data->same_index)
+	{
+		if (ex_data->same_id == 1)
+		{
+			se_name = GetGameSoundEffect(0);
+		}
+		else if (ex_data->same_id == 2)
+		{
+			const auto* snd = FindWithID(*sound_db::GetStarSoundDB(), nc::GetConfigSet()->star_se_id);
+			if (snd != nullptr)
+				se_name = snd->se_name;
+		}
+	}
+	else
+		se_name = ex_data->sounds[sel->selected_index].preview_name;
+	
+	if (!se_name.empty())
+	{
+		sound::ReleaseAllCues(PreviewQueueIndex);
+		sound::PlaySoundEffect(PreviewQueueIndex, se_name.c_str(), 1.0f);
+	}
 }
 
 static void StoreSoundEffectConfig(int32_t index, const SelectorExtraData& ex_data, int8_t* output)
@@ -123,12 +178,12 @@ public:
 		switch (action)
 		{
 		case KeyAction_MoveUp:
-			SetSelectorIndex(-1, true);
-			sound::PlaySelectSE();
+			if (SetSelectorIndex(-1, true))
+				sound::PlaySelectSE();
 			break;
 		case KeyAction_MoveDown:
-			SetSelectorIndex(1, true);
-			sound::PlaySelectSE();
+			if (SetSelectorIndex(1, true))
+				sound::PlaySelectSE();
 			break;
 		case KeyAction_SwapLeft:
 			ChangeTab(-1);
@@ -138,6 +193,8 @@ public:
 			break;
 		case KeyAction_Cancel:
 			SetLayer("cmn_win_nc_options_g_inout", 0x10000, WindowPrio, 14, AetAction_OutOnce);
+			sound::ReleaseAllCues(PreviewQueueIndex);
+			sound::PlaySoundEffect(1, "se_ft_sys_dialog_close", 1.0f);
 			finishing = true;
 			break;
 		}
@@ -182,8 +239,10 @@ public:
 
 		auto putSoundEffectList = [&](int32_t id, int32_t loc_id, const std::vector<SoundInfo>& sounds, int32_t same_id, int8_t* selected_id)
 		{
-			auto& ex_data = user_data.emplace_back();
 			size_t index = selectors.size();
+
+			auto& ex_data = user_data.emplace_back();
+			ex_data.same_id = same_id;
 
 			auto* opt = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(
 				id,
@@ -232,20 +291,41 @@ public:
 			putSoundEffectList(4, 4, *sound_db::GetButtonLongOnSoundDB(), 2, &config_set->link_se_id); 
 			putSoundEffectList(5, 5, *sound_db::GetStarWSoundDB(),        2, &config_set->star_w_se_id);
 		}
+		else if (selected_tab == 1)
+		{
+			auto* sens = CreateOptionElement<HorizontalSelectorNumber, HorizontalSelectorNumber::Notifier>(6, 1);
+			sens->value_min = 20.0f;
+			sens->value_max = 80.0f;
+			sens->SetValue(nc::GetSharedData().stick_sensitivity);
+			sens->format_string = "%.0f%%";
+			sens->SetOnChangeNotifier([](float v) { nc::GetSharedData().stick_sensitivity = v; });
+
+			auto* ctrl_se = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(7, 2);
+			ctrl_se->values.push_back("Slide");
+			ctrl_se->values.push_back("Star");
+			ctrl_se->selected_index = nc::GetSharedData().stick_control_se;
+			ctrl_se->SetOnChangeNotifier([](int32_t index) { nc::GetSharedData().stick_control_se = index; });
+
+			auto* tz = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(8, 3);
+			tz->values.push_back("F");
+			tz->values.push_back("F 2nd");
+			tz->values.push_back("X");
+			tz->selected_index = config_set->tech_zone_style;
+			tz->SetOnChangeNotifier([this](int32_t index) { config_set->tech_zone_style = index; });
+		}
 
 		SetSelectorIndex(0);
 	}
 
-	void SetSelectorIndex(int32_t index, bool relative = false)
+	bool SetSelectorIndex(int32_t index, bool relative = false)
 	{
-		selected_option = relative ? selected_option + index : index;
-		if (selected_option < 0)
-			selected_option = selectors.size() - 1;
-		else if (selected_option >= selectors.size())
-			selected_option = 0;
+		int32_t prev_index = selected_option;
+		selected_option = util::Wrap<int32_t>(relative ? selected_option + index : index, 0, selectors.size() - 1);
 
 		for (size_t i = 0; i < selectors.size(); i++)
 			selectors[i]->SetFocus(i == selected_option);
+
+		return selected_option != prev_index;
 	}
 };
 
@@ -263,6 +343,7 @@ namespace customize_sel
 				window = std::make_unique<NCConfigWindow>();
 				cs_state.window_open = true;
 				nc::BlockInputs();
+				sound::PlaySoundEffect(1, "se_ft_sys_dialog_open", 1.0f);
 			}
 		}
 
