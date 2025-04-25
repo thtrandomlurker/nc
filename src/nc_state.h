@@ -318,6 +318,13 @@ struct StateEx
 			return nc_chart_entry.value().score_mode;
 		return ScoreMode_Arcade;
 	}
+
+	inline int32_t GetGameStyle() const
+	{
+		if (nc_chart_entry.has_value())
+			return nc_chart_entry.value().style;
+		return GameStyle_Arcade;
+	}
 };
 
 // NOTE: Constants
