@@ -89,7 +89,9 @@ enum SEType : int32_t
 	SEType_RushStart   = 9,
 	SEType_RushPop     = 10,
 	SEType_RushFail    = 11,
-	SEType_Max         = 12
+	SEType_LinkStart   = 12,
+	SEType_LinkEnd     = 13,
+	SEType_Max         = 14
 };
 
 struct TargetStateEx
@@ -317,6 +319,13 @@ struct StateEx
 		if (nc_chart_entry.has_value())
 			return nc_chart_entry.value().score_mode;
 		return ScoreMode_Arcade;
+	}
+
+	inline int32_t GetGameStyle() const
+	{
+		if (nc_chart_entry.has_value())
+			return nc_chart_entry.value().style;
+		return GameStyle_Arcade;
 	}
 };
 

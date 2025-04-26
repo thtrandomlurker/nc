@@ -16,6 +16,7 @@ namespace sound_db
 {
 	const std::vector<SoundInfo>* GetStarSoundDB();
 	const std::vector<SoundInfo>* GetStarWSoundDB();
+	const std::vector<SoundInfo>* GetLinkSoundDB();
 	const std::vector<SoundInfo>* GetButtonWSoundDB();
 	const std::vector<SoundInfo>* GetButtonLongOnSoundDB();
 	const std::vector<SoundInfo>* GetButtonLongOffSoundDB();

@@ -3,11 +3,9 @@
 #include <Windows.h>
 #include <detours.h>
 #include <hooks.h>
-
-// TODO: CHANGE!!
 #include <nc_state.h>
 #include <nc_log.h>
-
+#include <save_data.h>
 #include "target.h"
 #include "chance_time.h"
 #include "hit_state.h"
@@ -336,9 +334,11 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					case TargetType_SquareLong:
 						state.PlaySoundEffect(ex->IsLongNoteStart() ? SEType_LongStart : SEType_LongRelease);
 						break;
+					case TargetType_LinkStar:
+						if (ex->IsLinkNoteStart()) { state.PlaySoundEffect(SEType_LinkStart); }
+						[[fallthrough]];
 					case TargetType_Star:
 					case TargetType_StarRush:
-					case TargetType_LinkStar:
 					case TargetType_LinkStarEnd:
 						state.PlaySoundEffect(SEType_Star);
 						game->mute_slide_chime = true;
@@ -358,6 +358,9 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 				}
 				else if (ex->IsLongNoteEnd())
 					state.PlaySoundEffect(SEType_LongFail);
+
+				if (ex->IsLinkNoteEnd())
+					state.PlaySoundEffect(SEType_LinkEnd);
 			}
 		}
 	}
@@ -375,6 +378,12 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 		// NOTE: Update chance time fill rate
 		if (state.chance_time.CheckTargetInRange(*target_index))
 			state.chance_time.targets_hit += 1;
+	}
+
+	if (macro_state.GetStarHit() && *play_default_se && nc::GetSharedData().stick_control_se == 1 && state.GetGameStyle() != GameStyle_Arcade)
+	{
+		state.PlaySoundEffect(SEType_Star);
+		game->mute_slide_chime = true;
 	}
 
 	return final_hit_state;

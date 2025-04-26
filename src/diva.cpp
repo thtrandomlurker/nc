@@ -12,6 +12,11 @@ static FUNCTION_PTR(int32_t, __fastcall, PlayLayerImp, 0x14027B420, uint32_t sce
 static FUNCTION_PTR(void*, __fastcall, CreateAetArgsAction, 0x14028D560, AetArgs* args, uint32_t scene_id, const char* layer, int32_t prio, int32_t action);
 static FUNCTION_PTR(int32_t, __fastcall, PlayLayerAetArgs, 0x1402CA220, AetArgs* args, int32_t id);
 
+AetArgs::AetArgs(uint32_t scene, const char* layer, int32_t prio, int32_t marker_mode)
+{
+	CreateAetArgsAction(this, scene, layer, prio, marker_mode);
+}
+
 SprArgs::SprArgs()
 {
 	memset(this, 0, sizeof(SprArgs));
@@ -24,18 +29,22 @@ TextArgs::TextArgs()
 	DefaultTextArgs(this);
 }
 
+/*
 AetArgs::AetArgs()
 {
 	memset(this, 0, sizeof(AetArgs));
 	DefaultAetArgs(this);
 }
+*/
 
 // NOTE: Temporary. Just until I sort out the std::map types.
+/*
 FUNCTION_PTR(void, __fastcall, DestroyAetArgs, 0x1401A9100, AetArgs* args);
 AetArgs::~AetArgs()
 {
 	DestroyAetArgs(this);
 }
+*/
 
 void aet::CreateAetArgs(AetArgs* args, uint32_t scene_id, const char* layer_name, int32_t prio)
 {
@@ -113,14 +122,18 @@ int32_t aet::PlayLayer(uint32_t scene_id, int32_t prio, const char* layer, int32
 // NOTE: InputState implementation
 static FUNCTION_PTR(float, __fastcall, IS_GetPosition, 0x1402AB2C0, diva::InputState* t, int32_t index);
 static FUNCTION_PTR(int32_t, __fastcall, IS_GetDeviceVendor, 0x1402AAF20, diva::InputState* t);
-static FUNCTION_PTR(int32_t, __fastcall, IS_IsButtonTapped, 0x1402AB260, diva::InputState* t, int32_t key);
-static FUNCTION_PTR(int32_t, __fastcall, IS_IsButtonDown, 0x1402AAFE0, diva::InputState* t, int32_t key);
+static FUNCTION_PTR(bool, __fastcall, IS_IsButtonTapped, 0x1402AB260, diva::InputState* t, int32_t key);
+static FUNCTION_PTR(bool, __fastcall, IS_IsButtonTappedAbs, 0x1402AB160, diva::InputState* t, int32_t key);
+static FUNCTION_PTR(bool, __fastcall, IS_IsButtonRepeat, 0x1402AB270, diva::InputState* t, int32_t key);
+static FUNCTION_PTR(bool, __fastcall, IS_IsButtonDown, 0x1402AB280, diva::InputState* t, int32_t key);
 static FUNCTION_PTR(int32_t, __fastcall, GetNormalizedDeviceType, 0x1402ACAA0, int32_t vendor);
 
 float diva::InputState::GetPosition(int32_t index) { return IS_GetPosition(this, index); }
 int32_t diva::InputState::GetDevice() { return GetNormalizedDeviceType(IS_GetDeviceVendor(this)); }
 bool diva::InputState::IsButtonTapped(int32_t key) { return IS_IsButtonTapped(this, key); }
+bool diva::InputState::IsButtonTappedAbs(int32_t key) { return CheckButtonDelegate(this, key, IS_IsButtonTappedAbs); }
 bool diva::InputState::IsButtonDown(int32_t key) { return IS_IsButtonDown(this, key); }
+bool diva::InputState::IsButtonTappedOrRepeat(int32_t key) { return IS_IsButtonRepeat(this, key); }
 
 // NOTE: PVGameArcade implementation
 static FUNCTION_PTR(void, __fastcall, PVGAC_EraseTarget, 0x14026E5C0, PVGameArcade* data, PvGameTarget* target);

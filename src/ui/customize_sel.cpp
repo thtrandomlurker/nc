@@ -6,250 +6,414 @@
 #include <sound_db.h>
 #include <save_data.h>
 #include <helpers.h>
-#include <thirdparty/imgui/imgui.h>
+#include <input.h>
+#include <util.h>
+#include "common.h"
 #include "customize_sel.h"
+
+constexpr int32_t PreviewQueueIndex = 3;
+
+struct CSStateConfigNC
+{
+	bool window_open = false;
+	bool assets_loaded = false;
+	int32_t aet_scene_id = 14010150;
+} static cs_state;
+
+struct SoundOptionInfo
+{
+	int32_t id = 0;
+	std::string preview_name;
+};
+
+struct SelectorExtraData
+{
+	int32_t same_index = -1;
+	int32_t song_default_index = -1;
+	int32_t base_index = 0;
+	int32_t same_id = 0;
+	std::vector<SoundOptionInfo> sounds;
+};
+
+static std::string GetGameSoundEffect(int32_t kind)
+{
+	if (kind < 0 || kind >= 6)
+		return "";
+
+	int32_t pv_id = game::GetGlobalPVInfo()->pv_id;
+	int32_t difficulty = util::Clamp(game::GetGlobalPVInfo()->difficulty, 0, 3);
+
+	if (auto* data = static_cast<int32_t*>(game::GetConfigSet(game::GetSaveData(), pv_id, false)); data != nullptr)
+	{
+		int32_t id = data[kind];
+		if (kind == 0)
+		{
+			if (id == 0)
+			{
+				if (auto* pv_entry = pv_db::FindPVEntry(pv_id); pv_entry != nullptr)
+				{
+					if (auto* diff_entry = pv_db::FindDifficulty(pv_entry, difficulty, 0); diff_entry != nullptr)
+						return std::string(diff_entry->button_se);
+				}
+			}
+
+			if (auto* se = game::GetButtonSE(id); se != nullptr)
+				return std::string(se->se_name);
+		}
+		else if (kind == 3)
+		{
+			// NOTE: This is actually hardcoded into the original CustomizeSel code so
+			//       I don't feel bad about hardcoding it here
+			return id == 1 ? "se_ft_option_preview_laser" : "se_ft_option_preview_windchime";
+		}
+	}
+
+	return "";
+}
+
+static void PlayPreviewSoundEffect(HorizontalSelector* sel_base, const void* extra)
+{
+	HorizontalSelectorMulti* sel = dynamic_cast<HorizontalSelectorMulti*>(sel_base);
+	const auto* ex_data = reinterpret_cast<const SelectorExtraData*>(extra);
+
+	std::string se_name;
+
+	if (sel->selected_index == ex_data->same_index)
+	{
+		if (ex_data->same_id == 1)
+		{
+			se_name = GetGameSoundEffect(0);
+		}
+		else if (ex_data->same_id == 2)
+		{
+			const auto* snd = FindWithID(*sound_db::GetStarSoundDB(), nc::GetConfigSet()->star_se_id);
+			if (snd != nullptr)
+				se_name = snd->se_name;
+		}
+	}
+	else
+		se_name = ex_data->sounds[sel->selected_index].preview_name;
+	
+	if (!se_name.empty())
+	{
+		sound::ReleaseAllCues(PreviewQueueIndex);
+		sound::PlaySoundEffect(PreviewQueueIndex, se_name.c_str(), 1.0f);
+	}
+}
+
+static void PlayControlSEPreview(HorizontalSelector* sel_base, const void*)
+{
+	HorizontalSelectorMulti* sel = dynamic_cast<HorizontalSelectorMulti*>(sel_base);
+	std::string se_name;
+
+	switch (sel->selected_index)
+	{
+	case 0:
+		se_name = GetGameSoundEffect(3);
+		break;
+	case 1:
+		if (const auto* snd = FindWithID(*sound_db::GetStarSoundDB(), nc::GetConfigSet()->star_se_id); snd != nullptr)
+			se_name = snd->se_name;
+		break;
+	}
+
+	if (!se_name.empty())
+	{
+		sound::ReleaseAllCues(PreviewQueueIndex);
+		sound::PlaySoundEffect(PreviewQueueIndex, se_name.c_str(), 1.0f);
+	}
+}
+
+static void StoreSoundEffectConfig(int32_t index, const SelectorExtraData& ex_data, int8_t* output)
+{
+	int32_t id = ex_data.sounds[index].id;
+	if (index == ex_data.song_default_index)
+		id = -2;
+	else if (index == ex_data.same_index)
+		id = -1;
+
+	*output = id;
+}
+
+class NCConfigWindow : public AetControl
+{
+protected:
+	bool finishing = false;
+	bool exit = false;
+	int32_t prev_selected_tab = 0;
+	int32_t selected_tab = 0;
+	int32_t selected_option = 0;
+	AetElement sub_menu_base;
+	std::vector<std::unique_ptr<HorizontalSelector>> selectors;
+	std::vector<SelectorExtraData> user_data;
+	float win_opacity = 1.0f;
+	ConfigSet* config_set;
+
+	static constexpr int32_t WindowPrio = 18;
+	static constexpr int32_t MaxTabCount = 2;
+	static constexpr uint32_t NumberSprites[3] = { 880817216, 1732835926, 3315147794 };
+	static constexpr uint32_t TabInfoSprites[MaxTabCount] = { 2099321196, 2806350346 };
+
+public:
+	NCConfigWindow()
+	{
+		AllowInputsWhenBlocked(true);
+		config_set = nc::GetConfigSet();
+
+		SetScene(cs_state.aet_scene_id);
+		SetLayer("cmn_win_nc_options_g_inout", 0x10000, WindowPrio, 14, AetAction_InLoop);
+		ChangeTab(0);
+	}
+
+	bool ShouldExit() const { return exit; }
+
+	void Ctrl() override
+	{
+		AetControl::Ctrl();
+
+		if (finishing && Ended())
+		{
+			exit = true;
+			return;
+		}
+
+		if (auto layout = GetLayout("nswgam_cmn_win_base.pic"); layout.has_value())
+			win_opacity = layout.value().opacity;
+
+		for (auto& selector : selectors)
+		{
+			selector->SetOpacity(win_opacity);
+			selector->text_opacity = win_opacity;
+			selector->Ctrl();
+		}
+	}
+
+	void Disp() override
+	{
+		for (auto& selector : selectors)
+			selector->Disp();
+
+		DrawSpriteAt("p_nc_page_num_10_c", NumberSprites[selected_tab + 1]);
+		DrawSpriteAt("p_nc_page_num_01_c", NumberSprites[MaxTabCount]);
+		DrawSpriteAt("p_nc_img_02_c", TabInfoSprites[prev_selected_tab]);
+		DrawSpriteAt("p_nc_img_01_c", TabInfoSprites[selected_tab]);
+	}
+
+	void OnActionPressed(int32_t action) override
+	{
+		if (finishing)
+			return;
+
+		switch (action)
+		{
+		case KeyAction_MoveUp:
+			if (SetSelectorIndex(-1, true))
+				sound::PlaySelectSE();
+			break;
+		case KeyAction_MoveDown:
+			if (SetSelectorIndex(1, true))
+				sound::PlaySelectSE();
+			break;
+		case KeyAction_SwapLeft:
+			ChangeTab(-1);
+			break;
+		case KeyAction_SwapRight:
+			ChangeTab(1);
+			break;
+		case KeyAction_Cancel:
+			SetLayer("cmn_win_nc_options_g_inout", 0x10000, WindowPrio, 14, AetAction_OutOnce);
+			sound::ReleaseAllCues(PreviewQueueIndex);
+			sound::PlaySoundEffect(1, "se_ft_sys_dialog_close", 1.0f);
+			finishing = true;
+			break;
+		}
+	}
+
+	template <typename T, typename F>
+	T* CreateOptionElement(int32_t id, int32_t loc_id, F func = nullptr)
+	{
+		diva::vec3 pos = { 0.0f, 0.0f, 0.0f };
+
+		if (auto layout = sub_menu_base.GetLayout(util::Format("p_nc_submenu_%02d_c", loc_id)); layout.has_value())
+			pos = layout.value().position;
+
+		auto opt = std::make_unique<T>(
+			cs_state.aet_scene_id,
+			util::Format("option_submenu_nc_%02d__f", id),
+			WindowPrio,
+			14
+		);
+
+		opt->AllowInputsWhenBlocked(true);
+		opt->SetPosition(pos);
+
+		if (func)
+			opt->SetOnChangeNotifier(func);
+
+		selectors.push_back(std::move(opt));
+		return dynamic_cast<T*>(selectors.back().get());
+	}
+
+	void ChangeTab(int32_t dir)
+	{
+		prev_selected_tab = selected_tab;
+		selected_tab += dir;
+		if (selected_tab < 0)
+			selected_tab = MaxTabCount - 1;
+		else if (selected_tab >= MaxTabCount)
+			selected_tab = 0;
+
+		sub_menu_base.SetScene(cs_state.aet_scene_id);
+		sub_menu_base.SetLayer(util::Format("submenu_nc_anm_%02d", selected_tab + 1), 0x10000, 15, 14, "", "", nullptr);
+
+		auto putSoundEffectList = [&](int32_t id, int32_t loc_id, const std::vector<SoundInfo>& sounds, int32_t same_id, int8_t* selected_id)
+		{
+			size_t index = selectors.size();
+
+			auto& ex_data = user_data.emplace_back();
+			ex_data.same_id = same_id;
+
+			auto* opt = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(
+				id,
+				loc_id,
+				[this, index, selected_id](int32_t i) { StoreSoundEffectConfig(i, user_data[index], selected_id); }
+			);
+
+			if (same_id > 0)
+			{
+				if (*selected_id == -1)
+					opt->selected_index = static_cast<int32_t>(opt->values.size());
+
+				ex_data.same_index = static_cast<int32_t>(opt->values.size());
+				ex_data.sounds.emplace_back().id = -1;
+				ex_data.base_index++;
+
+				opt->values.emplace_back(loc::GetString(6250 + same_id));
+			}
+
+			for (const auto& snd : sounds)
+			{
+				if (snd.id == *selected_id)
+					opt->selected_index = static_cast<int32_t>(opt->values.size());
+
+				auto& info = ex_data.sounds.emplace_back();
+				info.id = snd.id;
+				info.preview_name = !snd.se_preview_name.empty() ? snd.se_preview_name : snd.se_name;
+				
+				opt->values.push_back(snd.name);
+			}
+
+			opt->SetExtraData(&user_data[index]);
+			opt->SetPreviewNotifier(PlayPreviewSoundEffect);
+		};
+
+		selectors.clear();
+		user_data.clear();
+		user_data.reserve(20);
+		if (selected_tab == 0)
+		{
+			// TODO: Change the sound effect names (maybe?) and the "Same as" text to STR ARRAY
+			//       string to allow localization.
+			putSoundEffectList(1, 1, *sound_db::GetButtonLongOnSoundDB(), 1, &config_set->button_l_se_id);
+			putSoundEffectList(2, 2, *sound_db::GetButtonWSoundDB(),      1, &config_set->button_w_se_id);
+			putSoundEffectList(3, 3, *sound_db::GetStarSoundDB(),         0, &config_set->star_se_id);
+			putSoundEffectList(4, 4, *sound_db::GetLinkSoundDB(),         2, &config_set->link_se_id); 
+			putSoundEffectList(5, 5, *sound_db::GetStarWSoundDB(),        2, &config_set->star_w_se_id);
+		}
+		else if (selected_tab == 1)
+		{
+			auto* sens = CreateOptionElement<HorizontalSelectorNumber, HorizontalSelectorNumber::Notifier>(6, 1);
+			sens->value_min = 20.0f;
+			sens->value_max = 80.0f;
+			sens->SetValue(nc::GetSharedData().stick_sensitivity);
+			sens->format_string = "%.0f%%";
+			sens->SetOnChangeNotifier([](float v) { nc::GetSharedData().stick_sensitivity = v; });
+
+			auto* ctrl_se = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(7, 2);
+			ctrl_se->values.push_back("Slide");
+			ctrl_se->values.push_back("Star");
+			ctrl_se->selected_index = nc::GetSharedData().stick_control_se;
+			ctrl_se->SetOnChangeNotifier([](int32_t index) { nc::GetSharedData().stick_control_se = index; });
+			ctrl_se->SetPreviewNotifier(PlayControlSEPreview);
+
+			auto* tz = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(8, 3);
+			tz->values.push_back("F");
+			tz->values.push_back("F 2nd");
+			tz->values.push_back("X");
+			tz->selected_index = config_set->tech_zone_style;
+			tz->SetOnChangeNotifier([this](int32_t index) { config_set->tech_zone_style = index; });
+		}
+
+		SetSelectorIndex(0);
+	}
+
+	bool SetSelectorIndex(int32_t index, bool relative = false)
+	{
+		int32_t prev_index = selected_option;
+		selected_option = util::Wrap<int32_t>(relative ? selected_option + index : index, 0, selectors.size() - 1);
+
+		for (size_t i = 0; i < selectors.size(); i++)
+			selectors[i]->SetFocus(i == selected_option);
+
+		return selected_option != prev_index;
+	}
+};
 
 namespace customize_sel
 {
-	struct SoundConfig
-	{
-		const char* name;
-		int8_t* selected_id;
-		const std::vector<SoundInfo>* sounds;
-		int32_t base_type; // 0 - None, 1 - Button, 2 - Star
-		bool has_song_default;
-		bool play_preview_on_chosen;
-	};
+	std::unique_ptr<NCConfigWindow> window;
 
-	struct SetOption
-	{
-		int32_t id;
-		std::string name;
-	};
-
-	struct CSStateConfigNC
-	{
-		bool window_open = false;
-		int32_t selected_set = -1;
-		std::vector<SetOption> sets;
-		std::vector<SoundConfig> sound_nodes;
-		std::vector<std::string> tech_zone_styles;
-		bool assets_loaded = false;
-		bool assets_loading = false;
-	} static cs_state;
-
-	static void RepopulateSetNodes()
-	{
-		cs_state.sets.clear();
-		cs_state.sets.push_back({ -1, "Shared Set A" });
-		cs_state.sets.push_back({ -2, "Shared Set B" });
-		cs_state.sets.push_back({ -3, "Shared Set C" });
-		cs_state.sets.push_back({ game::GetGlobalPVInfo()->pv_id, "Song Specific" });
-	}
-
-	static void RepopulateSoundNodes()
-	{
-		auto addSoundNode = [&](const char* name, int8_t* selected_id, const std::vector<SoundInfo>* sounds, int32_t base, bool has_song_default = false, bool preview = true)
-		{
-			SoundConfig& node = cs_state.sound_nodes.emplace_back();
-			node.name = name;
-			node.selected_id = selected_id;
-			node.sounds = sounds;
-			node.base_type = base;
-			node.has_song_default = has_song_default;
-			node.play_preview_on_chosen = preview;
-		};
-
-		ConfigSet* set = nc::FindConfigSet(cs_state.selected_set, true);
-
-		cs_state.sound_nodes.clear();
-		addSoundNode("W Button", &set->button_w_se_id, sound_db::GetButtonWSoundDB(), 1);
-		addSoundNode("Sustain", &set->button_l_se_id, sound_db::GetButtonLongOnSoundDB(), 1, false, false);
-		addSoundNode("Star", &set->star_se_id, sound_db::GetStarSoundDB(), 0);
-		addSoundNode("W Star", &set->star_w_se_id, sound_db::GetStarWSoundDB(), 2);
-	}
-
-	static void OpenWindow()
-	{
-		cs_state.window_open = true;
-		cs_state.selected_set = nc::GetConfigSetID();
-		RepopulateSetNodes();
-		RepopulateSoundNodes();
-
-		/*
-		cs_state.tech_zone_styles.clear();
-		cs_state.tech_zone_styles.push_back("F");
-		cs_state.tech_zone_styles.push_back("F 2nd");
-		cs_state.tech_zone_styles.push_back("X");
-		*/
-
-		// TODO: Block inputs
-		// TODO: Set screen fade (?)
-	}
-
-	static void CloseWindow()
-	{
-		cs_state.window_open = false;
-		cs_state.selected_set = -1;
-		cs_state.sets.clear();
-		cs_state.sound_nodes.clear();
-		// TODO: Unblock inputs
-		// TODO: Reset screen fade
-	}
-
-	static std::string GetSameAsSoundName(const SoundConfig& config)
-	{
-		if (config.base_type == 1)
-			return "Same as Button";
-		else if (config.base_type == 2)
-			return "Same as Star";
-		return "(NULL)";
-	}
-
-	static std::string GetSoundNodePreviewText(const SoundConfig& config)
-	{
-		switch (*config.selected_id)
-		{
-		case -2:
-			return "Songs Default";
-		case -1:
-			return GetSameAsSoundName(config);
-		default:
-			if (const auto* snd = FindWithID(*config.sounds, *config.selected_id); snd != nullptr)
-				return snd->name.c_str();
-			break;
-		}
-
-		return "(NULL)";
-	}
-
-	static void PlaySoundPreview(const SoundInfo& snd)
-	{
-		std::string preview_se = snd.se_name;
-		if (!snd.se_preview_name.empty())
-			preview_se = snd.se_preview_name;
-
-		if (!preview_se.empty())
-			sound::PlaySoundEffect(3, preview_se.c_str(), 1.0f);
-	}
-
-	static void ShowSoundNode(SoundConfig& config)
-	{
-		ImGui::PushID(config.name);
-
-		// TODO: Add a better way to align elements;
-		//       This won't work if we change the font to a non-fixed size one in the future
-		ImGui::Text("%-12s", config.name);
-		ImGui::SameLine();
-
-		std::string preview_name = GetSoundNodePreviewText(config);
-		if (ImGui::BeginCombo("##sound-set", preview_name.c_str()))
-		{
-			if (config.has_song_default)
-			{
-				if (ImGui::Selectable("Song Defaults", *config.selected_id == -2))
-					*config.selected_id = -2;
-			}
-
-			if (config.base_type != 0)
-			{
-				if (ImGui::Selectable(GetSameAsSoundName(config).c_str(), *config.selected_id == -1))
-					*config.selected_id = -1;
-			}
-
-			for (const auto& sound : *config.sounds)
-			{
-				if (ImGui::Selectable(sound.name.c_str(), *config.selected_id == sound.id, ImGuiSelectableFlags_AllowItemOverlap))
-				{
-					*config.selected_id = sound.id;
-					if (config.play_preview_on_chosen)
-						PlaySoundPreview(sound);
-				}
-
-				ImGui::PushID(sound.name.c_str());
-
-				ImGui::SameLine();
-				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - 30.0f);
-				if (ImGui::SmallButton(u8"")) // NOTE: UTF-8 "Play" symbol
-					PlaySoundPreview(sound);
-
-				ImGui::PopID();
-			}
-
-			ImGui::EndCombo();
-		}
-
-		ImGui::PopID();
-	}
-
-	void ShowWindow()
+	static bool CtrlWindow()
 	{
 		if (!cs_state.window_open)
-			return;
-
-		bool open = true;
-		if (ImGui::Begin("NewClassics", &open, ImGuiWindowFlags_NoCollapse))
 		{
-			// NOTE: Show config set combo box
-			if (ImGui::BeginCombo("##set-combo", FindWithID(cs_state.sets, cs_state.selected_set)->name.c_str()))
+			diva::InputState* is = diva::GetInputState(0);
+			if (is->IsButtonTapped(92) || is->IsButtonTapped(13))
 			{
-				for (auto& opt : cs_state.sets)
-				{
-					if (ImGui::Selectable(opt.name.c_str(), opt.id == cs_state.selected_set))
-					{
-						cs_state.selected_set = opt.id;
-						RepopulateSoundNodes();
-					}
-				}
-
-				ImGui::EndCombo();
+				window = std::make_unique<NCConfigWindow>();
+				cs_state.window_open = true;
+				nc::BlockInputs();
+				sound::PlaySoundEffect(1, "se_ft_sys_dialog_open", 1.0f);
 			}
-
-			// NOTE: Show tabs
-			if (ImGui::BeginTabBar("##tabs"))
-			{
-				if (ImGui::BeginTabItem("Sounds"))
-				{
-					for (auto& node : cs_state.sound_nodes)
-						ShowSoundNode(node);
-					ImGui::EndTabItem();
-				}
-
-				if (ImGui::BeginTabItem("Other"))
-				{
-					ImGui::EndTabItem();
-				}
-
-				ImGui::EndTabBar();
-			}
-
-			ImGui::End();
 		}
 
-		if (!open)
-			CloseWindow();
+		if (cs_state.window_open)
+		{
+			window->Ctrl();
+			if (window->ShouldExit())
+			{
+				window.reset();
+				cs_state.window_open = false;
+				nc::UnblockInputs();
+			}
+		}
+
+		return cs_state.window_open;
 	}
 }
 
 HOOK(bool, __fastcall, CustomizeSelTaskInit, 0x140687D10, uint64_t a1)
 {
-	customize_sel::cs_state.assets_loaded = false;
-	customize_sel::cs_state.assets_loading = false;
-
 	sound::RequestFarcLoad("rom/sound/se_nc.farc");
 	sound::RequestFarcLoad("rom/sound/se_nc_option.farc");
-	customize_sel::cs_state.assets_loading = true;
 
+	prj::string out;
+	prj::string_view out2;
+	aet::LoadAetSet(14010060, &out);
+	spr::LoadSprSet(14020060, &out2);
+
+	cs_state.assets_loaded = false;
 	return originalCustomizeSelTaskInit(a1);
 }
 
 HOOK(bool, __fastcall, CustomizeSelTaskCtrl, 0x140687D70, uint64_t a1)
 {
-	if (customize_sel::cs_state.assets_loading)
+	if (!cs_state.assets_loaded)
 	{
-		customize_sel::cs_state.assets_loaded = !sound::IsFarcLoading("rom/sound/se_nc.farc") && !sound::IsFarcLoading("rom/sound/se_nc_option.farc");
-		if (customize_sel::cs_state.assets_loaded)
-			customize_sel::cs_state.assets_loading = false;
+		cs_state.assets_loaded = !sound::IsFarcLoading("rom/sound/se_nc.farc")
+			&& !sound::IsFarcLoading("rom/sound/se_nc_option.farc")
+			&& !aet::CheckAetSetLoading(14010060)
+			&& !spr::CheckSprSetLoading(14020060);
 	}
 
 	return originalCustomizeSelTaskCtrl(a1);
@@ -257,17 +421,25 @@ HOOK(bool, __fastcall, CustomizeSelTaskCtrl, 0x140687D70, uint64_t a1)
 
 HOOK(bool, __fastcall, CustomizeSelTaskDest, 0x140687D80, uint64_t a1)
 {
+	customize_sel::window.reset();
 	sound::UnloadFarc("rom/sound/se_nc.farc");
 	sound::UnloadFarc("rom/sound/se_nc_option.farc");
+	aet::UnloadAetSet(14010060);
+	spr::UnloadSprSet(14020060);
+	cs_state.assets_loaded = false;
 	return originalCustomizeSelTaskDest(a1);
+}
+
+HOOK(void, __fastcall, CustomizeSelTaskDisp, 0x140687DE0, uint64_t a1)
+{
+	originalCustomizeSelTaskDisp(a1);
+	if (customize_sel::window)
+		customize_sel::window->Disp();
 }
 
 HOOK(void, __fastcall, CSTopMenuMainCtrl, 0x14069B610, uint64_t a1)
 {
-	diva::InputState* is = diva::GetInputState(0);
-	if (is->IsButtonTapped(92) || (is->GetDevice() != InputDevice_Keyboard && is->IsButtonTapped(13)))
-		customize_sel::OpenWindow();
-
+	customize_sel::CtrlWindow();
 	originalCSTopMenuMainCtrl(a1);
 }
 
@@ -276,5 +448,6 @@ void InstallCustomizeSelHooks()
 	INSTALL_HOOK(CustomizeSelTaskInit);
 	INSTALL_HOOK(CustomizeSelTaskCtrl);
 	INSTALL_HOOK(CustomizeSelTaskDest);
+	INSTALL_HOOK(CustomizeSelTaskDisp);
 	INSTALL_HOOK(CSTopMenuMainCtrl);
 }

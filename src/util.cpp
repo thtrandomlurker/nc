@@ -33,3 +33,19 @@ std::string util::ChangeExtension(std::string_view view, std::string_view ext)
 
 	return std::string(path_without_ext) + std::string(ext);
 }
+
+bool util::StartsWith(std::string_view str, std::string_view prefix)
+{
+	if (prefix.size() > str.size())
+		return false;
+
+	return strncmp(str.data(), prefix.data(), prefix.size()) == 0;
+}
+
+bool util::EndsWith(std::string_view str, std::string_view suffix)
+{
+	if (suffix.size() > str.size())
+		return false;
+
+	return strncmp(str.substr(str.size() - suffix.size()).data(), suffix.data(), suffix.size()) == 0;
+}

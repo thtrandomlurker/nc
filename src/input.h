@@ -101,7 +101,7 @@ struct MacroState
 	bool Update(void* internal_handler, int32_t player_index);
 	void UpdateSticks(diva::InputState* input_state);
 	bool GetStarHit() const;
-	bool GetDoubleStarHit() const;
+  bool GetDoubleStarHit() const;
 	bool GetStarHitCancel() const;
 
 	uint64_t GetDownBitfield() const;
@@ -109,5 +109,16 @@ struct MacroState
 	uint64_t GetReleasedBitfield() const;
 	uint64_t GetTappedInNearFramesBitfield() const;
 };
+
+namespace nc
+{
+	void BlockInputs();
+	void UnblockInputs();
+
+	// NOTE: These functions return input even when it's blocked
+	bool IsButtonTappedOrRepeat(diva::InputState* input_state, int32_t key);
+
+	void InstallInputHooks();
+}
 
 uint64_t GetButtonMask(int32_t button);
