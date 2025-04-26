@@ -337,11 +337,21 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 			if (time != -1)
 				last_time = time;
 
-			// TODO: Add difficulty check
-			if (pv_game->pv_data.script_buffer[pos + 2] == 4)
-				chance_start_time = static_cast<int64_t>(last_time) * 10000;
-			else if (pv_game->pv_data.script_buffer[pos + 2] == 5)
-				chance_end_time = static_cast<int64_t>(last_time) * 10000;
+			int32_t difficulty = pv_game->pv_data.script_buffer[pos + 1];
+			int32_t mode = pv_game->pv_data.script_buffer[pos + 2];
+
+			if ((difficulty & (1 << GetPvGameplayInfo()->difficulty)) != 0)
+			{
+				switch (mode)
+				{
+				case 4:
+					chance_start_time = static_cast<int64_t>(last_time) * 10000;
+					break;
+				case 5:
+					chance_end_time = static_cast<int64_t>(last_time) * 10000;
+					break;
+				}
+			}
 
 			pos += dsc::GetOpcodeInfo(26)->length + 1;
 			continue;
@@ -374,6 +384,27 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 		float targets_max_rate = 1.0f;
 		if (state.chance_time.IsValid())
 			targets_max_rate -= ChanceTimeRetainedRate;
+
+		// NOTE: Patch target reference scores, to make the percentages borders
+		//       move more accurately to the console gameplay flow.
+		float target_max_score = pv_game->reference_score * targets_max_rate;
+		float target_step_score = target_max_score / pv_game->pv_data.targets.size();
+		float ct_retained_score = pv_game->reference_score * ChanceTimeRetainedRate;
+		float cur_ref_score = 0.0f;
+		
+		pv_game->target_reference_scores.clear();
+		pv_game->target_reference_scores.push_back(0);
+
+		int32_t tgt_index = 0;
+		for (const auto& group : pv_game->pv_data.targets)
+		{
+			cur_ref_score += target_step_score;
+			if (state.chance_time.IsValid() && tgt_index == state.chance_time.last_target_index)
+				cur_ref_score += ct_retained_score;
+
+			pv_game->target_reference_scores.push_back(cur_ref_score);
+			tgt_index++;
+		}
 
 		state.scoring_info.target_max_rate = targets_max_rate;
 	}

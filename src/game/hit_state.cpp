@@ -33,67 +33,115 @@ namespace nc
 		return HitState_None;
 	}
 
-	static int32_t GetHitStateInternal(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, ButtonState** hold_button, bool* double_tapped)
+	static int32_t GetHitStateInternal(PVGameArcade* data, PvGameTarget* target, TargetStateEx* ex, ButtonState** hold_button, bool* double_tapped, bool* no_success)
 	{
 		if (ex->force_hit_state != HitState_None)
 			return ex->force_hit_state;
 
+		if (target->flying_time_remaining < -NormalWindow[HitState_Sad])
+			return HitState_Worst;
+
 		bool hit = false;
 		bool wrong = false;
+
+		uint64_t button_mask = 0;
+		uint64_t wrong_mask = 0;
+		switch (target->target_type)
+		{
+		case TargetType_UpW:
+		case TargetType_TriangleLong:
+		case TargetType_TriangleRush:
+			button_mask = GetButtonMask(Button_Triangle) | GetButtonMask(Button_Up);
+			wrong_mask = ~button_mask & GetButtonMask(Button_Max);
+			break;
+		case TargetType_RightW:
+		case TargetType_CircleLong:
+		case TargetType_CircleRush:
+			button_mask = GetButtonMask(Button_Circle) | GetButtonMask(Button_Right);
+			wrong_mask = ~button_mask & GetButtonMask(Button_Max);
+			break;
+		case TargetType_DownW:
+		case TargetType_CrossLong:
+		case TargetType_CrossRush:
+			button_mask = GetButtonMask(Button_Cross) | GetButtonMask(Button_Down);
+			wrong_mask = ~button_mask & GetButtonMask(Button_Max);
+			break;
+		case TargetType_LeftW:
+		case TargetType_SquareLong:
+		case TargetType_SquareRush:
+			button_mask = GetButtonMask(Button_Square) | GetButtonMask(Button_Left);
+			wrong_mask = ~button_mask & GetButtonMask(Button_Max);
+			break;
+		}
 
 		// NOTE: Check input for double notes
 		if (target->target_type >= TargetType_UpW && target->target_type <= TargetType_LeftW)
 		{
-			int32_t base_index = target->target_type - TargetType_UpW;
-			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
-			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
+			ButtonState& face = macro_state.buttons[Button_Triangle + (target->target_type - TargetType_UpW)];
+			ButtonState& arrow = macro_state.buttons[Button_Up + (target->target_type - TargetType_UpW)];
 
-			*double_tapped = (face->IsTapped() && arrow->IsTappedInNearFrames()) ||
-				(arrow->IsTapped() && face->IsTappedInNearFrames());
-			hit = (face->IsDown() && arrow->IsTapped()) || (arrow->IsDown() && face->IsTapped());
-			
-
-			// TODO: Add logic for WRONG
-			//
-			//
+			if ((face.IsTapped() && arrow.IsDown()) || (arrow.IsTapped() && face.IsDown()))
+			{
+				hit = true;
+				wrong = false;
+				*double_tapped = (face.IsTapped() && arrow.IsTappedInNearFrames()) ||
+					(arrow.IsTapped() && face.IsTappedInNearFrames());
+			}
+			else if ((macro_state.GetTappedBitfield() & wrong_mask) != 0)
+			{
+				hit = true;
+				wrong = true;
+			}
 		}
 		else if (target->target_type >= TargetType_TriangleLong && target->target_type <= TargetType_SquareLong)
 		{
-			int32_t base_index = target->target_type - TargetType_TriangleLong;
-			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
-			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
+			ButtonState& face = macro_state.buttons[Button_Triangle + (target->target_type - TargetType_TriangleLong)];
+			ButtonState& arrow = macro_state.buttons[Button_Up + (target->target_type - TargetType_TriangleLong)];
 
 			if (!ex->long_end)
 			{
-				hit = face->IsTapped() || arrow->IsTapped();
-				*hold_button = face->IsTapped() ? face : arrow;
+				if (face.IsTapped() || arrow.IsTapped())
+				{
+					hit = true;
+					wrong = false;
+					*hold_button = face.IsTapped() ? &face : &arrow;
+				}
+				else if ((macro_state.GetTappedBitfield() & wrong_mask) != 0)
+				{
+					hit = true;
+					wrong = true;
+				}
 			}
-			else if (ex->long_end)
+			else
 			{
 				if (ex->prev->hold_button != nullptr)
+				{
 					hit = ex->prev->hold_button->IsReleased();
+					wrong = false;
+				}
 			}
-
-			// TODO: Add logic for WRONG
-			//
 		}
 		else if (ex->IsStarLikeNote())
+		{
 			hit = macro_state.GetStarHit();
+			if (target->target_type == TargetType_ChanceStar)
+				*no_success = macro_state.GetStarHitCancel();
+		}
 		else if (target->target_type == TargetType_StarW)
-			hit = macro_state.GetDoubleStarHit(double_tapped);
+			hit = macro_state.GetDoubleStarHit();
 		else if (ex->IsRushNote())
 		{
-			// NOTE: Star rush input is handled right up there
-			//
-			int32_t base_index = target->target_type - TargetType_TriangleRush;
-			ButtonState* face = &macro_state.buttons[Button_Triangle + base_index];
-			ButtonState* arrow = &macro_state.buttons[Button_Up + base_index];
-
-			hit = face->IsTapped() || arrow->IsTapped();
+			if ((macro_state.GetTappedBitfield() & button_mask) != 0)
+			{
+				hit = true;
+				wrong = false;
+			}
+			else if ((macro_state.GetTappedBitfield() & wrong_mask) != 0)
+			{
+				hit = true;
+				wrong = true;
+			}
 		}
-
-		if (target->flying_time_remaining < -NormalWindow[HitState_Sad])
-			return HitState_Worst;
 		
 		if (hit)
 			return nc::JudgeTiming(target->flying_time_remaining, ex->IsStarLikeNote() || ex->target_type == TargetType_StarW, wrong);
@@ -113,6 +161,14 @@ bool nc::CheckHit(int32_t hit_state, bool wrong, bool worst)
 	return cond;
 }
 
+bool nc::CheckGoodHit(int32_t hit_state)
+{
+	return hit_state == HitState_Cool || hit_state == HitState_Fine ||
+		hit_state == HitState_CoolDouble || hit_state == HitState_FineDouble ||
+		hit_state == HitState_CoolTriple || hit_state == HitState_FineTriple ||
+		hit_state == HitState_CoolQuad || hit_state == HitState_FineQuad;
+}
+
 int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx** extras, int32_t group_count, bool* success)
 {
 	if (group_count < 1)
@@ -126,7 +182,8 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 		// NOTE: Evaluate note hit
 		ButtonState* hold_button = nullptr;
 		bool double_tapped = false;
-		int32_t hit_state = nc::GetHitStateInternal(game, target, ex, &hold_button, &double_tapped);
+		bool no_success = false;
+		int32_t hit_state = nc::GetHitStateInternal(game, target, ex, &hold_button, &double_tapped, &no_success);
 
 		if (hit_state != HitState_None)
 		{
@@ -144,8 +201,11 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 					ex->holding = true;
 				else if (target->target_type == TargetType_ChanceStar)
 				{
-					*success = state.chance_time.GetFillRate() == 15;
-					state.chance_time.successful = *success;
+					if (CheckGoodHit(hit_state) && state.chance_time.GetFillRate() == 15)
+					{
+						*success = !no_success;
+						state.chance_time.successful = true;
+					}
 				}
 			}
 

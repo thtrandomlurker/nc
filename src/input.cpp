@@ -224,16 +224,12 @@ bool MacroState::GetStarHit() const
 		buttons[Button_R4].IsTapped();
 }
 
-bool MacroState::GetDoubleStarHit(bool* both_flicked) const
+bool MacroState::GetDoubleStarHit() const
 {
 	if (diva::GetInputState(0)->GetDevice() != InputDevice_Keyboard)
 	{
-		bool hit = (buttons[Button_LStick].IsTapped() && buttons[Button_RStick].IsTappedInNearFrames()) ||
+		return (buttons[Button_LStick].IsTapped() && buttons[Button_RStick].IsTappedInNearFrames()) ||
 			(buttons[Button_RStick].IsTapped() && buttons[Button_LStick].IsTappedInNearFrames());
-
-		if (both_flicked != nullptr)
-			*both_flicked = hit;
-		return hit;
 	}
 
 	const int32_t buttons_left[] = {
@@ -257,20 +253,10 @@ bool MacroState::GetDoubleStarHit(bool* both_flicked) const
 
 	if (l != nullptr && r != nullptr)
 	{
-		if (l->IsTapped() || r->IsTapped())
-		{
-			if (both_flicked != nullptr)
-			{
-				*both_flicked = (l->IsTapped() && r->IsTappedInNearFrames()) ||
-					(r->IsTapped() && l->IsTappedInNearFrames());
-			}
-
-			return true;
-		}
+		return (l->IsTapped() && r->IsTappedInNearFrames()) ||
+			(r->IsTapped() && l->IsTappedInNearFrames());
 	}
 
-	if (both_flicked != nullptr)
-		*both_flicked = false;
 	return false;
 }
 
@@ -331,4 +317,68 @@ void nc::InstallInputHooks()
 {
 	INSTALL_HOOK(SetInputNotDispatchable);
 	INSTALL_HOOK(PollInputRepeatAndDouble);
+}
+
+bool MacroState::GetStarHitCancel() const
+{
+	uint64_t left = GetButtonMask(Button_L1) |
+		GetButtonMask(Button_L2) |
+		GetButtonMask(Button_L3) |
+		GetButtonMask(Button_L4) |
+		GetButtonMask(Button_LStick);
+
+	uint64_t right = GetButtonMask(Button_R1) |
+		GetButtonMask(Button_R2) |
+		GetButtonMask(Button_R3) |
+		GetButtonMask(Button_R4) |
+		GetButtonMask(Button_RStick);
+
+	return (GetDownBitfield() & left) != 0 && (GetDownBitfield() & right) != 0;
+}
+
+uint64_t MacroState::GetDownBitfield() const
+{
+	uint64_t mask = 0;
+	for (size_t i = 0; i < Button_Max; i++)
+		mask |= static_cast<uint64_t>(buttons[i].IsDown()) << i;
+	return mask;
+}
+
+uint64_t MacroState::GetTappedBitfield() const
+{
+	uint64_t mask = 0;
+	for (size_t i = 0; i < Button_Max; i++)
+		mask |= static_cast<uint64_t>(buttons[i].IsTapped()) << i;
+	return mask;
+}
+
+uint64_t MacroState::GetReleasedBitfield() const
+{
+	uint64_t mask = 0;
+	for (size_t i = 0; i < Button_Max; i++)
+		mask |= static_cast<uint64_t>(buttons[i].IsReleased()) << i;
+	return mask;
+}
+
+uint64_t MacroState::GetTappedInNearFramesBitfield() const
+{
+	uint64_t mask = 0;
+	for (size_t i = 0; i < Button_Max; i++)
+		mask |= static_cast<uint64_t>(buttons[i].IsTappedInNearFrames()) << i;
+	return mask;
+}
+
+uint64_t GetButtonMask(int32_t button)
+{
+	if (button < 0 || button > Button_Max)
+		return 0;
+	else if (button == Button_Max)
+	{
+		uint64_t mask = 0;
+		for (size_t i = 0; i < Button_Max; i++)
+			mask |= static_cast<uint64_t>(1) << i;
+		return mask;
+	}
+
+	return static_cast<uint64_t>(1) << static_cast<uint64_t>(button);
 }

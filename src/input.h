@@ -101,7 +101,13 @@ struct MacroState
 	bool Update(void* internal_handler, int32_t player_index);
 	void UpdateSticks(diva::InputState* input_state);
 	bool GetStarHit() const;
-	bool GetDoubleStarHit(bool* both_flicked) const;
+  bool GetDoubleStarHit() const;
+	bool GetStarHitCancel() const;
+
+	uint64_t GetDownBitfield() const;
+	uint64_t GetTappedBitfield() const;
+	uint64_t GetReleasedBitfield() const;
+	uint64_t GetTappedInNearFramesBitfield() const;
 };
 
 namespace nc
@@ -114,3 +120,5 @@ namespace nc
 
 	void InstallInputHooks();
 }
+
+uint64_t GetButtonMask(int32_t button);
