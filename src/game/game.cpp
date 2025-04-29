@@ -154,6 +154,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					{
 						state.PlaySoundEffect(SEType_Star);
 						game->mute_slide_chime = true;
+						*play_default_se = false;
 					}
 				}
 			}
