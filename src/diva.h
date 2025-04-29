@@ -382,9 +382,9 @@ enum TextFlags : int32_t
 	TextFlags_AlignVCenter = 0x10,
 	TextFlags_AutoAlignVCenter = 0x20,
 	TextFlags_Clip = 0x200,
-	TextFlags_Font = 0x10000,
+	TextFlags_Outline = 0x10000,
 
-	TextFlags_AutoAlignCenter = TextFlags_Font | TextFlags_AutoAlignHCenter | TextFlags_AutoAlignVCenter
+	TextFlags_AutoAlign = TextFlags_AutoAlignHCenter | TextFlags_AutoAlignVCenter
 };
 
 #pragma pack(push, 1)

@@ -269,7 +269,7 @@ void HorizontalSelector::Disp()
 		text_args.print_work.font = spr::GetLocaleFont(&font, bold_text ? 19 : 18, true);
 		spr::SetFontSize(&font, 36.0f * font_scale, 38.0f * font_scale);
 
-		spr::DrawTextA(&text_args, TextFlags_AutoAlignCenter, GetSelectedValue().c_str());
+		spr::DrawTextA(&text_args, TextFlags_AutoAlign, GetSelectedValue().c_str());
 	}
 }
 
