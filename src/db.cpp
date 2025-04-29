@@ -188,6 +188,22 @@ HOOK(bool, __fastcall, TaskPvDBCtrl, 0x1404BB290, uint64_t a1)
 	return ret;
 }
 
+const db::ChartEntry* db::SongEntry::FindChart(int32_t difficulty, int32_t edition, int32_t style) const
+{
+	if (difficulty < 0 || difficulty >= MaxDifficultyCount || edition < 0 || edition >= MaxEditionCount)
+		return nullptr;
+
+	const auto& diff = difficulties[MaxDifficultyCount * edition + difficulty];
+	if (!diff.has_value())
+		return nullptr;
+
+	for (const ChartEntry& chart : diff.value().charts)
+		if (chart.style == style)
+			return &chart;
+
+	return nullptr;
+}
+
 const db::SongEntry* db::FindSongEntry(int32_t pv)
 {
 	if (auto it = nc_db.entries.find(pv); it != nc_db.entries.end())

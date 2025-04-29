@@ -64,6 +64,8 @@ namespace db
 		std::string star_w_se_name    = DefaultStarSound;
 		std::string link_se_name      = DefaultStarSound;
 		std::array<std::optional<DifficultyEntry>, MaxDifficultyCount * MaxEditionCount> difficulties;
+
+		const ChartEntry* FindChart(int32_t difficulty, int32_t edition, int32_t style) const;
 	};
 
 	const SongEntry* FindSongEntry(int32_t pv);
