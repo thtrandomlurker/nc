@@ -13,7 +13,7 @@ struct ConfigSet
 	// + ----------------------------------- +
 	int8_t button_w_se_id  = -1;
 	int8_t button_l_se_id  = -1;
-	int8_t star_se_id      = -2;
+	int8_t star_se_id      =  1;
 	int8_t star_w_se_id    = -1;
 	int8_t star_l_se_id    = -1;
 	int8_t link_se_id      = -1;
