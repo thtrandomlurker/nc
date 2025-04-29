@@ -40,4 +40,12 @@ namespace util
 			(Clamp<int32_t>(b * 255.0f, 0, 255) << 16) |
 			(Clamp<int32_t>(a * 255.0f, 0, 255) << 24);
 	}
+
+	inline void ColorI32F32(int32_t color, float* out)
+	{
+		out[0] = (color & 0xFF) / 255.0f;
+		out[1] = ((color >> 8) & 0xFF) / 255.0f;
+		out[2] = ((color >> 16) & 0xFF) / 255.0f;
+		out[3] = ((color >> 24) & 0xFF) / 255.0f;
+	}
 }

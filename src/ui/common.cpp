@@ -26,7 +26,7 @@ bool AetElement::SetLayer(std::string name, int32_t flags, int32_t prio, int32_t
 	return handle != 0;
 }
 
-bool AetElement::SetLayer(std::string name, int32_t flags, int32_t prio, int32_t res_mode, int32_t action)
+bool AetElement::SetLayer(std::string name, int32_t prio, int32_t res_mode, int32_t action)
 {
 	layer_name = name;
 	args = AetArgs(scene_id, layer_name.c_str(), prio, action);
@@ -61,6 +61,19 @@ void AetElement::SetLoop(bool loop)
 {
 	int32_t flags = args.flags & ~0x30000;
 	args.flags = flags | (loop ? 0x10000 : 0x20000);
+}
+
+void AetElement::SetVisible(bool visible)
+{
+	int32_t flags = args.flags & ~0x8;
+	args.flags = flags | (!visible ? 0x8 : 0x0);
+	aet::SetVisible(handle, visible);
+}
+
+void AetElement::SetColor(int32_t color)
+{
+	util::ColorI32F32(color, &args.color.x);
+	Remake();
 }
 
 void AetElement::SetMarkers(const std::string& start_marker, const std::string& end_marker)
@@ -107,6 +120,13 @@ bool AetElement::DrawSpriteAt(std::string layer_name, uint32_t sprite_id, int32_
 void AetElement::DeleteHandle()
 {
 	aet::Stop(&handle);
+}
+
+void AetElement::Remake()
+{
+	float frame = handle != 0 ? aet::GetFrame(handle) : 0.0f;
+	handle = aet::Play(&args, handle);
+	aet::SetFrame(handle, frame);
 }
 
 void AetControl::AllowInputsWhenBlocked(bool allow) { abs_input = allow; }

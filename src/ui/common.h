@@ -37,6 +37,7 @@ public:
 		scene_id = other.scene_id;
 		handle = other.handle;
 		args = other.args;
+		layer_name = other.layer_name;
 		other.handle = 0;
 	}
 
@@ -47,17 +48,20 @@ public:
 
 	inline void SetScene(uint32_t id) { scene_id = id; }
 	bool SetLayer(std::string name, int32_t flags, int32_t prio, int32_t res_mode, std::string_view start_marker, std::string_view end_marker, const diva::vec3* pos);
-	bool SetLayer(std::string name, int32_t flags, int32_t prio, int32_t res_mode, int32_t action);
+	bool SetLayer(std::string name, int32_t prio, int32_t res_mode, int32_t action);
 
 	std::optional<AetLayout> GetLayout(std::string layer_name) const;
 
 	void SetPosition(const diva::vec3& pos);
 	void SetOpacity(float opacity);
 	void SetLoop(bool loop);
+	void SetVisible(bool visible);
+	void SetColor(int32_t color);
 	void SetMarkers(const std::string& start_marker, const std::string& end_marker);
 
 	inline const AetArgs& GetArgs() { return args; }
 	inline bool Ended() const { return aet::GetEnded(handle); }
+	inline bool IsPlaying() const { return handle != 0; }
 
 	bool DrawSpriteAt(std::string layer_name, uint32_t id, int32_t prio = 1) const;
 private:
@@ -67,6 +71,7 @@ private:
 	std::string layer_name;
 
 	void DeleteHandle();
+	void Remake();
 };
 
 class AetControl : public AetElement

@@ -949,6 +949,8 @@ namespace aet
 	inline FUNCTION_PTR(void, __fastcall, UnloadAetSet, 0x1402CA040, uint32_t id);
 	// NOTE: Plays an Aet layer described by the `args` variable passed in.
 	inline FUNCTION_PTR(int32_t, __fastcall, Play, 0x1402CA220, AetArgs* args, int32_t id);
+	// NOTE: Returns the current from on an Aet object.
+	inline FUNCTION_PTR(float, __fastcall, GetFrame, 0x1402CA500, int32_t id);
 	// NOTE: Returns whether an Aet object has ended playback. Will always return false if the loop flag is set.
 	inline FUNCTION_PTR(bool, __fastcall, GetEnded, 0x1402CA510, int32_t id);
 	// NOTE: Retrieves layout data for specific Aet object ID.

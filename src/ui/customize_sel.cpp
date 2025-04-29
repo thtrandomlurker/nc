@@ -161,7 +161,7 @@ public:
 		config_set = nc::GetConfigSet();
 
 		SetScene(cs_state.aet_scene_id);
-		SetLayer("cmn_win_nc_options_g_inout", 0x10000, WindowPrio, 14, AetAction_InLoop);
+		SetLayer("cmn_win_nc_options_g_inout", WindowPrio, 14, AetAction_InLoop);
 		ChangeTab(0);
 	}
 
@@ -221,7 +221,7 @@ public:
 			ChangeTab(1);
 			break;
 		case KeyAction_Cancel:
-			SetLayer("cmn_win_nc_options_g_inout", 0x10000, WindowPrio, 14, AetAction_OutOnce);
+			SetLayer("cmn_win_nc_options_g_inout", WindowPrio, 14, AetAction_OutOnce);
 			sound::ReleaseAllCues(PreviewQueueIndex);
 			sound::PlaySoundEffect(1, "se_ft_sys_dialog_close", 1.0f);
 			finishing = true;
