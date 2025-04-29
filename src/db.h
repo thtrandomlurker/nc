@@ -53,6 +53,8 @@ namespace db
 		std::vector<ChartEntry> charts;
 
 		DifficultyEntry() { charts.reserve(MaxChartsPerDifficulty); }
+
+		ChartEntry& FindOrCreateChart(int32_t style);
 	};
 
 	struct SongEntry
@@ -65,6 +67,7 @@ namespace db
 		std::string link_se_name      = DefaultStarSound;
 		std::array<std::optional<DifficultyEntry>, MaxDifficultyCount * MaxEditionCount> difficulties;
 
+		ChartEntry& FindOrCreateChart(int32_t difficulty, int32_t edition, int32_t style);
 		const ChartEntry* FindChart(int32_t difficulty, int32_t edition, int32_t style) const;
 	};
 

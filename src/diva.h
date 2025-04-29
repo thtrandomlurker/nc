@@ -1136,6 +1136,23 @@ namespace pv_db
 		uint8_t gap[1000];
 	};
 
+	struct PvDBEntry
+	{
+		int32_t pv_id;
+		int32_t date;
+		std::string song_name;
+		std::string song_name_reading;
+		int32_t unk48;
+		int32_t bpm;
+		std::string song_file_name;
+		uint8_t gap70[24];
+		float sabi_start_time;
+		float sabi_play_time;
+		uint8_t gap90[32];
+		prj::vector<PvDBDifficulty> difficulties[5];
+		uint8_t gap128[664];
+	};
+
 	inline FUNCTION_PTR(void*, __fastcall, FindPVEntry, 0x1404BC500, int32_t pv_id);
 	inline FUNCTION_PTR(PvDBDifficulty*, __fastcall, FindDifficulty, 0x1404BCA70, void* entry, int32_t difficulty, int32_t edition);
 }

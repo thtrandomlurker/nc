@@ -66,7 +66,7 @@ static bool TryFindNextNCDBFile(std::string* output_path)
 	return true;
 }
 
-static bool ParseDifficultyEntry(toml::array& node, db::DifficultyEntry* entry)
+static bool ParseDifficultyEntry(toml::array& node, db::DifficultyEntry& entry)
 {
 	size_t length = node.size() > MaxChartsPerDifficulty ? MaxChartsPerDifficulty : node.size();
 	for (size_t i = 0; i < length; i++)
@@ -79,8 +79,7 @@ static bool ParseDifficultyEntry(toml::array& node, db::DifficultyEntry* entry)
 		std::string score_mode = table["score_mode"].value_or("ARCADE");
 		std::string pv_level = table["level"].value_or("PV_LV_00_0");
 
-		db::ChartEntry& chart = entry->charts.emplace_back();
-		chart.style = util::GetIndex(styles_names_internal, style, GameStyle_Max);
+		db::ChartEntry& chart = entry.FindOrCreateChart(util::GetIndex(styles_names_internal, style, GameStyle_Max));
 		chart.score_mode = util::GetIndex(score_mode_names_internal, score_mode, ScoreMode_Arcade);
 		chart.difficulty_level = util::GetIndex(pv_lv_names_internal, pv_level, 0);
 		chart.script_file_name = table["script_file_name"].value_or("(NULL)");
@@ -89,12 +88,8 @@ static bool ParseDifficultyEntry(toml::array& node, db::DifficultyEntry* entry)
 	return true;
 }
 
-static int32_t ParsePVEntry(toml::table& node, db::SongEntry* entry)
+static bool ParsePVEntry(toml::table& node, db::SongEntry* entry)
 {
-	int32_t id = node["id"].value_or(-1);
-	if (id == -1)
-		return -1;
-
 	const char* difficulty_names[MaxDifficultyCount] = { "easy", "normal", "hard", "extreme", "encore" };
 	for (size_t i = 0; i < MaxDifficultyCount; i++)
 	{
@@ -103,9 +98,12 @@ static int32_t ParsePVEntry(toml::table& node, db::SongEntry* entry)
 			std::string name = util::Format("%s%s", ed > 0 ? "ex_" : "", difficulty_names[i]);
 			if (toml::array* diff = node[name].as_array(); diff != nullptr)
 			{
-				db::DifficultyEntry difficulty_entry = { };
-				if (ParseDifficultyEntry(*diff, &difficulty_entry))
-					entry->difficulties[i + MaxDifficultyCount * ed] = difficulty_entry;
+				auto& difficulty_entry = entry->difficulties[i + MaxDifficultyCount * ed];
+				if (difficulty_entry.has_value())
+				{
+					if (ParseDifficultyEntry(*diff, difficulty_entry.value()))
+						entry->difficulties[i + MaxDifficultyCount * ed] = difficulty_entry;
+				}
 			}
 		}
 	}
@@ -116,31 +114,63 @@ static int32_t ParsePVEntry(toml::table& node, db::SongEntry* entry)
 	entry->star_w_se_name = node["star_w_se_name"].value_or(DefaultStarSound);
 	entry->star_long_se_name = node["star_long_se_name"].value_or(DefaultStarSound);
 	entry->link_se_name = node["link_se_name"].value_or(DefaultStarSound);
-	return id;
+	return true;
 }
 
-static bool ParseNCDB(const void* data, size_t size)
+static int32_t ParseNCDB(const void* data, size_t size)
 {
 	std::string_view view(reinterpret_cast<const char*>(data), size);
-	auto result = toml::parse(view);
-	if (!result)
-		return false;
-
-	toml::table& root = result.table();
-	if (toml::array* songs = root["songs"].as_array(); songs != nullptr)
+	if (auto result = toml::parse(std::string_view(reinterpret_cast<const char*>(data), size)); result.succeeded())
 	{
-		for (auto& node : *songs)
+		int32_t new_count = 0;
+		toml::table& root = result.table();
+		if (toml::array* songs = root["songs"].as_array(); songs != nullptr)
 		{
-			if (!node.is_table())
-				continue;
+			for (auto& node : *songs)
+			{
+				if (!node.is_table())
+					continue;
 
-			db::SongEntry entry = { };
-			if (int32_t id = ParsePVEntry(*node.as_table(), &entry); id > 0)
-				nc_db.entries[id] = entry;
+				int32_t id = node.as_table()->at("id").value_or(-1);
+				if (id > 0)
+				{
+					if (ParsePVEntry(*node.as_table(), &nc_db.entries[id]))
+						new_count++;
+				}
+			}
 		}
+
+		return new_count;
 	}
 
-	return true;
+	return 0;
+}
+
+HOOK(bool, __fastcall, TaskPvDBParseEntry, 0x1404B1020, uint64_t a1, pv_db::PvDBEntry* entry, void* prop, int32_t id)
+{
+	if (originalTaskPvDBParseEntry(a1, entry, prop, id))
+	{
+		if (nc_db.ready)
+			return true;
+
+		db::SongEntry& nc_song = nc_db.entries[id];
+		for (int32_t i = 0; i < 5; i++)
+		{
+			for (const auto& diff : entry->difficulties[i])
+			{
+				if (diff.edition != 0 && diff.edition != 1)
+					continue;
+
+				db::ChartEntry& chart = nc_song.FindOrCreateChart(diff.difficulty, diff.edition, GameStyle_Arcade);
+				chart.score_mode = ScoreMode_Arcade;
+				chart.difficulty_level = diff.level;
+			}
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 HOOK(bool, __fastcall, TaskPvDBCtrl, 0x1404BB290, uint64_t a1)
@@ -151,7 +181,7 @@ HOOK(bool, __fastcall, TaskPvDBCtrl, 0x1404BB290, uint64_t a1)
 	if (pv_db_state != 0 || nc_db.ready)
 		return ret;
 
-	size_t entry_count = nc_db.entries.size();
+	int32_t entry_count = 0;
 	std::string path = "";
 	switch (nc_db.state)
 	{
@@ -174,11 +204,11 @@ HOOK(bool, __fastcall, TaskPvDBCtrl, 0x1404BB290, uint64_t a1)
 			nc_db.state = 2;
 		break;
 	case 2:
-		ParseNCDB(FileGetData(&nc_db.file_handler), FileGetSize(&nc_db.file_handler));
+		entry_count = ParseNCDB(FileGetData(&nc_db.file_handler), FileGetSize(&nc_db.file_handler));
+		nc::Print("Loaded %d new entries.\n", entry_count);
+
 		FileFree(&nc_db.file_handler);
 		nc_db.state = 0;
-
-		nc::Print("Loaded %zu new entries.\n", nc_db.entries.size() - entry_count);
 		break;
 	case 3:
 		nc_db.ready = true;
@@ -186,6 +216,26 @@ HOOK(bool, __fastcall, TaskPvDBCtrl, 0x1404BB290, uint64_t a1)
 	}
 
 	return ret;
+}
+
+db::ChartEntry& db::DifficultyEntry::FindOrCreateChart(int32_t style)
+{
+	for (ChartEntry& chart : charts)
+		if (chart.style == style)
+			return chart;
+
+	ChartEntry& chart = charts.emplace_back();
+	chart.style = style;
+	return chart;
+}
+
+db::ChartEntry& db::SongEntry::FindOrCreateChart(int32_t difficulty, int32_t edition, int32_t style)
+{
+	auto& diff = difficulties[MaxDifficultyCount * edition + difficulty];
+	if (!diff.has_value())
+		diff = db::DifficultyEntry();
+
+	return diff.value().FindOrCreateChart(style);
 }
 
 const db::ChartEntry* db::SongEntry::FindChart(int32_t difficulty, int32_t edition, int32_t style) const
@@ -242,5 +292,6 @@ const db::ChartEntry* db::FindChart(int32_t pv, int32_t difficulty, int32_t edit
 
 void InstallDatabaseHooks()
 {
+	INSTALL_HOOK(TaskPvDBParseEntry);
 	INSTALL_HOOK(TaskPvDBCtrl);
 }
