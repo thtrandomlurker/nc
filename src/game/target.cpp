@@ -530,19 +530,19 @@ static void DrawLongNoteKiseki(TargetStateEx* ex)
 		switch (ex->target_type)
 		{
 		case TargetType_TriangleLong:
-			sprite_id = 2547777446; // SPR_GAM_CMN_KISEKI02
+			sprite_id = 1140037210; // SPR_GAM_EXTRA_KISEKI02
 			break;
 		case TargetType_CircleLong:
-			sprite_id = 268038873;  // SPR_GAM_CMN_KISEKI03
+			sprite_id = 2660966235; // SPR_GAM_EXTRA_KISEKI03
 			break;
 		case TargetType_CrossLong:
-			sprite_id = 3751393426; // SPR_GAM_CMN_KISEKI04
+			sprite_id = 1305045037; // SPR_GAM_EXTRA_KISEKI04
 			break;
 		case TargetType_SquareLong:
-			sprite_id = 1382161087; // SPR_GAM_CMN_KISEKI05
+			sprite_id = 2946182585; // SPR_GAM_EXTRA_KISEKI05
 			break;
 		case TargetType_StarLong:
-			sprite_id = 337203558;  // SPR_GAM_CMN_KISEKI06
+			sprite_id = 3052385779; // SPR_GAM_EXTRA_KISEKI06
 			break;
 		}
 
@@ -566,7 +566,6 @@ static uint32_t GetBalloonSpriteId(const TargetStateEx* ex)
 		return PlaystationStyle[base_id];
 	}
 	case TargetType_StarRush:
-		// NOTE: This will probably have to be changed soon
 		return 265324370;
 	}
 
