@@ -44,8 +44,11 @@ static void SetGlobalStateSelectedData(const PVSelectorSwitch* sel)
 
 	if (cur_pv != pv_id || style_dirty)
 	{
-		state.nc_song_entry.reset();
-		state.nc_chart_entry.reset();
+		if (cur_pv != -2)
+		{
+			state.nc_song_entry.reset();
+			state.nc_chart_entry.reset();
+		}
 
 		if (int32_t style = pvsel::GetSelectedStyleOrDefault(); style != GameStyle_Arcade)
 		{
