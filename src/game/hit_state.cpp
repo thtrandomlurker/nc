@@ -203,7 +203,7 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 				{
 					if (CheckGoodHit(hit_state) && state.chance_time.GetFillRate() == 15)
 					{
-						*success = !no_success;
+						*success = true;
 						state.chance_time.successful = true;
 					}
 				}
