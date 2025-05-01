@@ -313,7 +313,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 
 				// NOTE: Play note SE
 				//
-				if (ex->hit_state != HitState_Worst)
+				if (nc::CheckGoodHit(ex->hit_state))
 				{
 					switch (ex->target_type)
 					{
@@ -349,9 +349,11 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 							state.PlaySoundEffect(SEType_Cymbal);
 						else
 							state.PlaySoundEffect(SEType_Star);
+						game->mute_slide_chime = true;
 						break;
 					case TargetType_StarW:
 						state.PlaySoundEffect(SEType_StarDouble);
+						game->mute_slide_chime = true;
 						break;
 					}
 
@@ -366,7 +368,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 		}
 	}
 	
-	if (nc::CheckHit(final_hit_state, false, false))
+	if (nc::CheckGoodHit(final_hit_state))
 	{
 		// NOTE: Calculate score bonus
 		for (int i = 0; i < group_count; i++)
@@ -381,9 +383,10 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 			state.chance_time.targets_hit += 1;
 	}
 
-	if (macro_state.GetStarHit() && *play_default_se && nc::GetSharedData().stick_control_se == 1 && state.GetGameStyle() != GameStyle_Arcade)
+	if (*play_default_se && nc::GetSharedData().stick_control_se == 1 && state.GetGameStyle() != GameStyle_Arcade)
 	{
-		state.PlaySoundEffect(SEType_Star);
+		if (macro_state.GetStarHit())
+			state.PlaySoundEffect(SEType_Star);
 		game->mute_slide_chime = true;
 	}
 
