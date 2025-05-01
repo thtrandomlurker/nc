@@ -325,9 +325,9 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 				if (ex->vertex_count_max != 0)
 				{
 					if (!tgt->IsChainSucessful())
-						DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 752437696);
+						DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 1457444052);
 					else
-						DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 716223682);
+						DrawTriangles(ex->kiseki.data(), ex->vertex_count_max, 13, 7, 1964935274);
 				}
 			}
 		}
