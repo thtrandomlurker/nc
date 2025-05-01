@@ -55,6 +55,8 @@ namespace pvsel
 		int32_t preferred_style;
 		bool hidden;
 		bool dirty;
+		bool aet_dirty;
+		bool is_song_toggleable;
 
 		std::string GetModePrefix();
 		std::string GetLanguageSuffix();
@@ -72,15 +74,20 @@ namespace pvsel
 			memset(options, GameStyle_Max, MaxOptionCount);
 			hidden = false;
 			dirty = false;
+			aet_dirty = false;
+			is_song_toggleable = false;
 		}
 
 		bool SetAvailableOptions(std::array<int32_t, GameStyle_Max> song_counts);
+		inline void SetSongToggleable(bool toggleable) { is_song_toggleable = toggleable; }
 		void UpdateAet();
 		void SetVisible(bool visible);
 		bool Ctrl();
 		void Disp() const;
 
+		inline void MakeAetDirty() { aet_dirty = true; }
 		inline bool IsToggleable() const { return option_count > 1; }
+		inline bool IsSongToggleable() const { return is_song_toggleable; }
 		inline int32_t GetSelectedStyle() const
 		{
 			if (selected_index >= 0 && selected_index < MaxOptionCount)
@@ -101,6 +108,34 @@ namespace pvsel
 	int32_t GetSelectedStyleOrDefault();
 	int32_t GetPreferredStyleOrDefault();
 	bool CheckSongHasStyleAvailable(int32_t pv, int32_t difficulty, int32_t edition, int32_t style);
+	int32_t CalculateSongStyleCount(int32_t pv, int32_t difficulty, int32_t edition);
+
+	template <typename T>
+	void SetSongToggleable(const T* sel)
+	{
+		static int32_t selected_pv = -1;
+		static int32_t selected_difficulty = -1;
+		static int32_t selected_edition = -1;
+
+		if (!gs_win)
+			return;
+
+		if (sel->pv_id != selected_pv || sel->difficulty != selected_difficulty || sel->edition != selected_edition)
+		{
+			if (sel->pv_id == -2)
+				gs_win->SetSongToggleable(gs_win->IsToggleable());
+			else
+			{
+				int32_t count = pvsel::CalculateSongStyleCount(sel->pv_id, sel->difficulty, sel->edition);
+				gs_win->SetSongToggleable(count >= 2);
+			}
+
+			gs_win->MakeAetDirty();
+			selected_pv = sel->pv_id;
+			selected_difficulty = sel->difficulty;
+			selected_edition = sel->edition;
+		}
+	}
 
 	template <typename T>
 	std::array<int32_t, GameStyle_Max> GetSongCountPerStyle(T* sel)

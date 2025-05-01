@@ -147,6 +147,8 @@ HOOK(bool, __fastcall, PVselPS4Ctrl, 0x1402033C0, PVselPS4* sel)
 				PVselPS4ChangeSortFilter(sel, 0);
 				style_dirty = true;
 			}
+
+			pvsel::SetSongToggleable(sel);
 		}
 
 		SetGlobalStateSelectedData(sel);

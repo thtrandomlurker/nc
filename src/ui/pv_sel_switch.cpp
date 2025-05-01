@@ -134,6 +134,8 @@ HOOK(bool, __fastcall, PVSelectorSwitchCtrl, 0x1406EDC40, PVSelectorSwitch* sel)
 			PVSelectorSwitchChangeSortFilter(sel, 0);
 			style_dirty = true;
 		}
+
+		pvsel::SetSongToggleable(sel);
 	}
 	
 	SetGlobalStateSelectedData(sel);

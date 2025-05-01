@@ -77,13 +77,21 @@ namespace pvsel
 
 			cur_style_txt.SetScene(AetSelSceneID);
 			cur_style_txt.SetLayer(GetStyleTextLayerName(options[selected_index]), 10, 14, AetAction_InLoop);
+		}
 
-			/*if (options[selected_index] != preferred_style)
-				cur_style_txt.SetColor(0xFF148DF7);*/
+		if (IsSongToggleable())
+		{
+			base_win.SetMarkers("st_on", "ed_on");
+			base_txt.SetMarkers("st_on", "ed_on");
+		}
+		else
+		{
+			base_win.SetMarkers("st_off", "ed_off");
+			base_txt.SetMarkers("st_off", "ed_off");
 		}
 
 		diva::vec3 offset;
-		offset.x = game::IsFutureToneMode() && !IsToggleable() ? -18.0f : 0.0f;
+		offset.x = game::IsFutureToneMode() && !IsSongToggleable() ? -18.0f : 0.0f;
 		offset.y = 0.0f;
 		offset.z = 0.0f;
 		prev_style_txt.SetPosition(offset);
@@ -108,7 +116,7 @@ namespace pvsel
 		}
 
 		diva::InputState* is = diva::GetInputState(0);
-		if (IsToggleable() && (is->IsButtonTapped(92) || is->IsButtonTapped(13)))
+		if (IsSongToggleable() && (is->IsButtonTapped(92) || is->IsButtonTapped(13)))
 		{
 			selected_index = util::Wrap(selected_index + 1, 0, option_count - 1);
 			preferred_style = options[selected_index];
@@ -118,10 +126,11 @@ namespace pvsel
 
 		SetVisible(true);
 
-		if (options[selected_index] != previous_option)
+		if (options[selected_index] != previous_option || aet_dirty)
 		{
 			UpdateAet();
 			previous_option = options[selected_index];
+			aet_dirty = false;
 		}
 
 		// NOTE: Reset dirty flag and return it's value
@@ -132,7 +141,7 @@ namespace pvsel
 
 	void GSWindow::Disp() const
 	{
-		if (!base_win.IsPlaying() || hidden || !IsToggleable())
+		if (!base_win.IsPlaying() || hidden || !IsSongToggleable())
 			return;
 
 		const uint32_t key_sprite_ids_nsw[6] = {
@@ -154,21 +163,7 @@ namespace pvsel
 		};
 
 		const uint32_t* sprites = game::IsFutureToneMode() ? key_sprite_ids_ps4 : key_sprite_ids_nsw;
-		if (auto layout = base_win.GetLayout("p_key_icon_c"); layout.has_value())
-		{
-			SprArgs args = { };
-			args.id = sprites[diva::GetInputState(0)->GetDevice()];
-			args.trans = layout.value().position;
-			args.scale.x = layout.value().matrix.row0.x;
-			args.scale.y = layout.value().matrix.row1.y;
-			args.scale.z = 1.0f;
-			args.resolution_mode_sprite = 14;
-			args.resolution_mode_screen = 14;
-			memset(args.color, 0xFF, 4);
-			args.attr = 0x400000; // SPR_ATTR_CTR_CC
-			args.priority = 11;
-			spr::DrawSprite(&args);
-		}
+		base_win.DrawSpriteAt("p_key_icon_c", sprites[diva::GetInputState(0)->GetDevice()]);
 	}
 }
 
@@ -228,6 +223,21 @@ namespace pvsel
 		}
 
 		return song->FindChart(difficulty, edition, style) != nullptr;
+	}
+
+	int32_t CalculateSongStyleCount(int32_t pv, int32_t difficulty, int32_t edition)
+	{
+		if (const db::SongEntry* song = db::FindSongEntry(pv); song != nullptr)
+		{
+			int32_t count = 0;
+			for (int32_t i = 0; i < GameStyle_Max; i++)
+				if (song->FindChart(difficulty, edition, i))
+					count++;
+
+			return count;
+		}
+
+		return 0;
 	}
 
 	prj::vector<pvsel::PvData*> SortWithStyle(const SelPvList& list, int32_t difficulty, int32_t edition, int32_t style)
