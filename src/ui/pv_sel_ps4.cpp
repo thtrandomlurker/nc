@@ -68,7 +68,7 @@ static void SetGlobalStateSelectedData(const PVselPS4* sel)
 			if (const auto* entry = db::FindSongEntry(cur_pv); entry != nullptr)
 			{
 				state.nc_song_entry = *entry;
-				if (const auto* chart = entry->FindChart(sel->difficulty, sel->edition, style); entry != nullptr)
+				if (const auto* chart = entry->FindChart(sel->difficulty, sel->edition, style); chart != nullptr)
 					state.nc_chart_entry = *chart;
 			}
 		}
