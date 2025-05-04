@@ -139,6 +139,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					tgt->next->force_hit_state = HitState_Worst;
 					tgt->StopAet();
 					tgt->holding = false;
+					tgt->score_bonus = 0;
 					state.PopTarget(tgt);
 					state.PlaySoundEffect(SEType_LongFail);
 				}

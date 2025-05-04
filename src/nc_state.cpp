@@ -342,6 +342,15 @@ void StateEx::PlayRushHitEffect(const diva::vec2& pos, float scale, bool pop)
 	effect_index++;
 }
 
+int32_t StateEx::CalculateTotalBonusScore() const
+{
+	int32_t total = 0;
+	for (const TargetStateEx& ex : target_ex)
+		total += ex.score_bonus + ex.ct_score_bonus;
+
+	return total;
+}
+
 TargetStateEx* GetTargetStateEx(int32_t index, int32_t sub_index)
 {
 	for (TargetStateEx& ex : state.target_ex)

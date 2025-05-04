@@ -327,6 +327,8 @@ struct StateEx
 			return nc_chart_entry.value().style;
 		return GameStyle_Arcade;
 	}
+
+	int32_t CalculateTotalBonusScore() const;
 };
 
 // NOTE: Constants
