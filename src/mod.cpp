@@ -378,36 +378,9 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 		}
 	}
 
-	// NOTE: Calculate percentage parameters for F2nd score mode
-	if (state.GetScoreMode() == ScoreMode_F2nd)
-	{
-		float targets_max_rate = 1.0f;
-		if (state.chance_time.IsValid())
-			targets_max_rate -= ChanceTimeRetainedRate;
-
-		// NOTE: Patch target reference scores, to make the percentages borders
-		//       move more accurately to the console gameplay flow.
-		float target_max_score = pv_game->reference_score * targets_max_rate;
-		float target_step_score = target_max_score / pv_game->pv_data.targets.size();
-		float ct_retained_score = pv_game->reference_score * ChanceTimeRetainedRate;
-		float cur_ref_score = 0.0f;
-		
-		pv_game->target_reference_scores.clear();
-		pv_game->target_reference_scores.push_back(0);
-
-		int32_t tgt_index = 0;
-		for (const auto& group : pv_game->pv_data.targets)
-		{
-			cur_ref_score += target_step_score;
-			if (state.chance_time.IsValid() && tgt_index == state.chance_time.last_target_index)
-				cur_ref_score += ct_retained_score;
-
-			pv_game->target_reference_scores.push_back(cur_ref_score);
-			tgt_index++;
-		}
-
-		state.scoring_info.target_max_rate = targets_max_rate;
-	}
+	// NOTE: Calculate percentage parameters for F2nd/Franken score mode
+	if (state.GetScoreMode() == ScoreMode_Franken)
+		score::CalculateScoreReference(&state.score, pv_game);
 
 	// NOTE: Patch score reference (Only in Arcade mode; We don't need to patch this in F2nd mode as
 	//                              we use our own percentage calculation algorithm)

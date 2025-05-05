@@ -14,7 +14,6 @@
 
 constexpr size_t MaxFilePerRom = 10;
 constexpr std::array<std::string_view, GameStyle_Max> styles_names_internal = { "ARCADE", "CONSOLE", "MIXED" };
-constexpr std::array<std::string_view, ScoreMode_Max> score_mode_names_internal = { "ARCADE", "F2ND" };
 constexpr std::array<std::string_view, 21> pv_lv_names_internal = {
 	"PV_LV_00_0", "PV_LV_00_5", "PV_LV_01_0", "PV_LV_01_5",
 	"PV_LV_02_0", "PV_LV_02_5", "PV_LV_03_0", "PV_LV_03_5",
@@ -80,7 +79,6 @@ static bool ParseDifficultyEntry(toml::array& node, db::DifficultyEntry& entry)
 		std::string pv_level = table["level"].value_or("PV_LV_00_0");
 
 		db::ChartEntry& chart = entry.FindOrCreateChart(util::GetIndex(styles_names_internal, style, GameStyle_Max));
-		chart.score_mode = util::GetIndex(score_mode_names_internal, score_mode, ScoreMode_Arcade);
 		chart.difficulty_level = util::GetIndex(pv_lv_names_internal, pv_level, 0);
 		chart.script_file_name = table["script_file_name"].value_or("(NULL)");
 	}
@@ -162,7 +160,6 @@ HOOK(bool, __fastcall, TaskPvDBParseEntry, 0x1404B1020, uint64_t a1, pv_db::PvDB
 					continue;
 
 				db::ChartEntry& chart = nc_song.FindOrCreateChart(diff.difficulty, diff.edition, GameStyle_Arcade);
-				chart.score_mode = ScoreMode_Arcade;
 				chart.difficulty_level = diff.level;
 			}
 		}

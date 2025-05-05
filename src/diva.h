@@ -749,7 +749,7 @@ struct PVGameUI
 	int32_t int3C0;
 	diva::vec2 combo_counter_pos;
 
-	void SetBonusText(int32_t value, float x, float y);
+	void SetBonusText(int32_t value, const diva::vec2& pos);
 };
 
 struct PVGameData
@@ -1101,7 +1101,6 @@ namespace game
 	inline bool IsFutureToneMode() { return *reinterpret_cast<bool*>(0x1414AB9E3); }
 	inline bool IsPvMode() { return GetPvGameplayInfo()->type == 3 || GetPvGameplayInfo()->type == 6; }
 	inline int32_t GetFramerate() { return *reinterpret_cast<int32_t*>(0x1414ABBB8); }
-	//inline GlobalPVInfo& GetGlobalPVInfo() { *reinterpret_cast<GlobalPVInfo*>(0x1401D6520); }
 
 	// NOTE: The CustomizeSel doesn't have duplicated code for the Switch version
 	//       like other UI screens, so this is valid for both Switch and PS4 mode.

@@ -176,6 +176,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\game\hit_state.cpp" />
     <ClCompile Include="src\game\note_link.cpp" />
+    <ClCompile Include="src\game\score.cpp" />
     <ClCompile Include="src\game\target.cpp" />
     <ClCompile Include="src\input.cpp" />
     <ClCompile Include="src\mod.cpp" />
@@ -193,6 +194,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\db.h" />
+    <ClInclude Include="src\game\score.h" />
     <ClInclude Include="src\helpers.h" />
     <ClInclude Include="src\nc_state.h" />
     <ClInclude Include="src\diva.h" />
@@ -205,6 +207,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClInclude Include="src\input.h" />
     <ClInclude Include="src\nc_log.h" />
     <ClInclude Include="src\save_data.h" />
+    <ClInclude Include="src\shared.h" />
     <ClInclude Include="src\sound_db.h" />
     <ClInclude Include="src\thirdparty\lazycsv.hpp" />
     <ClInclude Include="src\thirdparty\toml++\toml.hpp" />

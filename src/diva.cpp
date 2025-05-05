@@ -147,7 +147,11 @@ void PVGameArcade::PlayHitEffect(int32_t index, const diva::vec2& pos) { PVGAC_P
 // NOTE:  PVGameUI implementation
 static FUNCTION_PTR(void, __fastcall, PGUI_SetBonusText, 0x140275670, PVGameUI*, int32_t, float, float);
 
-void PVGameUI::SetBonusText(int32_t value, float x, float y) { PGUI_SetBonusText(this, value, x, y); }
+void PVGameUI::SetBonusText(int32_t value, const diva::vec2& pos) 
+{
+	if (value > 0)
+		PGUI_SetBonusText(this, value, pos.x, pos.y);
+}
 
 // NOTE: Misc
 static FUNCTION_PTR(void, __fastcall, DSC_ScalePosition, 0x1402666E0, const diva::vec2* in, diva::vec2* out);

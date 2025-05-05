@@ -1,6 +1,7 @@
 #include "save_data.h"
 #include "sound_db.h"
 #include "helpers.h"
+#include "shared.h"
 #include "nc_state.h"
 
 void TargetStateEx::ResetPlayState()
@@ -28,7 +29,7 @@ void TargetStateEx::ResetPlayState()
 	kiseki.clear();
 	vertex_count_max = 0;
 	fix_long_kiseki = false;
-	long_bonus_timer = 0.0f;
+	sustain_bonus_time = 0.0f;
 	score_bonus = 0;
 	ct_score_bonus = 0;
 	double_tapped = false;
@@ -198,6 +199,11 @@ void StateEx::ResetPlayState()
 	for (TargetStateEx& ex : target_ex)
 		ex.ResetPlayState();
 	chance_time.ResetPlayState();
+	score.ct_score_bonus = 0;
+	score.double_tap_bonus = 0;
+	score.sustain_bonus = 0;
+	score.link_bonus = 0;
+	score.rush_bonus = 0;
 	ResetAetData();
 }
 
@@ -342,13 +348,23 @@ void StateEx::PlayRushHitEffect(const diva::vec2& pos, float scale, bool pop)
 	effect_index++;
 }
 
+int32_t StateEx::GetScoreMode() const
+{
+	if (GetGameStyle() == GameStyle_Console)
+		return ScoreMode_Franken;
+	return ScoreMode_Arcade;
+}
+
+int32_t StateEx::GetGameStyle() const
+{
+	if (nc_chart_entry.has_value())
+		return nc_chart_entry.value().style;
+	return GameStyle_Arcade;
+}
+
 int32_t StateEx::CalculateTotalBonusScore() const
 {
-	int32_t total = 0;
-	for (const TargetStateEx& ex : target_ex)
-		total += ex.score_bonus + ex.ct_score_bonus;
-
-	return total;
+	return score.ct_score_bonus + score.double_tap_bonus + score.sustain_bonus + score.link_bonus + score.rush_bonus;
 }
 
 TargetStateEx* GetTargetStateEx(int32_t index, int32_t sub_index)

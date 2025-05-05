@@ -150,25 +150,6 @@ namespace nc
 	}
 }
 
-bool nc::CheckHit(int32_t hit_state, bool wrong, bool worst)
-{
-	bool cond = (hit_state >= HitState_Cool && hit_state <= HitState_Sad);
-	cond |= (hit_state >= HitState_CoolDouble && hit_state <= HitState_SadQuad);
-	if (wrong)
-		cond |= (hit_state >= HitState_WrongCool && hit_state <= HitState_WrongSad);
-	if (worst)
-		cond |= (hit_state == HitState_Worst);
-	return cond;
-}
-
-bool nc::CheckGoodHit(int32_t hit_state)
-{
-	return hit_state == HitState_Cool || hit_state == HitState_Fine ||
-		hit_state == HitState_CoolDouble || hit_state == HitState_FineDouble ||
-		hit_state == HitState_CoolTriple || hit_state == HitState_FineTriple ||
-		hit_state == HitState_CoolQuad || hit_state == HitState_FineQuad;
-}
-
 int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx** extras, int32_t group_count, bool* success)
 {
 	if (group_count < 1)
@@ -187,7 +168,7 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 
 		if (hit_state != HitState_None)
 		{
-			if (CheckHit(hit_state, false, false))
+			if (nc::IsHitCorrect(hit_state))
 			{
 				if (ex->IsLongNoteStart())
 				{
@@ -201,7 +182,7 @@ int32_t nc::JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx
 					ex->holding = true;
 				else if (target->target_type == TargetType_ChanceStar)
 				{
-					if (CheckGoodHit(hit_state) && state.chance_time.GetFillRate() == 15)
+					if (nc::IsHitGreat(hit_state) && state.chance_time.GetFillRate() == 15)
 					{
 						*success = true;
 						state.chance_time.successful = true;

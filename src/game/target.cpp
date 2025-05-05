@@ -236,7 +236,7 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 			if (tgt->IsLongNoteStart() && tgt->holding)
 			{
 				tgt->length_remaining = fmaxf(tgt->length_remaining - dt, 0.0f);
-				tgt->long_bonus_timer += dt;
+				tgt->sustain_bonus_time += dt;
 			}
 			else if (tgt->IsRushNote() && tgt->holding)
 			{

@@ -5,6 +5,7 @@
 #include "diva.h"
 #include "input.h"
 #include "db.h"
+#include "game/score.h"
 
 constexpr float ChanceTimeRetainedRate = 0.05; // 5%
 
@@ -128,7 +129,7 @@ struct TargetStateEx
 	int32_t step_state = LinkStepState_None;
 	bool link_ending = false;
 
-	float long_bonus_timer = 0.0f;
+	float sustain_bonus_time = 0.0f;
 	int32_t score_bonus = 0;
 	int32_t ct_score_bonus = 0;
 	bool double_tapped = false;
@@ -191,6 +192,14 @@ struct TargetStateEx
 			target_type == TargetType_StarRush;
 	}
 
+	inline bool IsNormalDoubleNote() const
+	{
+		return target_type == TargetType_UpW ||
+			target_type == TargetType_RightW ||
+			target_type == TargetType_DownW ||
+			target_type == TargetType_LeftW;
+	}
+
 	inline bool IsLongNoteStart() const { return IsLongNote() && !long_end; }
 	inline bool IsLongNoteEnd()   const { return IsLongNote() && long_end; }
 	inline bool IsLinkNote()      const { return link_step; }
@@ -206,7 +215,7 @@ struct ChanceState
 	bool enabled = false;
 	bool successful = false;
 
-	inline bool IsValid() { return first_target_index != -1 && last_target_index != -1; }
+	inline bool IsValid() const { return first_target_index != -1 && last_target_index != -1; }
 
 	inline void ResetPlayState()
 	{
@@ -237,13 +246,8 @@ struct ChanceState
 
 	inline bool CheckTargetInRange(int32_t index) const
 	{
-		return index >= first_target_index && index <= last_target_index;
+		return IsValid() && (index >= first_target_index && index <= last_target_index);
 	}
-};
-
-struct ScoringInfo
-{
-	float target_max_rate = 0.0f;
 };
 
 enum LayerUI : int32_t
@@ -303,7 +307,7 @@ struct StateEx
 	int32_t effect_index = 0;
 	std::optional<db::SongEntry> nc_song_entry;
 	std::optional<db::ChartEntry> nc_chart_entry;
-	ScoringInfo scoring_info = { };
+	ScoreState score;
 	SoundEffects sound_effects;
 
 	void ResetPlayState();
@@ -314,20 +318,8 @@ struct StateEx
 	void PlaySoundEffect(int32_t type);
 	void PlayRushHitEffect(const diva::vec2& pos, float scale, bool pop);
 
-	inline int32_t GetScoreMode() const
-	{
-		if (nc_chart_entry.has_value())
-			return nc_chart_entry.value().score_mode;
-		return ScoreMode_Arcade;
-	}
-
-	inline int32_t GetGameStyle() const
-	{
-		if (nc_chart_entry.has_value())
-			return nc_chart_entry.value().style;
-		return GameStyle_Arcade;
-	}
-
+	int32_t GetScoreMode() const;
+	int32_t GetGameStyle() const;
 	int32_t CalculateTotalBonusScore() const;
 };
 

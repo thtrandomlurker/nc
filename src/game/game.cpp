@@ -9,85 +9,7 @@
 #include "target.h"
 #include "chance_time.h"
 #include "hit_state.h"
-
-constexpr int32_t DoubleScoreBonus = 200;
-constexpr float   LongNoteInterval = 0.1;
-constexpr int32_t RushNotePopBonus = 30;
-constexpr int32_t ChanceTimeScoreBonus[4]   = { 1000, 600, 200, 60 };
-constexpr int32_t LongNoteHoldScoreBonus[4] = { 20,   10,  10,  0  };
-constexpr int32_t LinkNoteScoreBonus[4]     = { 200,  100, 0,   0  };
-
-static void SetNoteScoreBonus(TargetStateEx* ex)
-{
-	if (ex->hit_state < HitState_Cool || ex->hit_state > HitState_Sad)
-		return;
-
-	if (ex->double_tapped)
-		ex->score_bonus += 200;
-
-	if (ex->IsLinkNote())
-		ex->score_bonus += LinkNoteScoreBonus[ex->hit_state];
-
-	if (state.chance_time.CheckTargetInRange(ex->target_index))
-		ex->ct_score_bonus += ChanceTimeScoreBonus[ex->hit_state];
-
-	int32_t final_bonus = ex->score_bonus + ex->ct_score_bonus;
-	int32_t final_bonus_disp = final_bonus;
-
-	if (ex->IsLongNoteEnd())
-	{
-		final_bonus += ex->prev->score_bonus;
-		final_bonus_disp += ex->prev->score_bonus + ex->prev->ct_score_bonus;
-	}
-	else if (ex->IsLinkNote())
-	{
-		for (TargetStateEx* prev = ex->prev; prev != nullptr; prev = prev->prev)
-			final_bonus_disp += prev->ct_score_bonus + prev->score_bonus;
-	}
-
-	if (final_bonus_disp > 0)
-		GetPVGameData()->ui.SetBonusText(final_bonus_disp, ex->target_pos.x, ex->target_pos.y);
-
-	if (final_bonus > 0)
-		GetPVGameData()->score += final_bonus;
-};
-
-static void CalculateLongNoteScoreBonus(TargetStateEx* ex)
-{
-	if (ex->holding && ex->hit_state >= HitState_Cool && ex->hit_state <= HitState_Sad)
-	{
-		if (ex->long_bonus_timer >= LongNoteInterval)
-		{
-			ex->score_bonus += LongNoteHoldScoreBonus[ex->hit_state];
-			ex->long_bonus_timer -= LongNoteInterval;
-		}
-
-		if (ex->score_bonus > 0 || ex->ct_score_bonus > 0)
-		{
-			GetPVGameData()->ui.SetBonusText(
-				ex->score_bonus + ex->ct_score_bonus,
-				ex->target_pos.x,
-				ex->target_pos.y
-			);
-		}
-	}
-}
-
-static void IncreaseRushNoteScoreBonus(TargetStateEx* ex)
-{
-	ex->score_bonus += RushNotePopBonus;
-	ex->bal_hit_count += 1;
-	
-	if (ex->bal_hit_count <= ex->bal_max_hit_count)
-		ex->bal_scale += 1.0f / static_cast<float>(ex->bal_max_hit_count);
-
-	GetPVGameData()->score += RushNotePopBonus;
-	if (ex->score_bonus >= 0)
-		GetPVGameData()->ui.SetBonusText(ex->score_bonus, ex->target_pos.x, ex->target_pos.y);
-
-	diva::vec2 pos = GetScaledPosition(ex->target_pos);
-	state.PlayRushHitEffect(pos, 0.6f * (1.0f + ex->bal_scale), false);
-}
+#include "score.h"
 
 HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	PVGameArcade* game,
@@ -129,7 +51,10 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					is_in_zone = time >= game->sad_late_window && time <= game->sad_early_window;
 				}
 
-				CalculateLongNoteScoreBonus(tgt);
+				int32_t bonus = score::CalculateSustainBonus(tgt);
+				state.score.sustain_bonus += bonus;
+				GetPVGameData()->score += bonus;
+				GetPVGameData()->ui.SetBonusText(tgt->score_bonus, tgt->target_pos);
 
 				// NOTE: Check if the start target button has been released;
 				//       if it's the end note is not inside it's timing zone,
@@ -139,7 +64,6 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					tgt->next->force_hit_state = HitState_Worst;
 					tgt->StopAet();
 					tgt->holding = false;
-					tgt->score_bonus = 0;
 					state.PopTarget(tgt);
 					state.PlaySoundEffect(SEType_LongFail);
 				}
@@ -149,7 +73,9 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 			{
 				if (nc::CheckRushNotePops(tgt))
 				{
-					IncreaseRushNoteScoreBonus(tgt);
+					GetPVGameData()->score += score::IncreaseRushPopCount(tgt);
+					GetPVGameData()->ui.SetBonusText(tgt->score_bonus, tgt->target_pos);
+					state.PlayRushHitEffect(GetScaledPosition(tgt->target_pos), 0.6f * (1.0f + tgt->bal_scale), false);
 
 					if (tgt->target_type == TargetType_StarRush)
 					{
@@ -268,7 +194,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					ex->prev->StopAet();
 					state.PopTarget(ex->prev);
 				}
-				else if (ex->IsLinkNoteEnd() && nc::CheckHit(hit_state, true, false))
+				else if (ex->IsLinkNoteEnd() && nc::IsHitGreat(hit_state))
 				{
 					// NOTE: Find chain start target
 					TargetStateEx* chain = nullptr;
@@ -314,7 +240,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 
 				// NOTE: Play note SE
 				//
-				if (nc::CheckGoodHit(ex->hit_state))
+				if (nc::IsHitCorrect(hit_state))
 				{
 					switch (ex->target_type)
 					{
@@ -369,17 +295,23 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 		}
 	}
 	
-	if (nc::CheckGoodHit(final_hit_state))
+	// NOTE: Calculate bonus score
+	if (nc::IsHitCorrect(final_hit_state))
 	{
-		// NOTE: Calculate score bonus
 		for (int i = 0; i < group_count; i++)
 		{
 			TargetStateEx* ex = GetTargetStateEx(group[i]);
 			ex->hit_state = group[i]->hit_state;
-			SetNoteScoreBonus(ex);
-		}
 
-		// NOTE: Update chance time fill rate
+			int32_t disp_score = 0;
+			GetPVGameData()->score += score::CalculateHitScoreBonus(ex, &ex->ct_score_bonus, &disp_score);
+			GetPVGameData()->ui.SetBonusText(disp_score, ex->target_pos);
+		}
+	}
+
+	// NOTE: Update chance time
+	if (nc::IsHitGreat(final_hit_state))
+	{
 		if (state.chance_time.CheckTargetInRange(*target_index))
 			state.chance_time.targets_hit += 1;
 	}
@@ -394,31 +326,16 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	return final_hit_state;
 }
 
-static float GetPercentageF2nd(const PVGameData* pv_game)
-{
-	int32_t target_count = static_cast<int32_t>(pv_game->pv_data.targets.size());
-	int32_t correct_hits = pv_game->judge_count_correct[BasicHitState_Cool] + pv_game->judge_count_correct[BasicHitState_Fine];
-
-	float targets_ratio = static_cast<float>(correct_hits) / static_cast<float>(target_count);
-	float completion_rate = targets_ratio * state.scoring_info.target_max_rate;
-
-	if (state.chance_time.IsValid() && state.chance_time.successful)
-		completion_rate += ChanceTimeRetainedRate;
-
-	return completion_rate * 100.0f;
-}
-
 HOOK(void, __fastcall, CalculatePercentage, 0x140246130, PVGameData* pv_game)
 {
 	switch (state.GetScoreMode())
 	{
-	case ScoreMode_F2nd:
-		pv_game->percentage = GetPercentageF2nd(pv_game);
-		break;
-	default:
-		originalCalculatePercentage(pv_game);
-		break;
+	case ScoreMode_Franken:
+		pv_game->percentage = score::CalculatePercentage(pv_game);
+		return;
 	}
+
+	return originalCalculatePercentage(pv_game);
 }
 
 HOOK(void, __fastcall, UpdateLife, 0x140245220, PVGameData* a1, int32_t hit_state, bool a3, bool is_challenge_time, int32_t a5, bool a6, bool a7, bool a8)
