@@ -740,7 +740,7 @@ struct PVGameArcade
 struct PVGameUI
 {
 	int32_t int00;
-	uint32_t aet_list[95];
+	int32_t aet_list[95];
 	bool visibility[95];
 	float frame_bottom_offset[2];
 	float frame_bottom_dt[2];
@@ -765,6 +765,7 @@ struct PVGameUI
 	diva::vec2 combo_counter_pos;
 
 	void SetBonusText(int32_t value, const diva::vec2& pos);
+	void RemoveBonusText();
 };
 
 struct PVGameData

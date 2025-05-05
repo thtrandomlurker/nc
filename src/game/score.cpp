@@ -26,9 +26,10 @@ constexpr float ChanceTimePercBonus  = 0.01; // 1%
 constexpr float DoubleTapPercBonus   = 0.02; // 2%
 constexpr float SustainHoldPercBonus = 0.01; // 1%
 
-int32_t score::CalculateHitScoreBonus(TargetStateEx* target, int32_t* chance_bonus, int32_t* disp)
+int32_t score::CalculateHitScoreBonus(TargetStateEx* target, int32_t* disp)
 {
 	int32_t bonus = 0;
+	int32_t ct_bonus = 0;
 	int32_t bonus_disp = 0;
 
 	if (target->double_tapped)
@@ -39,10 +40,8 @@ int32_t score::CalculateHitScoreBonus(TargetStateEx* target, int32_t* chance_bon
 
 	if (state.chance_time.CheckTargetInRange(target->target_index))
 	{
-		if (chance_bonus)
-			*chance_bonus = ChanceTimeScoreBonus[target->hit_state];
-		bonus += ChanceTimeScoreBonus[target->hit_state];
-		state.score.ct_score_bonus += ChanceTimeScoreBonus[target->hit_state];
+		ct_bonus = ChanceTimeScoreBonus[target->hit_state];
+		bonus_disp += ct_bonus;
 	}
 
 	if (target->IsLinkNote())
@@ -54,10 +53,19 @@ int32_t score::CalculateHitScoreBonus(TargetStateEx* target, int32_t* chance_bon
 			bonus_disp += prev->ct_score_bonus + prev->score_bonus;
 	}
 	else if (target->IsLongNoteEnd())
-		bonus_disp += target->prev->score_bonus;
+	{
+		bonus += target->prev->score_bonus;
+		bonus_disp += target->prev->ct_score_bonus;
+	}
 
 	if (disp)
 		*disp = bonus_disp + bonus;
+
+	if (ct_bonus > 0)
+	{
+		state.score.ct_score_bonus += ct_bonus;
+		target->ct_score_bonus = ct_bonus;
+	}
 
 	target->score_bonus += bonus;
 	return bonus;
@@ -88,9 +96,8 @@ int32_t score::IncreaseRushPopCount(TargetStateEx* target)
 	return RushNotePopBonus;
 }
 
-// NOTE: Calculates target + events (Technical Zones and Chance Time) percentage,
-//       which on a Full-Combo All-Cool run should give roughly 100%. Bonus percentage
-//       can then be applied externally.
+// NOTE: Calculates the base percentage of just the targets (excluding events such as Chance Time).
+//       Events and bonuses can be applied externally.
 static float CalculateFrankenBasePercentage(
 	const int32_t* judge,
 	const int32_t* judge_wrong,

@@ -51,10 +51,8 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					is_in_zone = time >= game->sad_late_window && time <= game->sad_early_window;
 				}
 
-				int32_t bonus = score::CalculateSustainBonus(tgt);
-				state.score.sustain_bonus += bonus;
-				GetPVGameData()->score += bonus;
-				GetPVGameData()->ui.SetBonusText(tgt->score_bonus, tgt->target_pos);
+				score::CalculateSustainBonus(tgt);
+				GetPVGameData()->ui.SetBonusText(tgt->score_bonus + tgt->ct_score_bonus, tgt->target_pos);
 
 				// NOTE: Check if the start target button has been released;
 				//       if it's the end note is not inside it's timing zone,
@@ -66,6 +64,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					tgt->holding = false;
 					state.PopTarget(tgt);
 					state.PlaySoundEffect(SEType_LongFail);
+					GetPVGameData()->ui.RemoveBonusText();
 				}
 			}
 			// NOTE: Poll input for ongoing rush notes
@@ -287,7 +286,10 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					*play_default_se = false;
 				}
 				else if (ex->IsLongNoteEnd())
+				{
 					state.PlaySoundEffect(SEType_LongFail);
+					GetPVGameData()->ui.RemoveBonusText();
+				}
 
 				if (ex->IsLinkNoteEnd())
 					state.PlaySoundEffect(SEType_LinkEnd);
@@ -304,8 +306,11 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 			ex->hit_state = group[i]->hit_state;
 
 			int32_t disp_score = 0;
-			GetPVGameData()->score += score::CalculateHitScoreBonus(ex, &ex->ct_score_bonus, &disp_score);
+			GetPVGameData()->score += score::CalculateHitScoreBonus(ex, &disp_score);
 			GetPVGameData()->ui.SetBonusText(disp_score, ex->target_pos);
+
+			if (ex->IsLongNoteEnd())
+				state.score.sustain_bonus += ex->prev->score_bonus;
 		}
 	}
 

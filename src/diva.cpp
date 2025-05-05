@@ -175,6 +175,8 @@ void PVGameUI::SetBonusText(int32_t value, const diva::vec2& pos)
 		PGUI_SetBonusText(this, value, pos.x, pos.y);
 }
 
+void PVGameUI::RemoveBonusText() { aet::Stop(&aet_list[5]); }
+
 // NOTE: Misc
 static FUNCTION_PTR(void, __fastcall, DSC_ScalePosition, 0x1402666E0, const diva::vec2* in, diva::vec2* out);
 
