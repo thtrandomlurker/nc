@@ -148,7 +148,6 @@ float score::CalculatePercentage(PVGameData* pv_game)
 void score::CalculateScoreReference(ScoreState* ref, PVGameData* pv_game)
 {
 	const ChanceState& ct = state.chance_time;
-	const float target_step_score = (pv_game->reference_score * ref->target_max_rate) / pv_game->pv_data.targets.size();
 
 	ref->target_max_rate = 1.0f;
 	ref->max_ct_score_bonus = 0;
@@ -159,6 +158,7 @@ void score::CalculateScoreReference(ScoreState* ref, PVGameData* pv_game)
 	if (ct.IsValid())
 		ref->target_max_rate -= ChanceTimeRetainedRate;
 
+	const float target_step_score = (pv_game->reference_score * ref->target_max_rate) / pv_game->pv_data.targets.size();
 	pv_game->target_reference_scores.clear();
 	pv_game->target_reference_scores.push_back(0);
 
