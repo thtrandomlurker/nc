@@ -209,6 +209,11 @@ namespace diva
 			return { this->x / scalar, this->y / scalar };
 		}
 
+		inline vec2 operator/(const vec2& right) const
+		{
+			return { this->x / right.x, this->y / right.y };
+		}
+
 		inline bool operator>(const vec2& right) const
 		{
 			return x > right.x && y > right.y;
@@ -267,9 +272,16 @@ namespace diva
 			this->z = z;
 		}
 
-		inline vec3 operator+(const vec3& right)
+		inline vec2 xy() const { return vec2(x, y); }
+
+		inline vec3 operator+(const vec3& right) const
 		{
 			return { this->x + right.x, this->y + right.y, this->z + right.z };
+		}
+
+		inline vec3 operator-(const vec3& right) const
+		{
+			return { this->x - right.x, this->y - right.y, this->z - right.z };
 		}
 	};
 
@@ -355,22 +367,24 @@ struct SprArgs
 
 struct FontInfo
 {
-	uint32_t font_id;
-	void* raw_font;
-	int32_t spr_id;
-	int32_t unk14;
-	float unk18;
-	float unk1C;
-	float width;
-	float height;
-	float unk28;
-	float unk2C;
-	float unk30;
-	float unk34;
-	float scaled_width;
-	float scaled_height;
-	float unk40;
-	float unk44;
+	int32_t font_id = -1;
+	void* raw_font = nullptr;
+	int32_t spr_id = -1;
+	int32_t unk14 = 0;
+	float unk18 = 0.0f;
+	float unk1C = 0.0f;
+	diva::vec2 font_size;
+	diva::vec2 font_box_size;
+	diva::vec2 size;
+	diva::vec2 scale;
+	diva::vec2 spacing;
+
+	FontInfo();
+	~FontInfo() = default;
+
+	static FontInfo CreateSpriteFont(int32_t sprite_id, int32_t width, int32_t height);
+
+	void SetSize(float width, float height);
 };
 
 enum TextFlags : int32_t
@@ -390,8 +404,8 @@ enum TextFlags : int32_t
 #pragma pack(push, 1)
 struct PrintWork
 {
-	uint8_t color[4];
-	uint8_t fill_color[4];
+	int32_t color;
+	int32_t fill_color;
 	bool clip;
 	int8_t gap9[3];
 	diva::vec4 clip_data;
@@ -408,14 +422,15 @@ struct PrintWork
 
 	inline void SetColor(uint32_t color, uint32_t fill)
 	{
-		this->color[0] = color & 0xFF;
-		this->color[1] = (color >> 8) & 0xFF;
-		this->color[2] = (color >> 16) & 0xFF;
-		this->color[3] = (color >> 24) & 0xFF;
-		fill_color[0] = fill & 0xFF;
-		fill_color[1] = (fill >> 8) & 0xFF;
-		fill_color[2] = (fill >> 16) & 0xFF;
-		fill_color[3] = (fill >> 24) & 0xFF;
+		color = color;
+		fill_color = fill;
+	}
+
+	inline void SetOpacity(float opacity)
+	{
+		int32_t a = (opacity < 0.0f ? 0.0f : opacity > 1.0f ? 1.0f : opacity) * 255;
+		color = (color & 0xFFFFFF) | (a << 24);
+		fill_color = (fill_color & 0xFFFFFF) | (a << 24);
 	}
 };
 

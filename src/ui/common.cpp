@@ -85,36 +85,13 @@ void AetElement::SetMarkers(const std::string& start_marker, const std::string& 
 
 bool AetElement::DrawSpriteAt(std::string layer_name, uint32_t sprite_id, int32_t prio) const
 {
-	auto layout = GetLayout(layer_name);
-	if (!layout.has_value())
-		return false;
-
-	int32_t attr = 0x40000;
-	if (util::StartsWith(layer_name, "p_"))
+	if (auto layout = GetLayout(layer_name); layout.has_value())
 	{
-		if      (util::EndsWith(layer_name, "_c"))  attr = 0x400000; // NOTE: These two are up top because they are
-		else if (util::EndsWith(layer_name, "_rt")) attr = 0x100000; //       the most commonly used.
-		else if (util::EndsWith(layer_name, "_ct")) attr = 0x80000;
-		else if (util::EndsWith(layer_name, "_lc")) attr = 0x200000;
-		else if (util::EndsWith(layer_name, "_rc")) attr = 0x800000;
-		else if (util::EndsWith(layer_name, "_lb")) attr = 0x1000000;
-		else if (util::EndsWith(layer_name, "_cb")) attr = 0x2000000;
-		else if (util::EndsWith(layer_name, "_rb")) attr = 0x4000000;
+		DrawSpriteAtLayout(layout.value(), layer_name, sprite_id, args.prio + prio, args.res_mode, false);
+		return true;
 	}
 
-	SprArgs spr_args = { };
-	spr_args.id = sprite_id;
-	spr_args.attr = attr;
-	spr_args.trans = layout.value().position;
-	spr_args.scale = { layout.value().matrix.row0.x, layout.value().matrix.row1.y, 1.0f };
-	memset(spr_args.color, 0xFF, 4);
-	spr_args.color[3] = static_cast<uint8_t>(fminf(layout.value().opacity * 255.0f, 255.0f));
-	spr_args.resolution_mode_screen = args.res_mode;
-	spr_args.resolution_mode_sprite = args.res_mode;
-	spr_args.priority = args.prio + prio;
-
-	spr::DrawSprite(&spr_args);
-	return true;
+	return false;
 }
 
 void AetElement::DeleteHandle()
@@ -311,4 +288,79 @@ void HorizontalSelectorNumber::ChangeValue(int32_t dir)
 
 	if (notify.has_value())
 		notify.value()(value);
+}
+
+std::pair<int32_t, int32_t> GetLayerAxisAnchor(std::string_view layer_name)
+{
+	int32_t x = AnchorMode_Left;
+	int32_t y = AnchorMode_Top;
+
+	if (util::StartsWith(layer_name, "p_"))
+	{
+		if      (util::EndsWith(layer_name, "_c"))  { x = AnchorMode_Center; y = AnchorMode_Center; }
+		else if (util::EndsWith(layer_name, "_rt")) { x = AnchorMode_Right;  y = AnchorMode_Top; }
+		else if (util::EndsWith(layer_name, "_ct")) { x = AnchorMode_Center; y = AnchorMode_Top; }
+		else if (util::EndsWith(layer_name, "_lc")) { x = AnchorMode_Left;   y = AnchorMode_Center; }
+		else if (util::EndsWith(layer_name, "_rc")) { x = AnchorMode_Right;  y = AnchorMode_Center; }
+		else if (util::EndsWith(layer_name, "_lb")) { x = AnchorMode_Left;   y = AnchorMode_Bottom; }
+		else if (util::EndsWith(layer_name, "_cb")) { x = AnchorMode_Center; y = AnchorMode_Bottom; }
+		else if (util::EndsWith(layer_name, "_rb")) { x = AnchorMode_Right;  y = AnchorMode_Bottom; }
+	}
+
+	return std::make_pair(x, y);
+}
+
+int32_t GetLayerSpriteAnchor(std::string_view layer_name)
+{
+	auto axis = GetLayerAxisAnchor(layer_name);
+
+	if      (axis.first == AnchorMode_Left   && axis.second == AnchorMode_Left)   return 0x40000;
+	else if (axis.first == AnchorMode_Left   && axis.second == AnchorMode_Center) return 0x200000;
+	else if (axis.first == AnchorMode_Left   && axis.second == AnchorMode_Bottom) return 0x1000000;
+	else if (axis.first == AnchorMode_Center && axis.second == AnchorMode_Center) return 0x400000;
+	else if (axis.first == AnchorMode_Center && axis.second == AnchorMode_Top)    return 0x80000;
+	else if (axis.first == AnchorMode_Center && axis.second == AnchorMode_Bottom) return 0x2000000;
+	else if (axis.first == AnchorMode_Right  && axis.second == AnchorMode_Top)    return 0x100000;
+	else if (axis.first == AnchorMode_Right  && axis.second == AnchorMode_Center) return 0x800000;
+	else if (axis.first == AnchorMode_Right  && axis.second == AnchorMode_Bottom) return 0x4000000;
+
+	return 0x40000;
+}
+
+diva::vec2 GetLayoutAdjustedPosition(const AetLayout& layout, std::string_view layer_name)
+{
+	auto calculateOffset = [](float size, int32_t anchor)
+	{
+		if (anchor == AnchorMode_Left || anchor == AnchorMode_Top)
+			return 0.0f;
+		else if (anchor == AnchorMode_Right || anchor == AnchorMode_Bottom)
+			return size;
+		return size / 2.0f;
+	};
+
+	// NOTE: Calculate top-left position
+	diva::vec2 scale = { layout.matrix.row0.x, layout.matrix.row1.y };
+	diva::vec2 pos = layout.position.xy() - layout.anchor.xy() * scale;
+
+	// NOTE: Add offset to position
+	auto axis = GetLayerAxisAnchor(layer_name);
+	pos.x += calculateOffset(layout.width * scale.x, axis.first);
+	pos.y += calculateOffset(layout.height * scale.y, axis.second);
+
+	return pos;
+}
+
+void DrawSpriteAtLayout(const AetLayout& layout, std::string_view layer_name, uint32_t sprite_id, int32_t prio, int32_t res, bool adjust_pos)
+{
+	SprArgs args;
+	args.id = sprite_id;
+	args.attr = GetLayerSpriteAnchor(layer_name);
+	args.trans = adjust_pos ? diva::vec3(GetLayoutAdjustedPosition(layout, layer_name), 0.0f) : layout.position;
+	args.scale = { layout.matrix.row0.x, layout.matrix.row1.y, 1.0f };
+	memset(args.color, 0xFF, 4);
+	args.color[3] = static_cast<uint8_t>(fminf(layout.opacity * 255.0f, 255.0f));
+	args.resolution_mode_screen = res;
+	args.resolution_mode_sprite = res;
+	args.priority = prio;
+	spr::DrawSprite(&args);
 }

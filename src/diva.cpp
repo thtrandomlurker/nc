@@ -3,6 +3,7 @@
 
 FUNCTION_PTR(AetArgs*, __fastcall, CreateAetArgsOrg, 0x14028D560, AetArgs*, uint32_t, const char*, int32_t, int32_t);
 FUNCTION_PTR(void, __fastcall, StopAetOrg, 0x1402CA330, int32_t* id);
+FUNCTION_PTR(FontInfo*, __fastcall, DefaultFontInfo, 0x1402C4D70, FontInfo* font);
 FUNCTION_PTR(SprArgs*, __fastcall, DefaultSprArgs, 0x1405B78D0, SprArgs* args);
 FUNCTION_PTR(TextArgs*, __fastcall, DefaultTextArgs, 0x1402C53D0, TextArgs* args);
 FUNCTION_PTR(AetArgs*, __fastcall, DefaultAetArgs, 0x1401A87F0, AetArgs* args);
@@ -11,6 +12,27 @@ static FUNCTION_PTR(int32_t, __fastcall, PlayLayerImp, 0x14027B420, uint32_t sce
 
 static FUNCTION_PTR(void*, __fastcall, CreateAetArgsAction, 0x14028D560, AetArgs* args, uint32_t scene_id, const char* layer, int32_t prio, int32_t action);
 static FUNCTION_PTR(int32_t, __fastcall, PlayLayerAetArgs, 0x1402CA220, AetArgs* args, int32_t id);
+
+static FUNCTION_PTR(void, __fastcall, CreateSpriteNumberFont, 0x1402C5160, FontInfo* font, int32_t id, int32_t w, int32_t h);
+
+FontInfo::FontInfo()
+{
+	memset(this, 0, sizeof(FontInfo));
+	DefaultFontInfo(this);
+}
+
+FontInfo FontInfo::CreateSpriteFont(int32_t sprite_id, int32_t width, int32_t height)
+{
+	FontInfo font = { };
+	CreateSpriteNumberFont(&font, sprite_id, width, height);
+	return font;
+}
+
+void FontInfo::SetSize(float width, float height)
+{
+	size = diva::vec2(width, height);
+	scale = size / font_size;
+}
 
 AetArgs::AetArgs(uint32_t scene, const char* layer, int32_t prio, int32_t marker_mode)
 {

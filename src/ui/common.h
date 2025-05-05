@@ -1,5 +1,6 @@
 #pragma once
 
+#include <utility>
 #include <optional>
 #include <functional>
 #include <string_view>
@@ -24,6 +25,15 @@ enum LimitMode : int32_t
 	LimitMode_Disabled = 0,
 	LimitMode_Clamp = 1,
 	LimitMode_Wrap = 2
+};
+
+enum AnchorMode : int32_t
+{
+	AnchorMode_Left    = 0,
+	AnchorMode_Right   = 1,
+	AnchorMode_Top     = 2,
+	AnchorMode_Bottom  = 3,
+	AnchorMode_Center  = 4,
 };
 
 class AetElement
@@ -174,3 +184,13 @@ protected:
 	std::string GetSelectedValue() override;
 	void ChangeValue(int32_t dir) override;
 };
+
+std::pair<int32_t, int32_t> GetLayerAxisAnchor(std::string_view layer_name);
+int32_t GetLayerSpriteAnchor(std::string_view layer_name);
+
+// NOTE: Returns the position adjusted to it's anchor suffix (ex: _c, _rt).
+//       To be used for positioning text / sprites;
+//       Do *not* use rotation on layers you intend to use as layout!
+diva::vec2 GetLayoutAdjustedPosition(const AetLayout& layout, std::string_view layer_name);
+
+void DrawSpriteAtLayout(const AetLayout& layout, std::string_view layer_name, uint32_t sprite_id, int32_t prio, int32_t res, bool adjust_pos = false);
