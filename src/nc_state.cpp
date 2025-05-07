@@ -351,7 +351,7 @@ void StateEx::PlayRushHitEffect(const diva::vec2& pos, float scale, bool pop)
 int32_t StateEx::GetScoreMode() const
 {
 	if (GetGameStyle() == GameStyle_Console)
-		return ScoreMode_Franken;
+		return ScoreMode_F2nd;
 	return ScoreMode_Arcade;
 }
 

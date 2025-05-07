@@ -335,6 +335,7 @@ HOOK(void, __fastcall, CalculatePercentage, 0x140246130, PVGameData* pv_game)
 {
 	switch (state.GetScoreMode())
 	{
+	case ScoreMode_F2nd:
 	case ScoreMode_Franken:
 		pv_game->percentage = score::CalculatePercentage(pv_game);
 		return;

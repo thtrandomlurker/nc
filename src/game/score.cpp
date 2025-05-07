@@ -120,34 +120,54 @@ static float CalculateFrankenBasePercentage(
 	return percentage;
 }
 
+static float CalculateF2ndBasePercentage(const int32_t* judge, const float target_max_rate, int32_t note_count)
+{
+	return static_cast<float>(judge[HitState_Cool] + judge[HitState_Fine]) / static_cast<float>(note_count) * target_max_rate;
+}
+
 // NOTE: This function assumes it's being called from the rhythm game so the state is valid
 float score::CalculatePercentage(PVGameData* pv_game)
 {
-	float percentage = CalculateFrankenBasePercentage(
-		pv_game->judge_count_correct,
-		pv_game->judge_count,
-		JudgePercentageWeight[GetPvGameplayInfo()->difficulty],
-		state.score.target_max_rate,
-		static_cast<int32_t>(pv_game->pv_data.targets.size())
-	);
+	if (state.score.target_max_rate <= 0.0f || pv_game->pv_data.targets.size() < 1)
+		return 0.0f;
 
-	if (state.chance_time.IsValid())
+	float percentage = 0.0f;
+	if (state.GetScoreMode() == ScoreMode_Franken)
 	{
-		// NOTE: Add chance time star success bonus
-		if (state.chance_time.successful)
-			percentage += ChanceTimeRetainedRate;
+		percentage = CalculateFrankenBasePercentage(
+			pv_game->judge_count_correct,
+			pv_game->judge_count,
+			JudgePercentageWeight[GetPvGameplayInfo()->difficulty],
+			state.score.target_max_rate,
+			static_cast<int32_t>(pv_game->pv_data.targets.size())
+		);
 
-		// NOTE: Add chance time bonus score percentage
-		percentage += state.score.ct_score_bonus / static_cast<float>(state.score.max_ct_score_bonus) * ChanceTimePercBonus;
+		if (state.chance_time.IsValid())
+		{
+			// NOTE: Add chance time bonus score percentage
+			percentage += state.score.ct_score_bonus / static_cast<float>(state.score.max_ct_score_bonus) * ChanceTimePercBonus;
+		}
+
+		// NOTE: Add double tap bonus score percentage
+		if (state.score.max_double_tap_bonus > 0)
+			percentage += state.score.double_tap_bonus / static_cast<float>(state.score.max_double_tap_bonus) * DoubleTapPercBonus;
+
+		// NOTE: Add sustain hold bonus score percentage
+		if (state.score.max_sustain_bonus > 0)
+			percentage += state.score.sustain_bonus / static_cast<float>(state.score.max_sustain_bonus) * SustainHoldPercBonus;
+	}
+	else if (state.GetScoreMode() == ScoreMode_F2nd)
+	{
+		percentage = CalculateF2ndBasePercentage(
+			pv_game->judge_count_correct,
+			state.score.target_max_rate,
+			static_cast<int32_t>(pv_game->pv_data.targets.size())
+		);
 	}
 
-	// NOTE: Add double tap bonus score percentage
-	if (state.score.max_double_tap_bonus > 0)
-		percentage += state.score.double_tap_bonus / static_cast<float>(state.score.max_double_tap_bonus) * DoubleTapPercBonus;
-
-	// NOTE: Add sustain hold bonus score percentage
-	if (state.score.max_sustain_bonus > 0)
-		percentage += state.score.sustain_bonus / static_cast<float>(state.score.max_sustain_bonus) * SustainHoldPercBonus;
+	// NOTE: Add chance time star success bonus
+	if (state.chance_time.IsValid() && state.chance_time.successful)
+		percentage += ChanceTimeRetainedRate;
 
 	return percentage * 100.0;
 }
@@ -196,6 +216,4 @@ void score::CalculateScoreReference(ScoreState* ref, PVGameData* pv_game)
 		if (ct.IsValid() && i == ct.last_target_index)
 			pv_game->target_reference_scores.back() += pv_game->reference_score * ChanceTimeRetainedRate;
 	}
-
-	printf("Reference Score: %.2f %d %d %d\n", ref->target_max_rate, ref->max_double_tap_bonus, ref->max_sustain_bonus, ref->max_ct_score_bonus);
 }

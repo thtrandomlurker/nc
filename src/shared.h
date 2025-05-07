@@ -4,9 +4,9 @@
 
 enum ScoreMode : int32_t
 {
-	ScoreMode_Arcade   = 0,
-	// ScoreMode_F2nd  = 1,
-	ScoreMode_Franken  = 2,
+	ScoreMode_Arcade  = 0,
+	ScoreMode_F2nd    = 1,
+	ScoreMode_Franken = 2,
 	ScoreMode_Max
 };
 
