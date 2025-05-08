@@ -379,10 +379,6 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 		}
 	}
 
-	// NOTE: Calculate percentage parameters for F2nd/Franken score mode
-	if (state.GetScoreMode() == ScoreMode_Franken)
-		score::CalculateScoreReference(&state.score, pv_game);
-
 	// NOTE: Patch score reference (Only in Arcade mode; We don't need to patch this in F2nd mode as
 	//                              we use our own percentage calculation algorithm)
 	if (state.GetScoreMode() == ScoreMode_Arcade)
@@ -425,6 +421,11 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 
 		pv_game->reference_score += total_chance_bonus + total_hold_bonus + total_link_bonus;
 		pv_game->reference_score_with_life += total_chance_bonus + total_hold_bonus + total_link_bonus;
+	}
+	else
+	{
+		// NOTE: Calculate percentage parameters for F2nd/Franken score mode
+		score::CalculateScoreReference(&state.score, pv_game);
 	}
 
 	for (TargetStateEx& ex : state.target_ex)
