@@ -24,6 +24,7 @@ namespace score
 {
 	int32_t CalculateHitScoreBonus(TargetStateEx* target, int32_t* disp);
 	int32_t CalculateSustainBonus(TargetStateEx* target);
+	int32_t CalculateMaxSustainBonus(TargetStateEx* target);
 	int32_t IncreaseRushPopCount(TargetStateEx* target);
 	float CalculatePercentage(PVGameData* pv_game);
 	void CalculateScoreReference(ScoreState* ref, PVGameData* pv_game);

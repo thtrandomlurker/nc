@@ -83,8 +83,13 @@ int32_t score::CalculateSustainBonus(TargetStateEx* target)
 		target->sustain_bonus_time -= SustainBonusInterval;
 	}
 
-	target->score_bonus += bonus;
+	target->score_bonus = util::Clamp(target->score_bonus + bonus, 0, CalculateMaxSustainBonus(target));
 	return bonus;
+}
+
+int32_t score::CalculateMaxSustainBonus(TargetStateEx* target)
+{
+	return static_cast<int32_t>(target->length / SustainBonusInterval) * SustainBonusScore[0];
 }
 
 int32_t score::IncreaseRushPopCount(TargetStateEx* target)
