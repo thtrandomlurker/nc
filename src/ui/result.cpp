@@ -61,10 +61,21 @@ void nc::InitResultsData(ScoreDetail* detail)
 		ct_result_txt_id = state.chance_time.successful ? 3031571741 : 2360194960;
 	}
 
-	if (detail && state.score.target_max_rate < 1.0f)
+	if (detail)
 	{
-		for (int32_t i = 0; i < 5; i++)
-			detail->judge_perc[i] = CalculateMaxRatePercentage(detail, i, state.score.target_max_rate);
+		if (state.GetScoreMode() == ScoreMode_F2nd)
+		{
+			detail->judge_perc[0] = CalculateMaxRatePercentage(detail, 0, state.score.target_max_rate);
+			detail->judge_perc[1] = CalculateMaxRatePercentage(detail, 1, state.score.target_max_rate);
+			detail->judge_perc[2] = 0;
+			detail->judge_perc[3] = 0;
+			detail->judge_perc[4] = 0;
+		}
+		else if (state.GetScoreMode() == ScoreMode_Franken)
+		{
+			for (int32_t i = 0; i < 5; i++)
+				detail->judge_perc[i] = CalculateMaxRatePercentage(detail, i, state.score.target_max_rate);
+		}
 	}
 }
 
