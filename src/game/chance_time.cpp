@@ -11,7 +11,7 @@ static FUNCTION_PTR(void, __fastcall, SetFrameAction, 0x140278AB0, PVGameUI* a1,
 bool SetChanceTimeMode(PVGameUI* ui, int32_t mode)
 {
 	// NOTE: Chance Time Start
-	if (mode == 4)
+	if (mode == ModeSelect_ChanceStart)
 	{
 		SetNormalFrameAction(ui, false, 1.0f);
 		SetFrameAction(ui, false, 1, 3, 60.0f);
@@ -25,7 +25,7 @@ bool SetChanceTimeMode(PVGameUI* ui, int32_t mode)
 		state.chance_time.enabled = true;
 	}
 	// NOTE: Chance Time End
-	else if (mode == 5)
+	else if (mode == ModeSelect_ChanceEnd)
 	{
 		SetNormalFrameAction(ui, true, 1.0f);
 		SetFrameAction(ui, false, 1, 4, 60.0f);

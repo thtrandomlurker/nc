@@ -1067,21 +1067,6 @@ namespace loc
 	}
 }
 
-namespace dsc
-{
-	struct OpcodeInfo
-	{
-		int32_t id;
-		int32_t length_old;
-		int32_t length;
-		int32_t unk0C;
-		const char* name;
-	};
-
-	// NOTE: Returns a pointer to a struct that describes DSC opcode <id>
-	inline FUNCTION_PTR(const OpcodeInfo*, __fastcall, GetOpcodeInfo, 0x14024DCA0, int32_t id);
-}
-
 inline FUNCTION_PTR(PvGameplayInfo*, __fastcall, GetPvGameplayInfo, 0x14027DD90);
 inline FUNCTION_PTR(bool, __fastcall, IsPracticeMode, 0x1401E7B90);
 inline FUNCTION_PTR(int32_t, __fastcall, FindNextCommand, 0x140257D50, PVGamePvData* pv_data, int32_t op, int32_t* time, int32_t* branch, int32_t head);
@@ -1097,6 +1082,23 @@ diva::vec2 GetScaledPosition(const diva::vec2& v);
 inline prj::vector<prj::string>* GetRomDirectories()
 {
 	return reinterpret_cast<prj::vector<prj::string>*>(0x1414AB8A0);
+}
+
+namespace dsc
+{
+	struct OpcodeInfo
+	{
+		int32_t id;
+		int32_t length_old;
+		int32_t length;
+		int32_t unk0C;
+		const char* name;
+	};
+
+	// NOTE: Returns a pointer to a struct that describes DSC opcode <id>
+	inline FUNCTION_PTR(const OpcodeInfo*, __fastcall, GetOpcodeInfo, 0x14024DCA0, int32_t id);
+
+	inline bool IsCurrentDifficulty(int32_t bit) { return (bit & (1 << GetPvGameplayInfo()->difficulty)) != 0; }
 }
 
 namespace game

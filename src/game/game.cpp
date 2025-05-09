@@ -360,12 +360,12 @@ HOOK(void, __fastcall, UpdateLife, 0x140245220, PVGameData* a1, int32_t hit_stat
 
 HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, int32_t op)
 {
-	if (!game::IsPvMode())
+	int32_t difficulty = pv_data->script_buffer[pv_data->script_pos + 1];
+	int32_t mode = pv_data->script_buffer[pv_data->script_pos + 2];
+
+	if (dsc::IsCurrentDifficulty(difficulty) && !game::IsPvMode())
 	{
-		int32_t op_difficulty = pv_data->script_buffer[pv_data->script_pos + 1];
-		int32_t difficulty = 1 << GetPvGameplayInfo()->difficulty;
-		if ((op_difficulty & difficulty) != 0)
-			SetChanceTimeMode(&pv_data->pv_game->ui, pv_data->script_buffer[pv_data->script_pos + 2]);
+		SetChanceTimeMode(&pv_data->pv_game->ui, mode);
 	}
 
 	return originalExecuteModeSelect(pv_data, op);

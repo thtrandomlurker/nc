@@ -17,3 +17,13 @@ enum GameStyle : int32_t
 	GameStyle_Mixed   = 2,
 	GameStyle_Max
 };
+
+enum ModeSelect : int32_t
+{
+	ModeSelect_ChallengeStart = 1,
+	ModeSelect_ChallengeEnd   = 3,
+	ModeSelect_ChanceStart    = 4,
+	ModeSelect_ChanceEnd      = 5,
+	ModeSelect_TechZoneStart  = 8,
+	ModeSelect_TechZoneEnd    = 9,
+};
