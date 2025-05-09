@@ -49,3 +49,23 @@ bool util::EndsWith(std::string_view str, std::string_view suffix)
 
 	return strncmp(str.substr(str.size() - suffix.size()).data(), suffix.data(), suffix.size()) == 0;
 }
+
+bool util::Contains(std::string_view str, std::string_view substr)
+{
+	if (substr.size() > str.size() || str.size() == 0 || substr.size() == 0)
+		return false;
+
+	for (size_t i = 0; i < str.size(); i++)
+	{
+		if (str[i] != substr[0])
+			continue;
+
+		if (str.size() - i < substr.size())
+			break;
+
+		if (strncmp(str.data(), substr.data(), substr.size()) == 0)
+			return true;
+	}
+
+	return false;
+}

@@ -192,6 +192,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClCompile Include="src\ui\pv_sel_switch.cpp" />
     <ClCompile Include="src\ui\result.cpp" />
     <ClCompile Include="src\ui\result_ps4.cpp" />
+    <ClCompile Include="src\ui\result_switch.cpp" />
     <ClCompile Include="src\util.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -45,6 +45,8 @@ static int32_t CalculateMaxRatePercentage(ScoreDetail* detail, int32_t index, fl
 	return static_cast<int32_t>(perc * 100);
 }
 
+bool nc::ShouldUseConsoleStyleWin() { return state.GetScoreMode() != ScoreMode_Arcade; }
+
 void nc::InitResultsData(ScoreDetail* detail)
 {
 	total_bonus_score = state.CalculateTotalBonusScore();
@@ -100,9 +102,12 @@ void nc::DrawResultsWindowText(int32_t win)
 }
 
 void InstallResultPS4Hooks();
+void InstallResultSwitchHooks();
 
 void nc::InstallResultsHook()
 {
 	if (game::IsFutureToneMode())
 		InstallResultPS4Hooks();
+	else
+		InstallResultSwitchHooks();
 }

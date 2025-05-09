@@ -7,9 +7,16 @@ struct ScoreDetail
 	int32_t judge_perc[5];
 };
 
+namespace results
+{
+	constexpr uint32_t AetSetID   = 14010070;
+	constexpr uint32_t SprSetID   = 14020070;
+	constexpr uint32_t AetSceneID = 14010071;
+}
+
 namespace nc
 {
-	inline bool ShouldUseConsoleStyleWin() { return state.GetScoreMode() != ScoreMode_Arcade; }
+	bool ShouldUseConsoleStyleWin();
 
 	void InitResultsData(ScoreDetail* detail);
 	void DrawResultsWindowText(int32_t win);

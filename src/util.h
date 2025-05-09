@@ -10,6 +10,7 @@ namespace util
 	std::string ChangeExtension(std::string_view view, std::string_view ext);
 	bool StartsWith(std::string_view str, std::string_view prefix);
 	bool EndsWith(std::string_view str, std::string_view suffix);
+	bool Contains(std::string_view str, std::string_view substr);
 	
 	template <size_t S>
 	int32_t GetIndex(std::array<std::string_view, S> data, std::string_view search, int32_t default_value = -1)
