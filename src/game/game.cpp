@@ -365,6 +365,9 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 
 	if (dsc::IsCurrentDifficulty(difficulty) && !game::IsPvMode())
 	{
+		if (mode == ModeSelect_ChanceEnd && state.chance_time.successful)
+			pv_data->pv_game->score += score::GetChanceTimeSuccessBonus();
+
 		SetChanceTimeMode(&pv_data->pv_game->ui, mode);
 	}
 
