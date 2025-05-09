@@ -111,6 +111,7 @@ HOOK(bool, __fastcall, StageResultSwitchInit, 0x14064C0E0, void* a1)
 	aet::LoadAetSet(results::AetSetID, &out);
 	spr::LoadSprSet(results::SprSetID, &strv);
 
+	// nc::InitResultsData(reinterpret_cast<ScoreDetail*>(a1));
 	return originalStageResultSwitchInit(a1);
 }
 
@@ -129,6 +130,21 @@ HOOK(bool, __fastcall, StageResultSwitchDest, 0x14064C300, void* a1)
 	return originalStageResultSwitchDest(a1);
 }
 
+HOOK(void, __fastcall, StageResultSwitchDetailInit, 0x1406463B0, char* a1)
+{
+	originalStageResultSwitchDetailInit(a1);
+	nc::InitResultsData(*reinterpret_cast<ScoreDetail**>(a1 + 0x18));
+}
+
+HOOK(void, __fastcall, StageResultSwitchDetailDisp, 0x140647840, char* a1)
+{
+	nc::DrawResultsWindowText(
+		*reinterpret_cast<const int32_t*>(a1 + 0x28 + 0x8 + 0x15C),
+		*reinterpret_cast<const int32_t*>(a1 + 0xC)
+	);
+	originalStageResultSwitchDetailDisp(a1);
+}
+
 void InstallResultSwitchHooks()
 {
 	INSTALL_HOOK(CStageResultAetControllerInLoopOutGetSceneID);
@@ -138,4 +154,6 @@ void InstallResultSwitchHooks()
 	INSTALL_HOOK(StageResultSwitchInit);
 	INSTALL_HOOK(StageResultSwitchWaitLoad);
 	INSTALL_HOOK(StageResultSwitchDest);
+	INSTALL_HOOK(StageResultSwitchDetailInit);
+	INSTALL_HOOK(StageResultSwitchDetailDisp);
 }

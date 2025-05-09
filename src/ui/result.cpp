@@ -9,14 +9,14 @@ static int32_t total_bonus_score = 0;
 static std::pair<int32_t, int32_t> ct_perc;
 static uint32_t ct_result_txt_id = 0;
 
-static void DrawNumberOrText(const AetComposition& comp, const char* layer, const char* format, int32_t number = 0)
+static void DrawNumberOrText(const AetComposition& comp, int32_t prio, const char* layer, const char* format, int32_t number = 0)
 {
 	if (auto it = comp.find(layer); it != comp.end())
 	{
 		const AetLayout& layout = it->second;
 
 		// NOTE: Set up font
-		FontInfo font = FontInfo::CreateSpriteFont(49485, 34, 32);
+		FontInfo font = FontInfo::CreateSpriteFont(game::IsFutureToneMode() ? 49485 : 53022, 34, 32);
 		font.SetSize(font.size.x * layout.matrix.row0.x, font.size.y * layout.matrix.row1.y);
 
 		// NOTE: Draw text
@@ -25,8 +25,8 @@ static void DrawNumberOrText(const AetComposition& comp, const char* layer, cons
 		args.print_work.line_origin = args.print_work.text_current;
 		args.print_work.font = &font;
 		args.print_work.res_mode = 14;
-		args.print_work.prio = 6;
-		args.print_work.SetColor(0xFFFFFFFF, 0xFFFFFFFF);
+		args.print_work.prio = prio;
+		args.print_work.SetColor(0xFFFFFFFF, 0xFF808080);
 		args.print_work.SetOpacity(layout.opacity);
 
 		spr::DrawTextA(&args, 0x2, util::Format(format, number).c_str());
@@ -81,24 +81,24 @@ void nc::InitResultsData(ScoreDetail* detail)
 	}
 }
 
-void nc::DrawResultsWindowText(int32_t win)
+void nc::DrawResultsWindowText(int32_t win, int32_t prio)
 {
 	AetComposition comp;
 	aet::GetComposition(&comp, win);
 
-	DrawNumberOrText(comp, "p_ct_per_01_rt", ct_perc.first > -1 ? "%d" : "-", ct_perc.first);
-	DrawNumberOrText(comp, "p_ct_per_02_rt", ct_perc.second > -1 ? "%02d" : "--", ct_perc.second);
+	DrawNumberOrText(comp, prio, "p_ct_per_01_rt", ct_perc.first > -1 ? "%d" : "-", ct_perc.first);
+	DrawNumberOrText(comp, prio, "p_ct_per_02_rt", ct_perc.second > -1 ? "%02d" : "--", ct_perc.second);
 	if (ct_result_txt_id != 0)
 	{
 		if (auto it = comp.find("p_ct_result_txt"); it != comp.end())
-			DrawSpriteAtLayout(it->second, "p_ct_result_txt", ct_result_txt_id, 6, 14);
+			DrawSpriteAtLayout(it->second, "p_ct_result_txt", ct_result_txt_id, prio, 14);
 	}
 
-	DrawNumberOrText(comp, "p_tz_count_num_01_rt", "-");
-	DrawNumberOrText(comp, "p_tz_count_num_02_rt", "-");
-	DrawNumberOrText(comp, "p_tz_per_01_rt", "-");
-	DrawNumberOrText(comp, "p_tz_per_02_rt", "--");
-	DrawNumberOrText(comp, "p_bonus_num_rt", total_bonus_score <= 0 ? "%d" : "%+d", total_bonus_score);
+	DrawNumberOrText(comp, prio, "p_tz_count_num_01_rt", "-");
+	DrawNumberOrText(comp, prio, "p_tz_count_num_02_rt", "-");
+	DrawNumberOrText(comp, prio, "p_tz_per_01_rt", "-");
+	DrawNumberOrText(comp, prio, "p_tz_per_02_rt", "--");
+	DrawNumberOrText(comp, prio, "p_bonus_num_rt", total_bonus_score <= 0 ? "%d" : "%+d", total_bonus_score);
 }
 
 void InstallResultPS4Hooks();

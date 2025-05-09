@@ -170,7 +170,7 @@ HOOK(void, __fastcall, StageResultPS4Disp, 0x140232E80, StageResultPS4* result)
 		return;
 
 	if (nc::ShouldUseConsoleStyleWin())
-		nc::DrawResultsWindowText(result->win);
+		nc::DrawResultsWindowText(result->win, 6);
 }
 
 void InstallResultPS4Hooks()

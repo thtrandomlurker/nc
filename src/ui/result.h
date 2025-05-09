@@ -19,6 +19,6 @@ namespace nc
 	bool ShouldUseConsoleStyleWin();
 
 	void InitResultsData(ScoreDetail* detail);
-	void DrawResultsWindowText(int32_t win);
+	void DrawResultsWindowText(int32_t win, int32_t prio);
 	void InstallResultsHook();
 }
