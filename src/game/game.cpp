@@ -419,4 +419,10 @@ void InstallGameHooks()
 	INSTALL_HOOK(ExecuteModeSelect);
 	INSTALL_HOOK(UpdateGaugeFrame);
 	INSTALL_HOOK(CalculatePercentage);
+
+	// NOTE: Replace the branches in FinishTargetAet with a simple JMP so that the game properly
+	//       removes the target aets from the screen even if the target or button aet handles are 0,
+	//       which normally would make the target effects aet stay on screen when retrying a song while
+	//       a link note is spawning (as we capture their aet handles)
+	WRITE_MEMORY(0x14026E649, uint8_t, 0xE9, 0x7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
