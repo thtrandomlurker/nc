@@ -27,6 +27,11 @@ constexpr float ChanceTimePercBonus  = 0.01; // 1%
 constexpr float DoubleTapPercBonus   = 0.02; // 2%
 constexpr float SustainHoldPercBonus = 0.01; // 1%
 
+float score::GetTechZoneRetainedRate()
+{
+	return TechZoneRetainedRate;
+}
+
 int32_t score::CalculateHitScoreBonus(TargetStateEx* target, int32_t* disp)
 {
 	int32_t bonus = 0;
