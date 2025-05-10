@@ -25,6 +25,7 @@ struct TechZoneState
 	}
 
 	bool IsValid() const;
+	bool IsSuccessful() const;
 	int32_t GetTargetCount() const;
 	int32_t GetRemainingCount() const;
 	bool PushNewHitState(int32_t target_index, int32_t hit_state);

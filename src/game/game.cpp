@@ -382,11 +382,20 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 			SetChanceTimeMode(&pv_data->pv_game->ui, ModeSelect_ChanceEnd);
 			break;
 		case ModeSelect_TechZoneStart:
-			nc::Print("Technical Zone #%d   START!\n", state.tech_zone_index);
+			if (state.tech_zone_index < state.tech_zones.size())
+				nc::Print("Technical Zone #%d   START!\n", state.tech_zone_index);
+
 			break;
 		case ModeSelect_TechZoneEnd:
-			nc::Print("Technical Zone #%d   %s! \n", state.tech_zone_index, state.tech_zones[state.tech_zone_index].failed ? "FAIL" : "SUCCESS");
-			state.tech_zone_index++;
+			if (state.tech_zone_index < state.tech_zones.size())
+			{
+				if (TechZoneState& tz = state.tech_zones[state.tech_zone_index]; tz.IsValid())
+					pv_data->pv_game->score += score::GetTechZoneSuccessBonus();
+				
+				nc::Print("Technical Zone #%d   %s! \n", state.tech_zone_index, state.tech_zones[state.tech_zone_index].failed ? "FAIL" : "SUCCESS");
+				state.tech_zone_index++;
+			}
+
 			break;
 		}
 	}

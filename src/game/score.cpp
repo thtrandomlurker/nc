@@ -11,6 +11,7 @@ constexpr float   SustainBonusInterval    = 0.1;
 constexpr int32_t SustainBonusScore[4]    = { 20,   10,  10,  0 };
 constexpr int32_t ChanceTimeScoreBonus[4] = { 1000, 600, 200, 60 };
 constexpr int32_t LinkNoteScoreBonus[4]   = { 200,  100, 0,   0 };
+constexpr float TechZoneRetainedRate      = 0.03; // 3%
 
 constexpr float WrongPercentageWeight = 0.5;
 static const float JudgePercentageWeight[5][5] = {
@@ -174,6 +175,11 @@ float score::CalculatePercentage(PVGameData* pv_game)
 	if (state.chance_time.IsValid() && state.chance_time.successful)
 		percentage += ChanceTimeRetainedRate;
 
+	// NOTE: Add technical zone success bonus
+	for (TechZoneState& tz : state.tech_zones)
+		if (tz.IsSuccessful())
+			percentage += TechZoneRetainedRate;
+
 	return percentage * 100.0;
 }
 
@@ -189,6 +195,9 @@ void score::CalculateScoreReference(ScoreState* ref, PVGameData* pv_game)
 
 	if (ct.IsValid())
 		ref->target_max_rate -= ChanceTimeRetainedRate;
+
+	for (TechZoneState& tz : state.tech_zones)
+		ref->target_max_rate -= TechZoneRetainedRate;
 
 	const float target_step_score = (pv_game->reference_score * ref->target_max_rate) / pv_game->pv_data.targets.size();
 	pv_game->target_reference_scores.clear();
@@ -218,7 +227,12 @@ void score::CalculateScoreReference(ScoreState* ref, PVGameData* pv_game)
 		// NOTE: Patch target reference scores, to make the percentages borders
 		//       move more accurately to the console gameplay flow.
 		pv_game->target_reference_scores.push_back(pv_game->target_reference_scores.back() + target_step_score);
+
 		if (ct.IsValid() && i == ct.last_target_index)
 			pv_game->target_reference_scores.back() += pv_game->reference_score * ChanceTimeRetainedRate;
+
+		for (TechZoneState& tz : state.tech_zones)
+			if (i == tz.last_target_index)
+				pv_game->target_reference_scores.back() += pv_game->reference_score * TechZoneRetainedRate;
 	}
 }

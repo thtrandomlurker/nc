@@ -7,6 +7,11 @@ bool TechZoneState::IsValid() const
 	return first_target_index != -1 && last_target_index != -1;
 }
 
+bool TechZoneState::IsSuccessful() const
+{
+	return IsValid() && !failed && GetRemainingCount() == 0;
+}
+
 int32_t TechZoneState::GetTargetCount() const
 {
 	if (!IsValid())
