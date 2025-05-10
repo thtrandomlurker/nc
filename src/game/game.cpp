@@ -344,7 +344,8 @@ HOOK(void, __fastcall, CalculatePercentage, 0x140246130, PVGameData* pv_game)
 	{
 	case ScoreMode_F2nd:
 	case ScoreMode_Franken:
-		pv_game->percentage = score::CalculatePercentage(pv_game);
+		if (pv_game->scoring_enabled)
+			pv_game->percentage = score::CalculatePercentage(pv_game);
 		return;
 	}
 

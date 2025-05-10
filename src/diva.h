@@ -812,7 +812,8 @@ struct PVGameData
 	int32_t life;
 	int32_t score;
 	int32_t dword2D23C;
-	int32_t dword2D240;
+	bool scoring_enabled;
+	uint8_t gap2D241[3];
 	int32_t total_challenge_bonus;
 	int32_t combo;
 	int32_t total_surv_challenge_bonus;
