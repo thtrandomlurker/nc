@@ -204,6 +204,9 @@ void StateEx::ResetPlayState()
 	score.sustain_bonus = 0;
 	score.link_bonus = 0;
 	score.rush_bonus = 0;
+	for (TechZoneState& tz : tech_zones)
+		tz.ResetPlayState();
+	tech_zone_index = 0;
 	ResetAetData();
 }
 
@@ -219,6 +222,8 @@ void StateEx::Reset()
 {
 	target_references.clear();
 	target_ex.clear();
+	tech_zones.clear();
+	tech_zone_index = 0;
 	chance_time.first_target_index = -1;
 	chance_time.last_target_index = -1;
 	chance_time.targets_hit = 0;

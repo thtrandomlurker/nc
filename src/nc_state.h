@@ -6,6 +6,7 @@
 #include "input.h"
 #include "db.h"
 #include "game/score.h"
+#include "game/tech_zone.h"
 
 constexpr float ChanceTimeRetainedRate = 0.05; // 5%
 
@@ -257,6 +258,7 @@ enum LayerUI : int32_t
 	LayerUI_StarGaugeBase,
 	LayerUI_StarGauge,
 	LayerUI_ChanceTxt,
+	LayerUI_BonusZone,
 	LayerUI_Max
 };
 
@@ -302,6 +304,8 @@ struct StateEx
 	bool files_loaded;
 	std::vector<TargetStateEx> target_ex;
 	ChanceState chance_time;
+	std::vector<TechZoneState> tech_zones;
+	size_t tech_zone_index;
 	UIState ui;
 	int32_t effect_buffer[MaxHitEffectCount] = { };
 	int32_t effect_index = 0;

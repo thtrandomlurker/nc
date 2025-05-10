@@ -324,32 +324,42 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 	// NOTE: Find chance time
 	//
 	int32_t pos = 1;
-	int32_t time = -1;
-	int32_t last_time = -1;
+	int64_t cur_time = -1;
+	int64_t last_time = -1;
 	int64_t chance_start_time = -1;
 	int64_t chance_end_time = -1;
+	std::vector<std::pair<int64_t, int64_t>> tech_zone_times;
 	while (true)
 	{
 		int32_t branch = 0;
+		int32_t time = 0;
 		pos = FindNextCommand(&pv_game->pv_data, 26, &time, &branch, pos);
+		cur_time = static_cast<int64_t>(time) * 10000;
 
 		if (pos != -1)
 		{
 			if (time != -1)
-				last_time = time;
+				last_time = cur_time;
 
 			int32_t difficulty = pv_game->pv_data.script_buffer[pos + 1];
 			int32_t mode = pv_game->pv_data.script_buffer[pos + 2];
 
-			if ((difficulty & (1 << GetPvGameplayInfo()->difficulty)) != 0)
+			if (dsc::IsCurrentDifficulty(difficulty))
 			{
 				switch (mode)
 				{
-				case 4:
-					chance_start_time = static_cast<int64_t>(last_time) * 10000;
+				case ModeSelect_ChanceStart:
+					chance_start_time = last_time;
 					break;
-				case 5:
-					chance_end_time = static_cast<int64_t>(last_time) * 10000;
+				case ModeSelect_ChanceEnd:
+					chance_end_time = last_time;
+					break;
+				case ModeSelect_TechZoneStart:
+					tech_zone_times.emplace_back(last_time, -1);
+					break;
+				case ModeSelect_TechZoneEnd:
+					if (tech_zone_times.size() > 0)
+						tech_zone_times.back().second = last_time;
 					break;
 				}
 			}
@@ -375,6 +385,26 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 				if (state.chance_time.first_target_index == -1)
 					state.chance_time.first_target_index = i;
 				state.chance_time.last_target_index = i;
+			}
+		}
+	}
+
+	// NOTE: Figure out which notes are part of each technical zone.
+	//
+	for (auto& [start_time, end_time] : tech_zone_times)
+	{
+		if (start_time == -1 || end_time == -1)
+			continue;
+
+		TechZoneState& tz = state.tech_zones.emplace_back();
+		for (size_t i = 0; i < pv_game->pv_data.targets.size(); i++)
+		{
+			PvDscTargetGroup& tgt = pv_game->pv_data.targets[i];
+			if (tgt.hit_time >= start_time && tgt.hit_time <= end_time)
+			{
+				if (tz.first_target_index == -1)
+					tz.first_target_index = i;
+				tz.last_target_index = i;
 			}
 		}
 	}
@@ -434,6 +464,11 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 			continue;
 
 		nc::Print("TARGET %03d/%03d:  %02d  %d:%.3f  <%d-%d-%d>\n", ex.target_index, ex.sub_index, ex.target_type, ex.long_end, ex.length, ex.link_start, ex.link_step, ex.link_end);
+	}
+
+	for (TechZoneState& tz : state.tech_zones)
+	{
+		nc::Print("TECHNICAL ZONE: %d -> %d  (%d)\n", tz.first_target_index, tz.last_target_index, tz.GetTargetCount());
 	}
 
 	return pv_game->reference_score;
