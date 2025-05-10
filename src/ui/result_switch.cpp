@@ -3,6 +3,7 @@
 #include <nc_log.h>
 #include <nc_state.h>
 #include <util.h>
+#include "common.h"
 #include "result.h"
 
 // GETSCENEID  14064BC50 (VTABLE 140CC1A00)
@@ -33,7 +34,7 @@ static prj::string GetModeLayerName(int32_t kind, bool no_fail)
 		+ "_"
 		+ (no_fail ? "nofail_" : "")
 		+ kinds[kind]
-		+ (GetGameLocale() == GameLocale_JP ? "_jp" : "_en");
+		+ GetLanguageSuffix().c_str();
 }
 
 static prj::string GetWindowLayerName(int32_t kind)

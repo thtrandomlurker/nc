@@ -364,3 +364,9 @@ void DrawSpriteAtLayout(const AetLayout& layout, std::string_view layer_name, ui
 	args.priority = prio;
 	spr::DrawSprite(&args);
 }
+
+std::string GetLanguageSuffix()
+{
+	const char* suffixes[GameLocale_Max] = { "_jp", "_en", "_zh", "_tw", "_kr", "_fr", "_it", "_de", "_sp" };
+	return suffixes[GetGameLocale()];
+}

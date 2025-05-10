@@ -50,7 +50,13 @@ struct StageResultPS4
 	uint8_t byte279;
 };
 
-static std::string GetLocalizedLayerName(std::string_view name)
+static std::string GetStyleLayerName()
+{
+	const char* styles[GameStyle_Max] = { "", "console", "mixed" };
+	return std::string("ps4_tit_") + styles[state.GetGameStyle()] + GetLanguageSuffix();
+}
+
+static std::string GetLocalizedLayerNameOnlyJP(std::string_view name)
 {
 	return std::string(name) + (GetGameLocale() == GameLocale_JP ? "_jp" : "_en");
 }
@@ -63,7 +69,7 @@ private:
 public:
 	StyleBelt()
 	{
-		SetScene(14010071);
+		SetScene(results::AetSceneID);
 		SetLayer("ps4_gam_belt_rslt", 3, 14, AetAction_InOnce);
 	}
 
@@ -72,8 +78,8 @@ public:
 		if (Ended())
 		{
 			SetLayer("ps4_gam_belt_rslt", 3, 14, AetAction_Loop);
-			style_txt.SetScene(14010071);
-			style_txt.SetLayer(GetLocalizedLayerName("ps4_tit_console"), 3, 14, AetAction_InLoop);
+			style_txt.SetScene(results::AetSceneID);
+			style_txt.SetLayer(GetStyleLayerName(), 3, 14, AetAction_InLoop);
 		}
 
 		if (auto layout = GetLayout("p_style_loc_c"); layout.has_value())
@@ -95,32 +101,32 @@ static void SetWindowAet(StageResultPS4* result, const std::string& name, bool l
 		return;
 
 	aet::Stop(&result->win);
-	result->win = aet::PlayLayer(14010071, 3, loop ? 0x10000 : 0x20000, name.c_str(), nullptr, nullptr, nullptr);
+	result->win = aet::PlayLayer(results::AetSceneID, 3, loop ? 0x10000 : 0x20000, name.c_str(), nullptr, nullptr, nullptr);
 	result->win_name = name;
 }
 
 HOOK(void, __fastcall, PutScoreWindowIn, 0x1402365C0, StageResultPS4* result)
 {
 	originalPutScoreWindowIn(result);
-	SetWindowAet(result, GetLocalizedLayerName("ps4_win_nc_in"));
+	SetWindowAet(result, GetLocalizedLayerNameOnlyJP("ps4_win_nc_in"));
 }
 
 HOOK(void, __fastcall, PutWinCount, 0x1402367C0, StageResultPS4* result)
 {
 	originalPutWinCount(result);
-	SetWindowAet(result, GetLocalizedLayerName("ps4_win_nc_count"));
+	SetWindowAet(result, GetLocalizedLayerNameOnlyJP("ps4_win_nc_count"));
 }
 
 HOOK(void, __fastcall, PutWinLoop, 0x140236A30, StageResultPS4* result)
 {
 	originalPutWinLoop(result);
-	SetWindowAet(result, GetLocalizedLayerName("ps4_win_nc_loop"), true);
+	SetWindowAet(result, GetLocalizedLayerNameOnlyJP("ps4_win_nc_loop"), true);
 }
 
 HOOK(void, __fastcall, PutWinOut, 0x140236C80, StageResultPS4* result)
 {
 	originalPutWinOut(result);
-	SetWindowAet(result, GetLocalizedLayerName("ps4_win_nc_out"));
+	SetWindowAet(result, GetLocalizedLayerNameOnlyJP("ps4_win_nc_out"));
 }
 
 HOOK(bool, __fastcall, StageResultPS4Init, 0x140231A70, StageResultPS4* result)
@@ -129,8 +135,8 @@ HOOK(bool, __fastcall, StageResultPS4Init, 0x140231A70, StageResultPS4* result)
 
 	prj::string str;
 	prj::string_view strv;
-	aet::LoadAetSet(14010070, &str);
-	spr::LoadSprSet(14020070, &strv);
+	aet::LoadAetSet(results::AetSetID, &str);
+	spr::LoadSprSet(results::SprSetID, &strv);
 
 	nc::InitResultsData(result->detail);
 	WriteDispAetSceneID(nc::ShouldUseConsoleStyleWin() ? 14010071 : 1279);
@@ -142,7 +148,7 @@ HOOK(bool, __fastcall, StageResultPS4Ctrl, 0x140232010, StageResultPS4* result)
 {
 	if (result->state == 0)
 	{
-		if (aet::CheckAetSetLoading(14010070) || spr::CheckSprSetLoading(14020070))
+		if (aet::CheckAetSetLoading(results::AetSetID) || spr::CheckSprSetLoading(results::SprSetID))
 			return false;
 	}
 
@@ -150,7 +156,7 @@ HOOK(bool, __fastcall, StageResultPS4Ctrl, 0x140232010, StageResultPS4* result)
 
 	if (result->state == 10)
 	{
-		if (!belt)
+		if (!belt && state.GetGameStyle() != GameStyle_Arcade)
 			belt = std::make_unique<StyleBelt>();
 	}
 
@@ -163,8 +169,8 @@ HOOK(bool, __fastcall, StageResultPS4Ctrl, 0x140232010, StageResultPS4* result)
 HOOK(bool, __fastcall, StageResultPS4Dest, 0x140232DD0, uint64_t a1)
 {
 	belt.reset();
-	aet::UnloadAetSet(14010070);
-	spr::UnloadSprSet(14020070);
+	aet::UnloadAetSet(results::AetSetID);
+	spr::UnloadSprSet(results::SprSetID);
 	return originalStageResultPS4Dest(a1);
 }
 
