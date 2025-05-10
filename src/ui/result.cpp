@@ -57,12 +57,20 @@ void nc::InitResultsData(ScoreDetail* detail)
 
 	if (state.chance_time.IsValid())
 	{
-		ct_perc = {
-			ChanceTimeRetainedRate * 100,
-			static_cast<int32_t>(ChanceTimeRetainedRate * 100000) % 100
-		};
+		if (state.chance_time.successful)
+		{
+			ct_perc = {
+				ChanceTimeRetainedRate * 100,
+				static_cast<int32_t>(ChanceTimeRetainedRate * 100000) % 100
+			};
 
-		ct_result_txt_id = state.chance_time.successful ? 3031571741 : 2360194960;
+			ct_result_txt_id = 3031571741;
+		}
+		else
+		{
+			ct_perc = { 0, 0 };
+			ct_result_txt_id = 2360194960;
+		}
 	}
 
 	if (detail)
