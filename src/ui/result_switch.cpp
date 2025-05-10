@@ -33,7 +33,7 @@ static prj::string GetModeLayerName(int32_t kind, bool no_fail)
 		+ "_"
 		+ (no_fail ? "nofail_" : "")
 		+ kinds[kind]
-		+ "_en";
+		+ (GetGameLocale() == GameLocale_JP ? "_jp" : "_en");
 }
 
 static prj::string GetWindowLayerName(int32_t kind)
@@ -42,7 +42,7 @@ static prj::string GetWindowLayerName(int32_t kind)
 
 	return prj::string("nsw_win_arcard_")
 		+ kinds[kind]
-		+ "_en";
+		+ (GetGameLocale() == GameLocale_JP ? "_jp" : "_en");
 }
 
 static bool CheckLayerNameMatchesNC(std::string_view name)
