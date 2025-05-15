@@ -120,9 +120,6 @@ void SoundEffectManager::ClearSchedules()
 
 void SoundEffectManager::UpdateSchedules()
 {
-	if (timers[1].IsRunning())
-		printf("ELLAPSE: %.2f\n", timers[1].Ellapsed() * 1000.0f);
-
 	if (timers[0].Ellapsed() >= 0.05f)
 	{
 		PlayButtonSE();
