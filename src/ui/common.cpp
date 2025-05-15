@@ -251,6 +251,9 @@ void HorizontalSelector::Ctrl()
 
 	if (auto layout = GetLayout("p_opt_arrow_r01_c"); layout.has_value())
 		arrow_r.SetPosition(layout.value().position + GetArgs().pos);
+
+	arrow_l.SetOpacity(GetArgs().color.w);
+	arrow_r.SetOpacity(GetArgs().color.w);
 }
 
 void HorizontalSelector::Disp()

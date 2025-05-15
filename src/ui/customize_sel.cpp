@@ -110,6 +110,7 @@ protected:
 	AetElement fade_base;
 	AetElement sub_menu_base;
 	AetElement help_loc;
+	AetElement subhelp_loc;
 	std::vector<std::unique_ptr<HorizontalSelector>> selectors;
 	std::vector<SelectorExtraData> user_data;
 	float win_opacity = 1.0f;
@@ -137,6 +138,8 @@ protected:
 		{ 2211731674, 2257174132, 2940751399, 160436885, 0 }
 	};
 
+	static constexpr uint32_t SoundPrioSubhelpMM[3] = { 2163775515, 1748614505, 2008681813 };
+	static constexpr uint32_t SoundPrioSubhelpPS4[3] = { 2775564751, 2489232069, 3322578733 };
 	static constexpr uint32_t PS4WinTitleSpriteID = 1861400143;
 
 	void CreateWindowBase()
@@ -147,12 +150,16 @@ protected:
 			fade_base.SetLayer("ps4_help_win_bg", WindowPrio - 1, 14, AetAction_InLoop);
 			help_loc.SetScene(SceneID);
 			help_loc.SetLayer("ps4_nc_help_loc", WindowPrio + 1, 14, AetAction_InLoop);
+			subhelp_loc.SetScene(SceneID);
+			subhelp_loc.SetLayer("ps4_nc_subhelp_loc", WindowPrio + 1, 14, AetAction_InLoop);
 			SetLayer("ps4_help_win_l_back_t", WindowPrio, 14, AetAction_InLoop);
 		}
 		else
 		{
 			help_loc.SetScene(SceneID);
 			help_loc.SetLayer("nsw_nc_help_loc", WindowPrio + 1, 14, AetAction_InLoop);
+			subhelp_loc.SetScene(SceneID);
+			subhelp_loc.SetLayer("nsw_nc_subhelp_loc", WindowPrio + 1, 14, AetAction_InLoop);
 			SetLayer("nsw_cmn_win_nc_options_g_inout", WindowPrio, 14, AetAction_InLoop);
 		}
 	}
@@ -205,13 +212,17 @@ public:
 
 		if (game::IsFutureToneMode())
 		{
-			// TODO: Get opacity
+			if (auto layout = GetLayout("ps4_cmn_t_win_l_side.pic"); layout.has_value())
+				win_opacity = layout.value().opacity;
 		}
 		else
 		{
 			if (auto layout = GetLayout("nswgam_cmn_win_base.pic"); layout.has_value())
 				win_opacity = layout.value().opacity;
 		}
+
+		help_loc.SetOpacity(win_opacity);
+		subhelp_loc.SetOpacity(win_opacity);
 
 		for (auto& selector : selectors)
 		{
@@ -233,6 +244,9 @@ public:
 			DrawSpriteAt("p_win_img_c", TabInfoSprites[0][selected_tab]);
 			DrawSpriteAt("p_win_tit_lt", PS4WinTitleSpriteID);
 			help_loc.DrawSpriteAt("p_help_loc_c", OptionInfoSpritesPS4[selected_tab][selected_option]);
+
+			if (selected_tab == 1 && selected_option == 3)
+				subhelp_loc.DrawSpriteAt("p_subhelp_loc_c", SoundPrioSubhelpPS4[nc::GetSharedData().sound_prio]);
 		}
 		else
 		{
@@ -241,6 +255,9 @@ public:
 			DrawSpriteAt("p_nc_img_02_c", TabInfoSprites[1][prev_selected_tab]);
 			DrawSpriteAt("p_nc_img_01_c", TabInfoSprites[1][selected_tab]);
 			help_loc.DrawSpriteAt("p_help_loc_c", OptionInfoSpritesMM[selected_tab][selected_option]);
+
+			if (selected_tab == 1 && selected_option == 3)
+				subhelp_loc.DrawSpriteAt("p_subhelp_loc_c", SoundPrioSubhelpMM[nc::GetSharedData().sound_prio]);
 		}
 	}
 
