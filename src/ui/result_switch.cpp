@@ -83,9 +83,12 @@ HOOK(void, __fastcall, CAetControllerInLoopOutSetLayer, 0x14065E7D0, void* a1, c
 	}
 	else if (util::StartsWith(in, "win_arcard") && util::StartsWith(loop, "win_arcard"))
 	{
-		patched_in = GetWindowLayerName(0);
-		patched_lp = GetWindowLayerName(1);
-		patched_out = GetWindowLayerName(2);
+		if (nc::ShouldUseConsoleStyleWin())
+		{
+			patched_in = GetWindowLayerName(0);
+			patched_lp = GetWindowLayerName(1);
+			patched_out = GetWindowLayerName(2);
+		}
 	}
 	
 	originalCAetControllerInLoopOutSetLayer(a1, patched_in, patched_lp, patched_out, prio);
@@ -111,8 +114,6 @@ HOOK(bool, __fastcall, StageResultSwitchInit, 0x14064C0E0, void* a1)
 	prj::string_view strv;
 	aet::LoadAetSet(results::AetSetID, &out);
 	spr::LoadSprSet(results::SprSetID, &strv);
-
-	// nc::InitResultsData(reinterpret_cast<ScoreDetail*>(a1));
 	return originalStageResultSwitchInit(a1);
 }
 
