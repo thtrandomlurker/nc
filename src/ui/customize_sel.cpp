@@ -5,9 +5,9 @@
 #include <nc_log.h>
 #include <sound_db.h>
 #include <save_data.h>
-#include <helpers.h>
 #include <input.h>
 #include <util.h>
+#include <game/sound_effects.h>
 #include "common.h"
 #include "customize_sel.h"
 
@@ -35,42 +35,6 @@ struct SelectorExtraData
 	std::vector<SoundOptionInfo> sounds;
 };
 
-static std::string GetGameSoundEffect(int32_t kind)
-{
-	if (kind < 0 || kind >= 6)
-		return "";
-
-	int32_t pv_id = game::GetGlobalPVInfo()->pv_id;
-	int32_t difficulty = util::Clamp(game::GetGlobalPVInfo()->difficulty, 0, 3);
-
-	if (auto* data = static_cast<int32_t*>(game::GetConfigSet(game::GetSaveData(), pv_id, false)); data != nullptr)
-	{
-		int32_t id = data[kind];
-		if (kind == 0)
-		{
-			if (id == 0)
-			{
-				if (auto* pv_entry = pv_db::FindPVEntry(pv_id); pv_entry != nullptr)
-				{
-					if (auto* diff_entry = pv_db::FindDifficulty(pv_entry, difficulty, 0); diff_entry != nullptr)
-						return std::string(diff_entry->button_se);
-				}
-			}
-
-			if (auto* se = game::GetButtonSE(id); se != nullptr)
-				return std::string(se->se_name);
-		}
-		else if (kind == 3)
-		{
-			// NOTE: This is actually hardcoded into the original CustomizeSel code so
-			//       I don't feel bad about hardcoding it here
-			return id == 1 ? "se_ft_option_preview_laser" : "se_ft_option_preview_windchime";
-		}
-	}
-
-	return "";
-}
-
 static void PlayPreviewSoundEffect(HorizontalSelector* sel_base, const void* extra)
 {
 	HorizontalSelectorMulti* sel = dynamic_cast<HorizontalSelectorMulti*>(sel_base);
@@ -82,11 +46,11 @@ static void PlayPreviewSoundEffect(HorizontalSelector* sel_base, const void* ext
 	{
 		if (ex_data->same_id == 1)
 		{
-			se_name = GetGameSoundEffect(0);
+			se_name = sound_effects::GetGameSoundEffect(0);
 		}
 		else if (ex_data->same_id == 2)
 		{
-			const auto* snd = FindWithID(*sound_db::GetStarSoundDB(), nc::GetConfigSet()->star_se_id);
+			const auto* snd = util::FindWithID(*sound_db::GetStarSoundDB(), nc::GetConfigSet()->star_se_id);
 			if (snd != nullptr)
 				se_name = snd->se_name;
 		}
@@ -109,10 +73,10 @@ static void PlayControlSEPreview(HorizontalSelector* sel_base, const void*)
 	switch (sel->selected_index)
 	{
 	case 0:
-		se_name = GetGameSoundEffect(3);
+		se_name = sound_effects::GetGameSoundEffect(3);
 		break;
 	case 1:
-		if (const auto* snd = FindWithID(*sound_db::GetStarSoundDB(), nc::GetConfigSet()->star_se_id); snd != nullptr)
+		if (const auto* snd = util::FindWithID(*sound_db::GetStarSoundDB(), nc::GetConfigSet()->star_se_id); snd != nullptr)
 			se_name = snd->se_name;
 		break;
 	}

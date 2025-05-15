@@ -33,7 +33,6 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 
 	// NOTE: Update input manager
 	macro_state.Update(game->ptr08, 0);
-	state.sound_effects.SetSoundEffects(*se);
 
 	if (ShouldUpdateTargets())
 	{
@@ -63,7 +62,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					tgt->StopAet();
 					tgt->holding = false;
 					state.PopTarget(tgt);
-					state.PlaySoundEffect(SEType_LongFail);
+					se_mgr.EndLongSE(true);
 					GetPVGameData()->ui.RemoveBonusText();
 				}
 			}
@@ -78,7 +77,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 
 					if (tgt->target_type == TargetType_StarRush)
 					{
-						state.PlaySoundEffect(SEType_Star);
+						se_mgr.PlayStarSE();
 						game->mute_slide_chime = true;
 						*play_default_se = false;
 					}
@@ -183,7 +182,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					if (!ex->IsWrong())
 					{
 						ex->SetRushNoteAet();
-						state.PlaySoundEffect(SEType_RushStart);
+						se_mgr.StartRushBackSE();
 					}
 					else
 						state.PopTarget(ex);
@@ -247,38 +246,41 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					case TargetType_CircleRush:
 					case TargetType_CrossRush:
 					case TargetType_SquareRush:
-						sound::PlaySoundEffect(3, se->button.c_str(), 1.0f);
+						se_mgr.PlayButtonSE();
 						break;
 					case TargetType_UpW:
 					case TargetType_RightW:
 					case TargetType_DownW:
 					case TargetType_LeftW:
-						state.PlaySoundEffect(SEType_Double);
+						se_mgr.PlayDoubleSE();
 						break;
 					case TargetType_TriangleLong:
 					case TargetType_CircleLong:
 					case TargetType_CrossLong:
 					case TargetType_SquareLong:
-						state.PlaySoundEffect(ex->IsLongNoteStart() ? SEType_LongStart : SEType_LongRelease);
+						if (ex->IsLongNoteStart())
+							se_mgr.StartLongSE();
+						else
+							se_mgr.EndLongSE(false);
 						break;
 					case TargetType_LinkStar:
-						if (ex->IsLinkNoteStart()) { state.PlaySoundEffect(SEType_LinkStart); }
+						if (ex->IsLinkNoteStart()) { se_mgr.StartLinkSE(); }
 						[[fallthrough]];
 					case TargetType_Star:
 					case TargetType_StarRush:
 					case TargetType_LinkStarEnd:
-						state.PlaySoundEffect(SEType_Star);
+						se_mgr.PlayStarSE();
 						game->mute_slide_chime = true;
 						break;
 					case TargetType_ChanceStar:
 						if (state.chance_time.GetFillRate() == 15)
-							state.PlaySoundEffect(SEType_Cymbal);
+							se_mgr.PlayCymbalSE();
 						else
-							state.PlaySoundEffect(SEType_Star);
+							se_mgr.PlayStarSE();
 						game->mute_slide_chime = true;
 						break;
 					case TargetType_StarW:
-						state.PlaySoundEffect(SEType_StarDouble);
+						se_mgr.PlayStarDoubleSE();
 						game->mute_slide_chime = true;
 						break;
 					}
@@ -287,12 +289,12 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 				}
 				else if (ex->IsLongNoteEnd())
 				{
-					state.PlaySoundEffect(SEType_LongFail);
+					se_mgr.EndLongSE(true);
 					GetPVGameData()->ui.RemoveBonusText();
 				}
 
 				if (ex->IsLinkNoteEnd())
-					state.PlaySoundEffect(SEType_LinkEnd);
+					se_mgr.EndLinkSE();
 			}
 		}
 	}
@@ -331,7 +333,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	if (*play_default_se && nc::GetSharedData().stick_control_se == 1 && state.GetGameStyle() != GameStyle_Arcade)
 	{
 		if (macro_state.GetStarHit())
-			state.PlaySoundEffect(SEType_Star);
+			se_mgr.PlayStarSE();
 		game->mute_slide_chime = true;
 	}
 

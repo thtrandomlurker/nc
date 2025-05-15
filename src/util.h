@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <vector>
 #include <string>
 #include <string_view>
 
@@ -32,6 +33,15 @@ namespace util
 	inline T Wrap(T value, T min, T max)
 	{
 		return value < min ? max : value > max ? min : value;
+	}
+
+	template <typename T>
+	const T* FindWithID(const std::vector<T>& vec, int32_t id)
+	{
+		for (const auto& data : vec)
+			if (data.id == id)
+				return &data;
+		return nullptr;
 	}
 
 	inline int32_t ColorF32I32(float r, float g, float b, float a)

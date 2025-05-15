@@ -7,6 +7,7 @@
 #include "db.h"
 #include "game/score.h"
 #include "game/tech_zone.h"
+#include "game/sound_effects.h"
 
 constexpr float ChanceTimeRetainedRate = 0.05; // 5%
 
@@ -277,22 +278,6 @@ struct UIState
 	void ResetAllLayers();
 };
 
-struct SoundEffects
-{
-	std::string w_button;
-	std::string l_button_on;
-	std::string l_button_off;
-	std::string star;
-	std::string w_star;
-	// std::string l_star_on;
-	// std::string l_star_off;
-	std::string link;
-	std::string rush_on;
-	std::string rush_off;
-
-	void SetSoundEffects(const SoundEffect& org);
-};
-
 struct StateEx
 {
 	static constexpr int32_t MaxHitEffectCount = 4;
@@ -312,14 +297,12 @@ struct StateEx
 	std::optional<db::SongEntry> nc_song_entry;
 	std::optional<db::ChartEntry> nc_chart_entry;
 	ScoreState score;
-	SoundEffects sound_effects;
 
 	void ResetPlayState();
 	void ResetAetData();
 	void Reset();
 	bool PushTarget(TargetStateEx* ex);
 	bool PopTarget(TargetStateEx* ex);
-	void PlaySoundEffect(int32_t type);
 	void PlayRushHitEffect(const diva::vec2& pos, float scale, bool pop);
 
 	int32_t GetScoreMode() const;
@@ -338,6 +321,7 @@ constexpr float KisekiInterval = 1.0f / KisekiRate;
 // NOTE: Global state
 inline MacroState macro_state = { };
 inline StateEx state = { };
+inline SoundEffectManager se_mgr = { };
 
 // NOTE: Helper functions
 TargetStateEx* GetTargetStateEx(int32_t index, int32_t sub_index);

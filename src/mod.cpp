@@ -100,6 +100,7 @@ HOOK(bool, __fastcall, TaskPvGameInit, 0x1405DA040, uint64_t a1)
 		nc::Print("Failed to load se_nc.farc\n");
 
 	state.Reset();
+	se_mgr.Init();
 
 	macro_state.sensivity = 1.0f - nc::GetSharedData().stick_sensitivity / 100.0f;
 	return originalTaskPvGameInit(a1);

@@ -177,6 +177,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClCompile Include="src\game\hit_state.cpp" />
     <ClCompile Include="src\game\note_link.cpp" />
     <ClCompile Include="src\game\score.cpp" />
+    <ClCompile Include="src\game\sound_effects.cpp" />
     <ClCompile Include="src\game\target.cpp" />
     <ClCompile Include="src\game\tech_zone.cpp" />
     <ClCompile Include="src\input.cpp" />
@@ -199,8 +200,8 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
   <ItemGroup>
     <ClInclude Include="src\db.h" />
     <ClInclude Include="src\game\score.h" />
+    <ClInclude Include="src\game\sound_effects.h" />
     <ClInclude Include="src\game\tech_zone.h" />
-    <ClInclude Include="src\helpers.h" />
     <ClInclude Include="src\nc_state.h" />
     <ClInclude Include="src\diva.h" />
     <ClInclude Include="src\game\chance_time.h" />

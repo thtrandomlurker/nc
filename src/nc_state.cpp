@@ -1,6 +1,5 @@
 #include "save_data.h"
 #include "sound_db.h"
-#include "helpers.h"
 #include "shared.h"
 #include "nc_state.h"
 
@@ -159,40 +158,6 @@ void UIState::ResetAllLayers()
 	}
 }
 
-void SoundEffects::SetSoundEffects(const SoundEffect& org)
-{
-	auto tryFindSound = [&](int32_t id, const std::vector<SoundInfo>& data, std::string fallback = "", int32_t default_id = -1)
-	{
-		if (id > 0)
-		{
-			if (auto* info = FindWithID(data, id); info != nullptr)
-				return info->se_name;
-		}
-		else if (id == -2 && default_id != -1 && state.nc_song_entry.has_value())
-		{
-			switch (default_id)
-			{
-			case 0:
-				return state.nc_song_entry.value().star_se_name;
-			default:
-				break;
-			}
-		}
-
-		return fallback;
-	};
-
-	const auto& config = *nc::GetConfigSet();
-	w_button = tryFindSound(config.button_w_se_id, *sound_db::GetButtonWSoundDB(), org.button.c_str());
-	l_button_on = tryFindSound(config.button_l_se_id, *sound_db::GetButtonLongOnSoundDB(), org.button.c_str());
-	l_button_off = tryFindSound(config.button_l_se_id, *sound_db::GetButtonLongOffSoundDB(), org.button.c_str());
-	star = tryFindSound(config.star_se_id, *sound_db::GetStarSoundDB(), "", 0);
-	w_star = tryFindSound(config.star_w_se_id, *sound_db::GetStarWSoundDB(), star);
-	link = tryFindSound(config.link_se_id, *sound_db::GetLinkSoundDB(), "");
-	rush_on = "se_pv_button_rush1_on";
-	rush_off = "se_pv_button_rush1_off";
-}
-
 void StateEx::ResetPlayState()
 {
 	target_references.clear();
@@ -251,55 +216,6 @@ bool StateEx::PopTarget(TargetStateEx* ex)
 	}
 
 	return false;
-}
-
-void StateEx::PlaySoundEffect(int32_t type)
-{
-	switch (type)
-	{
-	case SEType_Double:
-		sound::PlaySoundEffect(3, sound_effects.w_button.c_str(), 1.0f);
-		break;
-	case SEType_LongStart:
-		sound::ReleaseCue(3, sound_effects.l_button_on.c_str(), true);
-		sound::PlaySoundEffect(3, sound_effects.l_button_on.c_str(), 1.0f);
-		break;
-	case SEType_LongRelease:
-		sound::ReleaseCue(3, sound_effects.l_button_on.c_str(), true);
-		sound::PlaySoundEffect(3, sound_effects.l_button_off.c_str(), 1.0f);
-		break;
-	case SEType_LongFail:
-		sound::ReleaseCue(3, sound_effects.l_button_on.c_str(), false);
-		break;
-	case SEType_Star:
-		sound::PlaySoundEffect(3, sound_effects.star.c_str(), 1.0f);
-		break;
-	case SEType_Cymbal:
-		sound::PlaySoundEffect(3, "cymbal_mmv", 1.0f);
-		break;
-	case SEType_StarDouble:
-		sound::PlaySoundEffect(3, sound_effects.w_star.c_str(), 1.0f);
-		break;
-	case SEType_RushStart:
-		sound::ReleaseCue(3, sound_effects.rush_on.c_str(), true);
-		sound::PlaySoundEffect(3, sound_effects.rush_on.c_str(), 1.0f);
-		break;
-	case SEType_RushPop:
-		sound::ReleaseCue(3, sound_effects.rush_on.c_str(), true);
-		sound::PlaySoundEffect(3, sound_effects.rush_off.c_str(), 1.0f);
-		break;
-	case SEType_RushFail:
-		sound::ReleaseCue(3, sound_effects.rush_on.c_str(), false);
-		break;
-	case SEType_LinkStart:
-		if (!sound_effects.link.empty())
-			sound::PlaySoundEffect(3, sound_effects.link.c_str(), 1.0f);
-		break;
-	case SEType_LinkEnd:
-		if (!sound_effects.link.empty())
-			sound::ReleaseCue(3, sound_effects.link.c_str(), false);
-		break;
-	}
 }
 
 void StateEx::PlayRushHitEffect(const diva::vec2& pos, float scale, bool pop)

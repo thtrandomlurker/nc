@@ -247,12 +247,10 @@ HOOK(void, __fastcall, UpdateTargets, 0x14026DD80, PVGameArcade* data, float dt)
 					{
 						diva::vec2 pos = GetScaledPosition(tgt->target_pos);
 						state.PlayRushHitEffect(pos, 1.0f + tgt->bal_scale, true);
-						state.PlaySoundEffect(SEType_RushPop);
+						se_mgr.EndRushBackSE(true);
 					}
 					else
-					{
-						state.PlaySoundEffect(SEType_RushFail);
-					}
+						se_mgr.EndRushBackSE(false);
 
 					tgt->StopAet();
 				}
