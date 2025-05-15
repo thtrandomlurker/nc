@@ -30,9 +30,12 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	void* a16)
 {
 	int32_t final_hit_state = HitState_None;
+	bool should_play_star_se = true;
+	bool schedule_star_se = false;
 
 	// NOTE: Update input manager
 	macro_state.Update(game->ptr08, 0);
+	se_mgr.UpdateSchedules();
 
 	if (ShouldUpdateTargets())
 	{
@@ -110,6 +113,43 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	if (has_custom_note && has_vanilla_note)
 	{
 		nc::Print("Target #%d is a multi note that mixes Vanilla and custom notes. That is not supported and might cause some issues.", group[0]->target_index);
+	}
+
+	// NOTE: Check sound prio
+	int32_t snd_prio = nc::GetSharedData().sound_prio;
+	if (ShouldUpdateTargets() && snd_prio != 0)
+	{
+		if (group_count > 0)
+		{
+			bool in_window = group[0]->flying_time_remaining >= game->sad_late_window && group[0]->flying_time_remaining <= game->sad_early_window;
+			bool wbutton = group[0]->target_type >= TargetType_UpW && group[0]->target_type <= TargetType_LeftW;
+			bool wstar = group[0]->target_type == TargetType_StarW;
+			bool button_tapped = (macro_state.GetTappedBitfield() & GetMainButtonsMask()) != 0;
+
+			if (in_window && snd_prio == 1) // Delay
+			{
+				if (wbutton && button_tapped)
+				{
+					*play_default_se = false;
+					se_mgr.ScheduleButtonSound();
+				}
+				else if (wstar)
+				{
+					schedule_star_se = true;
+					game->mute_slide_chime = true;
+				}
+			}
+			else if (in_window && snd_prio == 2) // Mute
+			{
+				if (wbutton && game->bool1328E)
+					*play_default_se = false;
+				else if (wstar && macro_state.GetStarHit())
+				{
+					should_play_star_se = false;
+					game->mute_slide_chime = true;
+				}
+			}
+		}
 	}
 
 	if (has_vanilla_note || !ShouldUpdateTargets() || group_count < 1)
@@ -253,6 +293,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					case TargetType_DownW:
 					case TargetType_LeftW:
 						se_mgr.PlayDoubleSE();
+						se_mgr.ClearSchedules();
 						break;
 					case TargetType_TriangleLong:
 					case TargetType_CircleLong:
@@ -281,11 +322,17 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 						break;
 					case TargetType_StarW:
 						se_mgr.PlayStarDoubleSE();
+						se_mgr.ClearSchedules();
 						game->mute_slide_chime = true;
 						break;
 					}
 
 					*play_default_se = false;
+				}
+				else if (nc::IsHitWrong(hit_state))
+				{
+					*play_default_se = true;
+					se_mgr.ClearSchedules();
 				}
 				else if (ex->IsLongNoteEnd())
 				{
@@ -330,10 +377,16 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 			tz.PushNewHitState(*target_index, final_hit_state);
 	}
 
-	if (*play_default_se && nc::GetSharedData().stick_control_se == 1 && state.GetGameStyle() != GameStyle_Arcade)
+	if (should_play_star_se && *play_default_se && nc::GetSharedData().stick_control_se == 1 && state.GetGameStyle() != GameStyle_Arcade)
 	{
 		if (macro_state.GetStarHit())
-			se_mgr.PlayStarSE();
+		{
+			if (schedule_star_se)
+				se_mgr.ScheduleStarSound();
+			else
+				se_mgr.PlayStarSE();
+		}
+
 		game->mute_slide_chime = true;
 	}
 

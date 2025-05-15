@@ -2,6 +2,7 @@
 
 #include <string>
 #include <diva.h>
+#include <nc_time.h>
 
 class SoundEffectManager
 {
@@ -21,6 +22,11 @@ public:
 	void EndRushBackSE(bool popped);
 	void StartLinkSE();
 	void EndLinkSE();
+
+	void ScheduleButtonSound();
+	void ScheduleStarSound();
+	void ClearSchedules();
+	void UpdateSchedules();
 private:
 	std::string button;
 	std::string w_button;
@@ -31,6 +37,7 @@ private:
 	std::string link;
 	std::string rush_on;
 	std::string rush_off;
+	nc::Timer timers[2];
 };
 
 namespace sound_effects

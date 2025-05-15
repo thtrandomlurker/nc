@@ -22,14 +22,19 @@ namespace nc
 			hit == HitState_CoolQuad || hit == HitState_FineQuad;
 	}
 
-	// NOTE: Returns true if the hit state is any WRONG or WORST
-	inline bool IsHitMiss(int32_t hit)
+	// NOTE: Returns true if the hit state is WRONG
+	inline bool IsHitWrong(int32_t hit)
 	{
 		return hit == HitState_WrongCool ||
 			hit == HitState_WrongFine ||
 			hit == HitState_WrongSafe ||
-			hit == HitState_WrongSad ||
-			hit == HitState_Worst;
+			hit == HitState_WrongSad;
+	}
+
+	// NOTE: Returns true if the hit state is any WRONG or WORST
+	inline bool IsHitMiss(int32_t hit)
+	{
+		return IsHitWrong(hit) || hit == HitState_Worst;
 	}
 
 	int32_t JudgeNoteHit(PVGameArcade* game, PvGameTarget** group, TargetStateEx** extras, int32_t group_count, bool* success);

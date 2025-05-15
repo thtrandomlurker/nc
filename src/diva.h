@@ -707,7 +707,10 @@ struct PVGameArcade
 	float safe_late_window;
 	float sad_early_window;
 	float sad_late_window;
-	uint8_t gap1328C[4];
+	uint8_t byte1328C;
+	uint8_t byte1328D;
+	bool bool1328E;
+	uint8_t byte1328F;
 	float current_time;
 	int32_t int13294;
 	int32_t hit_effects[64];

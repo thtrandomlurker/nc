@@ -382,3 +382,11 @@ uint64_t GetButtonMask(int32_t button)
 
 	return static_cast<uint64_t>(1) << static_cast<uint64_t>(button);
 }
+
+uint64_t GetMainButtonsMask()
+{
+	uint64_t mask = 0;
+	for (int i = 0; i < 8; i++)
+		mask |= GetButtonMask(i);
+	return mask;
+}

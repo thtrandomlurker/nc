@@ -1,3 +1,5 @@
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include <util.h>
 #include <sound_db.h>
 #include <nc_state.h>
@@ -38,6 +40,7 @@ void SoundEffectManager::Init()
 	link = tryFindSound(config.link_se_id, *sound_db::GetLinkSoundDB(), "");
 	rush_on = "se_pv_button_rush1_on";
 	rush_off = "se_pv_button_rush1_off";
+	ClearSchedules();
 }
 
 void SoundEffectManager::PlayButtonSE()
@@ -97,6 +100,40 @@ void SoundEffectManager::StartLinkSE()
 void SoundEffectManager::EndLinkSE()
 {
 	sound::ReleaseCue(QueueIndex, link.c_str(), false);
+}
+
+void SoundEffectManager::ScheduleButtonSound()
+{
+	timers[0].Start();
+}
+
+void SoundEffectManager::ScheduleStarSound()
+{
+	timers[1].Start();
+}
+
+void SoundEffectManager::ClearSchedules()
+{
+	timers[0].Stop(true);
+	timers[1].Stop(true);
+}
+
+void SoundEffectManager::UpdateSchedules()
+{
+	if (timers[1].IsRunning())
+		printf("ELLAPSE: %.2f\n", timers[1].Ellapsed() * 1000.0f);
+
+	if (timers[0].Ellapsed() >= 0.05f)
+	{
+		PlayButtonSE();
+		timers[0].Stop(true);
+	}
+
+	if (timers[1].Ellapsed() >= 0.05f)
+	{
+		PlayStarSE();
+		timers[1].Stop(true);
+	}
 }
 
 std::string sound_effects::GetGameSoundEffect(int32_t kind)
