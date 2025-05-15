@@ -352,6 +352,13 @@ public:
 			tz->values.push_back("X");
 			tz->selected_index = config_set->tech_zone_style;
 			tz->SetOnChangeNotifier([this](int32_t index) { config_set->tech_zone_style = index; });
+
+			auto* snd = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(9, 4);
+			snd->values.push_back("Disabled");
+			snd->values.push_back("Delay");
+			snd->values.push_back("Mute");
+			snd->selected_index = nc::GetSharedData().sound_prio;
+			snd->SetOnChangeNotifier([](int32_t index) { nc::GetSharedData().sound_prio = index; });
 		}
 
 		SetSelectorIndex(0);

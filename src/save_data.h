@@ -34,7 +34,8 @@ struct SharedData
 	uint8_t stick_control_se = 0; // NOTE: Applies to console and mixed styles; Arcade is forced to slidechime.
 	uint8_t _padding1[3]; // NOTE: Do not use this data; May be set from previous versions of the format.
 	int32_t stick_sensitivity = 50;
-	uint8_t reserved[244];
+	int32_t sound_prio = 0;
+	uint8_t reserved[240];
 
 	SharedData()
 	{
