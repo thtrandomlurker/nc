@@ -83,6 +83,12 @@ void AetElement::SetMarkers(const std::string& start_marker, const std::string& 
 	handle = aet::Play(&args, handle);
 }
 
+void AetElement::SetMarkers(const std::string& start_marker, const std::string& end_marker, bool loop)
+{
+	SetLoop(loop);
+	SetMarkers(start_marker, end_marker);
+}
+
 bool AetElement::DrawSpriteAt(std::string layer_name, uint32_t sprite_id, int32_t prio) const
 {
 	if (auto layout = GetLayout(layer_name); layout.has_value())
@@ -193,18 +199,30 @@ void HorizontalSelector::Ctrl()
 
 	if (enter_anim_state == 0)
 	{
-		SetLoop(false);
-		SetMarkers("st_sp", "ed_sp");
+		SetMarkers("st_sp", "ed_sp", false);
+		arrow_l.SetMarkers("st_sp", "ed_sp", false);
+		arrow_r.SetMarkers("st_sp", "ed_sp", false);
 		enter_anim_state = 1;
+		sp_ended = false;
+		arrow_sp_ended = false;
 	}
 	else if (enter_anim_state == 1)
 	{
 		if (Ended())
 		{
-			SetLoop(true);
-			SetMarkers("st_lp", "ed_lp");
-			enter_anim_state = -1;
+			SetMarkers("st_lp", "ed_lp", true);
+			sp_ended = true;
 		}
+
+		if (arrow_l.Ended() && arrow_r.Ended())
+		{
+			arrow_l.SetMarkers("st_lp", "ed_lp", true);
+			arrow_r.SetMarkers("st_lp", "ed_lp", true);
+			arrow_sp_ended = true;
+		}
+
+		if (sp_ended && arrow_sp_ended)
+			enter_anim_state = -1;
 	}
 
 	if (IsFocused() != focused_old)
@@ -213,12 +231,26 @@ void HorizontalSelector::Ctrl()
 		enter_anim_state = -1;
 
 		if (IsFocused())
+		{
 			SetMarkers("st_lp", "ed_lp");
+			arrow_l.SetMarkers("st_lp", "ed_lp", true);
+			arrow_r.SetMarkers("st_lp", "ed_lp", true);
+		}
 		else
+		{
 			SetMarkers("st_in", "ed_in");
+			arrow_l.SetMarkers("st_in", "ed_in", false);
+			arrow_r.SetMarkers("st_in", "ed_in", false);
+		}
 
 		focused_old = IsFocused();
 	}
+
+	if (auto layout = GetLayout("p_opt_arrow_l01_c"); layout.has_value())
+		arrow_l.SetPosition(layout.value().position + GetArgs().pos);
+
+	if (auto layout = GetLayout("p_opt_arrow_r01_c"); layout.has_value())
+		arrow_r.SetPosition(layout.value().position + GetArgs().pos);
 }
 
 void HorizontalSelector::Disp()
@@ -226,6 +258,9 @@ void HorizontalSelector::Disp()
 	std::optional<AetLayout> layout = GetLayout("p_nc_setting_txt2_sel_c");
 	if (!layout.has_value())
 		layout = GetLayout("p_nc_setting_txt2_c");
+
+	if (!layout.has_value())
+		layout = GetLayout("p_opt_txt01_c");
 
 	if (layout.has_value())
 	{
@@ -250,6 +285,15 @@ void HorizontalSelector::Disp()
 	}
 }
 
+void HorizontalSelector::SetArrows(const std::string& left, const std::string& right)
+{
+	const AetArgs& args = GetArgs();
+	arrow_l.SetScene(GetSceneID());
+	arrow_l.SetLayer(left, args.prio + 1, args.res_mode, AetAction_InOnce);
+	arrow_r.SetScene(GetSceneID());
+	arrow_r.SetLayer(right, args.prio + 1, args.res_mode, AetAction_InOnce);
+}
+
 std::string HorizontalSelectorMulti::GetSelectedValue()
 {
 	if (selected_index < 0 || selected_index >= values.size() || values.empty())
@@ -262,12 +306,7 @@ void HorizontalSelectorMulti::ChangeValue(int32_t dir)
 	if (values.empty())
 		return;
 
-	selected_index += dir;
-	if (selected_index < 0)
-		selected_index = values.size() - 1;
-	else if (selected_index >= values.size())
-		selected_index = 0;
-
+	selected_index = util::Wrap<int32_t>(selected_index + dir, 0, values.size() - 1);
 	if (notify.has_value())
 		notify.value()(selected_index);
 }

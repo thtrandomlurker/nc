@@ -68,7 +68,9 @@ public:
 	void SetVisible(bool visible);
 	void SetColor(int32_t color);
 	void SetMarkers(const std::string& start_marker, const std::string& end_marker);
+	void SetMarkers(const std::string& start_marker, const std::string& end_marker, bool loop);
 
+	inline uint32_t GetSceneID() { return scene_id; }
 	inline const AetArgs& GetArgs() { return args; }
 	inline bool Ended() const { return aet::GetEnded(handle); }
 	inline bool IsPlaying() const { return handle != 0; }
@@ -129,6 +131,8 @@ public:
 
 	inline void SetExtraData(const void* data) { extra_data = data; }
 	inline void SetPreviewNotifier(PreviewNotifier func) { preview_notify = func; }
+
+	void SetArrows(const std::string& left, const std::string& right);
 protected:
 	virtual std::string GetSelectedValue() = 0;
 	virtual void ChangeValue(int32_t dir) = 0;
@@ -137,7 +141,12 @@ private:
 	std::optional<PreviewNotifier> preview_notify;
 	const void* extra_data = nullptr;
 	bool focused_old = false;
+	bool sp_ended = false;
+	bool arrow_sp_ended = false;
 	int32_t enter_anim_state = -1;
+
+	AetElement arrow_l; // NOTE: For FT UI
+	AetElement arrow_r; // ---------------
 };
 
 class HorizontalSelectorMulti : public HorizontalSelector

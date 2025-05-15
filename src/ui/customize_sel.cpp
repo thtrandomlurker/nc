@@ -12,12 +12,12 @@
 #include "customize_sel.h"
 
 constexpr int32_t PreviewQueueIndex = 3;
+constexpr uint32_t SceneID = 14010150;
 
 struct CSStateConfigNC
 {
 	bool window_open = false;
 	bool assets_loaded = false;
-	int32_t aet_scene_id = 14010150;
 } static cs_state;
 
 struct SoundOptionInfo
@@ -143,16 +143,78 @@ protected:
 	int32_t prev_selected_tab = 0;
 	int32_t selected_tab = 0;
 	int32_t selected_option = 0;
+	AetElement fade_base;
 	AetElement sub_menu_base;
+	AetElement help_loc;
 	std::vector<std::unique_ptr<HorizontalSelector>> selectors;
 	std::vector<SelectorExtraData> user_data;
 	float win_opacity = 1.0f;
 	ConfigSet* config_set;
 
-	static constexpr int32_t WindowPrio = 18;
+	static constexpr int32_t WindowPrio = 20;
 	static constexpr int32_t MaxTabCount = 2;
-	static constexpr uint32_t NumberSprites[3] = { 880817216, 1732835926, 3315147794 };
-	static constexpr uint32_t TabInfoSprites[MaxTabCount] = { 2099321196, 2806350346 };
+	static constexpr uint32_t NumberSprites[2][3] = {
+		{ 3084111403, 965335902,  268427239 }, // FT UI
+		{ 880817216,  1732835926, 3315147794 } // MM+ UI
+	};
+
+	static constexpr uint32_t TabInfoSprites[2][MaxTabCount] = {
+		{ 3180940432, 4017317092 }, // FT UI
+		{ 2099321196, 2806350346 }  // MM+ UI
+	};
+
+	static constexpr uint32_t OptionInfoSpritesMM[MaxTabCount][5] = {
+		{ 0, 0, 0, 0, 0 },
+		{ 1445577118, 2528592817, 2367656052, 3568576596, 0 }
+	};
+
+	static constexpr uint32_t OptionInfoSpritesPS4[MaxTabCount][5] = {
+		{ 0, 0, 0, 0, 0 },
+		{ 2211731674, 2257174132, 2940751399, 160436885, 0 }
+	};
+
+	static constexpr uint32_t PS4WinTitleSpriteID = 1861400143;
+
+	void CreateWindowBase()
+	{
+		if (game::IsFutureToneMode())
+		{
+			fade_base.SetScene(SceneID);
+			fade_base.SetLayer("ps4_help_win_bg", WindowPrio - 1, 14, AetAction_InLoop);
+			help_loc.SetScene(SceneID);
+			help_loc.SetLayer("ps4_nc_help_loc", WindowPrio + 1, 14, AetAction_InLoop);
+			SetLayer("ps4_help_win_l_back_t", WindowPrio, 14, AetAction_InLoop);
+		}
+		else
+		{
+			help_loc.SetScene(SceneID);
+			help_loc.SetLayer("nsw_nc_help_loc", WindowPrio + 1, 14, AetAction_InLoop);
+			SetLayer("nsw_cmn_win_nc_options_g_inout", WindowPrio, 14, AetAction_InLoop);
+		}
+	}
+
+	void CreateSubmenuBase(int32_t page_num)
+	{
+		std::string layer_name;
+		int32_t action;
+
+		if (game::IsFutureToneMode())
+		{
+			layer_name = util::Format("ps4_base_nc_anm_%02d", page_num);
+			action = AetAction_InLoop;
+		}
+		else
+		{
+			layer_name = util::Format("nsw_submenu_nc_anm_%02d", page_num);
+			action = AetAction_None;
+		}
+
+		if (!layer_name.empty())
+		{
+			sub_menu_base.SetScene(SceneID);
+			sub_menu_base.SetLayer(layer_name, WindowPrio, 14, action);
+		}
+	}
 
 public:
 	NCConfigWindow()
@@ -160,8 +222,8 @@ public:
 		AllowInputsWhenBlocked(true);
 		config_set = nc::GetConfigSet();
 
-		SetScene(cs_state.aet_scene_id);
-		SetLayer("cmn_win_nc_options_g_inout", WindowPrio, 14, AetAction_InLoop);
+		SetScene(SceneID);
+		CreateWindowBase();
 		ChangeTab(0);
 	}
 
@@ -177,8 +239,15 @@ public:
 			return;
 		}
 
-		if (auto layout = GetLayout("nswgam_cmn_win_base.pic"); layout.has_value())
-			win_opacity = layout.value().opacity;
+		if (game::IsFutureToneMode())
+		{
+			// TODO: Get opacity
+		}
+		else
+		{
+			if (auto layout = GetLayout("nswgam_cmn_win_base.pic"); layout.has_value())
+				win_opacity = layout.value().opacity;
+		}
 
 		for (auto& selector : selectors)
 		{
@@ -193,10 +262,22 @@ public:
 		for (auto& selector : selectors)
 			selector->Disp();
 
-		DrawSpriteAt("p_nc_page_num_10_c", NumberSprites[selected_tab + 1]);
-		DrawSpriteAt("p_nc_page_num_01_c", NumberSprites[MaxTabCount]);
-		DrawSpriteAt("p_nc_img_02_c", TabInfoSprites[prev_selected_tab]);
-		DrawSpriteAt("p_nc_img_01_c", TabInfoSprites[selected_tab]);
+		if (game::IsFutureToneMode())
+		{
+			DrawSpriteAt("p_num_n_c", NumberSprites[0][selected_tab + 1]);
+			DrawSpriteAt("p_num_d_c", NumberSprites[0][MaxTabCount]);
+			DrawSpriteAt("p_win_img_c", TabInfoSprites[0][selected_tab]);
+			DrawSpriteAt("p_win_tit_lt", PS4WinTitleSpriteID);
+			help_loc.DrawSpriteAt("p_help_loc_c", OptionInfoSpritesPS4[selected_tab][selected_option]);
+		}
+		else
+		{
+			DrawSpriteAt("p_nc_page_num_10_c", NumberSprites[1][selected_tab + 1]);
+			DrawSpriteAt("p_nc_page_num_01_c", NumberSprites[1][MaxTabCount]);
+			DrawSpriteAt("p_nc_img_02_c", TabInfoSprites[1][prev_selected_tab]);
+			DrawSpriteAt("p_nc_img_01_c", TabInfoSprites[1][selected_tab]);
+			help_loc.DrawSpriteAt("p_help_loc_c", OptionInfoSpritesMM[selected_tab][selected_option]);
+		}
 	}
 
 	void OnActionPressed(int32_t action) override
@@ -213,7 +294,8 @@ public:
 			ChangeTab(1);
 			break;
 		case KeyAction_Cancel:
-			SetLayer("cmn_win_nc_options_g_inout", WindowPrio, 14, AetAction_OutOnce);
+			SetMarkers("st_out", "ed_out", false);
+			fade_base.SetMarkers("st_out", "ed_out", false);
 			sound::ReleaseAllCues(PreviewQueueIndex);
 			sound::PlaySoundEffect(1, "se_ft_sys_dialog_close", 1.0f);
 			finishing = true;
@@ -247,12 +329,27 @@ public:
 		if (auto layout = sub_menu_base.GetLayout(util::Format("p_nc_submenu_%02d_c", loc_id)); layout.has_value())
 			pos = layout.value().position;
 
-		auto opt = std::make_unique<T>(
-			cs_state.aet_scene_id,
-			util::Format("option_submenu_nc_%02d__f", id),
-			WindowPrio,
-			14
-		);
+		std::unique_ptr<T> opt;
+		if (game::IsFutureToneMode())
+		{
+			opt = std::make_unique<T>(
+				SceneID,
+				util::Format("ps4_options_base_nc_%02d_ft", id),
+				WindowPrio,
+				14
+			);
+
+			opt->SetArrows("ps4_sel_arrow_l", "ps4_sel_arrow_r");
+		}
+		else
+		{
+			opt = std::make_unique<T>(
+				SceneID,
+				util::Format("nsw_option_submenu_nc_%02d__f", id),
+				WindowPrio,
+				14
+			);
+		}
 
 		opt->AllowInputsWhenBlocked(true);
 		opt->SetPosition(pos);
@@ -267,14 +364,8 @@ public:
 	void ChangeTab(int32_t dir)
 	{
 		prev_selected_tab = selected_tab;
-		selected_tab += dir;
-		if (selected_tab < 0)
-			selected_tab = MaxTabCount - 1;
-		else if (selected_tab >= MaxTabCount)
-			selected_tab = 0;
-
-		sub_menu_base.SetScene(cs_state.aet_scene_id);
-		sub_menu_base.SetLayer(util::Format("submenu_nc_anm_%02d", selected_tab + 1), 0x10000, 15, 14, "", "", nullptr);
+		selected_tab = util::Wrap(selected_tab + dir, 0, MaxTabCount - 1);
+		CreateSubmenuBase(selected_tab + 1);
 
 		auto putSoundEffectList = [&](int32_t id, int32_t loc_id, const std::vector<SoundInfo>& sounds, int32_t same_id, int8_t* selected_id)
 		{
