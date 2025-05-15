@@ -206,14 +206,6 @@ public:
 
 		switch (action)
 		{
-		case KeyAction_MoveUp:
-			if (SetSelectorIndex(-1, true))
-				sound::PlaySelectSE();
-			break;
-		case KeyAction_MoveDown:
-			if (SetSelectorIndex(1, true))
-				sound::PlaySelectSE();
-			break;
 		case KeyAction_SwapLeft:
 			ChangeTab(-1);
 			break;
@@ -225,6 +217,24 @@ public:
 			sound::ReleaseAllCues(PreviewQueueIndex);
 			sound::PlaySoundEffect(1, "se_ft_sys_dialog_close", 1.0f);
 			finishing = true;
+			break;
+		}
+	}
+
+	void OnActionPressedOrRepeat(int32_t action) override
+	{
+		if (finishing)
+			return;
+
+		switch (action)
+		{
+		case KeyAction_MoveUp:
+			if (SetSelectorIndex(-1, true))
+				sound::PlaySelectSE();
+			break;
+		case KeyAction_MoveDown:
+			if (SetSelectorIndex(1, true))
+				sound::PlaySelectSE();
 			break;
 		}
 	}
