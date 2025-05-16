@@ -143,6 +143,13 @@ HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
 	originalPVGameReset(pv_game);
 }
 
+HOOK(void, __fastcall, PVGameLoaderResetPrePlayScript, 0x140262430, PVGameData** pv_game)
+{
+	state.ResetPlayState();
+	state.ui.ResetAllLayers();
+	originalPVGameLoaderResetPrePlayScript(pv_game);
+}
+
 HOOK(void, __fastcall, PVGameArcadeReset, 0x14026AE80, PVGameArcade* game)
 {
 	state.ResetAetData();
@@ -489,6 +496,7 @@ extern "C"
 		INSTALL_HOOK(TaskPvGameCtrl);
 		INSTALL_HOOK(TaskPvGameDest);
 		INSTALL_HOOK(PVGameReset);
+		INSTALL_HOOK(PVGameLoaderResetPrePlayScript);
 		INSTALL_HOOK(PVGameArcadeReset);
 		INSTALL_HOOK(ParseTargets);
 		INSTALL_HOOK(LoadDscCtrl);
