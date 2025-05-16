@@ -31,3 +31,29 @@ struct TechZoneState
 	bool PushNewHitState(int32_t target_index, int32_t hit_state);
 	void ResetPlayState();
 };
+
+struct TechZoneDispState
+{
+	TechZoneState* data;
+	uint32_t scene;
+	std::string layer_name;
+	int32_t prio;
+	int32_t state;
+	bool end;
+	bool fail_in;
+
+	TechZoneDispState()
+	{
+		data = nullptr;
+		scene = 0;
+		layer_name = "";
+		prio = 4;
+		state = 0;
+		end = false;
+		fail_in = false;
+	}
+
+	void Reset();
+	void Ctrl();
+	void Disp() const;
+};

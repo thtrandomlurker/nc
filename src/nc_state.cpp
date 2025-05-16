@@ -149,11 +149,19 @@ void UIState::SetLayer(int32_t index, bool visible, const char* name, int32_t pr
 	);
 }
 
+std::shared_ptr<AetElement>& UIState::GetLayer(int32_t id)
+{
+	if (!elements[id])
+		elements[id] = std::make_shared<AetElement>();
+	return elements[id];
+}
+
 void UIState::ResetAllLayers()
 {
 	for (int i = 0; i < LayerUI_Max; i++)
 	{
 		aet::Stop(&aet_list[i]);
+		elements[i].reset();
 		aet_visibility[i] = false;
 	}
 }
@@ -171,6 +179,7 @@ void StateEx::ResetPlayState()
 	score.rush_bonus = 0;
 	for (TechZoneState& tz : tech_zones)
 		tz.ResetPlayState();
+	tz_disp.Reset();
 	tech_zone_index = 0;
 	ResetAetData();
 }

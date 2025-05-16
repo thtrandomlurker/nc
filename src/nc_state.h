@@ -2,12 +2,14 @@
 
 #include <optional>
 #include <list>
+#include <memory>
 #include "diva.h"
 #include "input.h"
 #include "db.h"
 #include "game/score.h"
 #include "game/tech_zone.h"
 #include "game/sound_effects.h"
+#include "ui/common.h"
 
 constexpr float ChanceTimeRetainedRate = 0.05; // 5%
 
@@ -260,12 +262,15 @@ enum LayerUI : int32_t
 	LayerUI_StarGauge,
 	LayerUI_ChanceTxt,
 	LayerUI_BonusZone,
+	LayerUI_BonusZoneText,
 	LayerUI_Max
 };
 
 struct UIState
 {
 	int32_t aet_list[LayerUI_Max];
+	// TODO: Change all the layers to use AetElement
+	std::shared_ptr<AetElement> elements[LayerUI_Max];
 	bool aet_visibility[LayerUI_Max];
 
 	UIState()
@@ -275,6 +280,7 @@ struct UIState
 	}
 
 	void SetLayer(int32_t index, bool visible, const char* name, int32_t prio, int32_t flags);
+	std::shared_ptr<AetElement>& GetLayer(int32_t id);
 	void ResetAllLayers();
 };
 
@@ -290,6 +296,7 @@ struct StateEx
 	std::vector<TargetStateEx> target_ex;
 	ChanceState chance_time;
 	std::vector<TechZoneState> tech_zones;
+	TechZoneDispState tz_disp;
 	size_t tech_zone_index;
 	UIState ui;
 	int32_t effect_buffer[MaxHitEffectCount] = { };

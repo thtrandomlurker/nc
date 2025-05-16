@@ -333,6 +333,7 @@ HOOK(void, __fastcall, DrawArcadeGame, 0x140271AB0, PVGameArcade* data)
 			DrawBalloonEffect(tgt);
 	}
 
+	state.tz_disp.Disp();
 	originalDrawArcadeGame(data);
 }
 

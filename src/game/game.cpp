@@ -440,7 +440,14 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 			break;
 		case ModeSelect_TechZoneStart:
 			if (state.tech_zone_index < state.tech_zones.size())
+			{
+				state.tz_disp.data = &state.tech_zones[state.tech_zone_index];
+				state.tz_disp.scene = 14010081;
+				state.tz_disp.layer_name = "bonus_zone";
+				state.tz_disp.end = false;
+
 				nc::Print("Technical Zone #%d   START!\n", state.tech_zone_index);
+			}
 
 			break;
 		case ModeSelect_TechZoneEnd:
@@ -453,6 +460,8 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 				}
 				
 				nc::Print("Technical Zone #%d   %s! \n", state.tech_zone_index, state.tech_zones[state.tech_zone_index].failed ? "FAIL" : "SUCCESS");
+
+				state.tz_disp.end = true;
 				state.tech_zone_index++;
 			}
 
@@ -469,6 +478,7 @@ HOOK(void, __fastcall, UpdateGaugeFrame, 0x14027A490, PVGameUI* ui)
 	if (state.chance_time.enabled)
 		SetChanceTimeStarFill(ui, state.chance_time.GetFillRate());
 	SetChanceTimePosition(ui);
+	state.tz_disp.Ctrl();
 }
 
 void InstallGameHooks()
