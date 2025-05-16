@@ -79,19 +79,19 @@ namespace pvsel
 			cur_style_txt.SetLayer(GetStyleTextLayerName(options[selected_index]), 10, 14, AetAction_InLoop);
 		}
 
-		if (IsSongToggleable())
+		if (IsToggleable())
 		{
-			base_win.SetMarkers("st_on", "ed_on");
-			base_txt.SetMarkers("st_on", "ed_on");
+			base_win.SetMarkers("st_on", "ed_on", true);
+			base_txt.SetMarkers("st_on", "ed_on", true);
 		}
 		else
 		{
-			base_win.SetMarkers("st_off", "ed_off");
-			base_txt.SetMarkers("st_off", "ed_off");
+			base_win.SetMarkers("st_off", "ed_off", true);
+			base_txt.SetMarkers("st_off", "ed_off", true);
 		}
 
 		diva::vec3 offset;
-		offset.x = game::IsFutureToneMode() && !IsSongToggleable() ? -18.0f : 0.0f;
+		offset.x = game::IsFutureToneMode() && !IsToggleable() ? -18.0f : 0.0f;
 		offset.y = 0.0f;
 		offset.z = 0.0f;
 		prev_style_txt.SetPosition(offset);
@@ -116,7 +116,7 @@ namespace pvsel
 		}
 
 		diva::InputState* is = diva::GetInputState(0);
-		if (IsSongToggleable() && (is->IsButtonTapped(92) || is->IsButtonTapped(13)))
+		if (IsToggleable() && (is->IsButtonTapped(92) || is->IsButtonTapped(13)))
 		{
 			selected_index = util::Wrap(selected_index + 1, 0, option_count - 1);
 			preferred_style = options[selected_index];
@@ -141,7 +141,7 @@ namespace pvsel
 
 	void GSWindow::Disp() const
 	{
-		if (!base_win.IsPlaying() || hidden || !IsSongToggleable())
+		if (!base_win.IsPlaying() || hidden || !IsToggleable())
 			return;
 
 		const uint32_t key_sprite_ids_nsw[6] = {
