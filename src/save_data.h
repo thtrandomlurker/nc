@@ -11,11 +11,11 @@ struct ConfigSet
 	// |    -1 = Same as <Button / Star>     |
 	// |    >0 = Sound DB ID                 |
 	// + ----------------------------------- +
-	int8_t button_w_se_id  = -1;
-	int8_t button_l_se_id  = -1;
+	int8_t button_w_se_id  =  1;
+	int8_t button_l_se_id  =  1;
 	int8_t star_se_id      =  1;
-	int8_t star_w_se_id    = -1;
-	int8_t star_l_se_id    = -1;
+	int8_t star_w_se_id    =  1;
+	int8_t star_l_se_id    =  1;
 	int8_t link_se_id      = -1;
 	int8_t rush_se_id      = -1; // NOTE: No real reason to make this modifiable, I think
 	int8_t tech_zone_style =  1;
