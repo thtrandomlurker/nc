@@ -403,14 +403,14 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 		}
 	}
 
-	// NOTE: Figure out which notes are part of each technical zone.
+	// NOTE: Find valid technical zones.
 	//
 	for (auto& [start_time, end_time] : tech_zone_times)
 	{
 		if (start_time == -1 || end_time == -1)
 			continue;
 
-		TechZoneState& tz = state.tech_zones.emplace_back();
+		TechZoneState tz = { };
 		for (size_t i = 0; i < pv_game->pv_data.targets.size(); i++)
 		{
 			PvDscTargetGroup& tgt = pv_game->pv_data.targets[i];
@@ -421,6 +421,9 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 				tz.last_target_index = i;
 			}
 		}
+
+		if (tz.IsValid())
+			state.tech_zones.push_back(tz);
 	}
 
 	// NOTE: Patch score reference (Only in Arcade mode; We don't need to patch this in F2nd mode as
