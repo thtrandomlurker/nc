@@ -35,7 +35,8 @@ struct SharedData
 	uint8_t _padding1[3]; // NOTE: Do not use this data; May be set from previous versions of the format.
 	int32_t stick_sensitivity = 50;
 	int32_t sound_prio = 0;
-	uint8_t reserved[240];
+	int32_t tech_zone_style = 1;
+	uint8_t reserved[236];
 
 	SharedData()
 	{

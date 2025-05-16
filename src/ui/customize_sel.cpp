@@ -422,8 +422,8 @@ public:
 			tz->values.push_back("F");
 			tz->values.push_back("F 2nd");
 			tz->values.push_back("X");
-			tz->selected_index = config_set->tech_zone_style;
-			tz->SetOnChangeNotifier([this](int32_t index) { config_set->tech_zone_style = index; });
+			tz->selected_index = nc::GetSharedData().tech_zone_style;
+			tz->SetOnChangeNotifier([this](int32_t index) { nc::GetSharedData().tech_zone_style = index; });
 
 			auto* snd = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(9, 4);
 			snd->values.push_back("Disabled");
