@@ -135,12 +135,28 @@ void TechZoneDispState::Ctrl()
 	}
 }
 
+static int32_t GetMaxNumber(int32_t max_digits)
+{
+	int32_t dec = 1;
+	int32_t num = 0;
+	for (int i = 0; i < max_digits; i++)
+	{
+		num += 9 * dec;
+		dec *= 10;
+	}
+
+	return num;
+}
+
 static void DrawNumberWithF2ndFont(int32_t value, int32_t max_digits, diva::vec3 pos, int32_t prio, bool fail)
 {
 	constexpr uint32_t sprite_id = 776507282;
 	const diva::vec2 glyph_size = { 60.0f, 64.0f };
 	const diva::vec2 size = { 45.0f, 48.0f };
 	const int32_t color = fail ? 0xFF7F7F7F : 0xFFFFFFFF;
+
+	if (int32_t max = GetMaxNumber(max_digits); value > max)
+		value = max;
 
 	for (int i = 0; i < max_digits; i++)
 	{
