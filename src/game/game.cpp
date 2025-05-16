@@ -445,8 +445,6 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 				state.tz_disp.scene = 14010081;
 				state.tz_disp.layer_name = "bonus_zone";
 				state.tz_disp.end = false;
-
-				nc::Print("Technical Zone #%d   START!\n", state.tech_zone_index);
 			}
 
 			break;
@@ -459,8 +457,6 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 						pv_data->pv_game->score += score::GetTechZoneSuccessBonus();
 				}
 				
-				nc::Print("Technical Zone #%d   %s! \n", state.tech_zone_index, state.tech_zones[state.tech_zone_index].failed ? "FAIL" : "SUCCESS");
-
 				state.tz_disp.end = true;
 				state.tech_zone_index++;
 			}

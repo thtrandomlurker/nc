@@ -46,8 +46,6 @@ bool TechZoneState::PushNewHitState(int32_t target_index, int32_t hit_state)
 			targets_hit++;
 		else
 			failed = true;
-
-		nc::Print("%d  CONTINUE:%s  REMAINING:%d\n", hit_state, failed ? "NO" : "YES", GetRemainingCount());
 	}
 }
 
