@@ -2,6 +2,19 @@
 
 #include <stdint.h>
 
+enum TechZoneStyle : int32_t
+{
+	TechZoneStyle_F     = 0,
+	TechZoneStyle_F2nd  = 1,
+	TechZoneStyle_X     = 2,
+	TechZoneStyle_FT    = 3,
+	TechZoneStyle_FS    = 4,
+	TechZoneStyle_CT    = 5,
+	TechZoneStyle_M39   = 6,
+	TechZoneStyle_Match = 20, // NOTE: Match UI
+	TechZoneStyle_Song  = 21  // NOTE: Song's default
+};
+
 struct TechZoneState
 {
 	int32_t first_target_index = -1;

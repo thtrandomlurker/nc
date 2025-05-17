@@ -1,5 +1,6 @@
 #include <nc_state.h>
 #include <nc_log.h>
+#include <save_data.h>
 #include "hit_state.h"
 #include "tech_zone.h"
 
@@ -58,6 +59,8 @@ void TechZoneState::ResetPlayState()
 void TechZoneDispState::Reset()
 {
 	data = nullptr;
+	scene = 0;
+	layer_name.clear();
 	state = 0;
 	end = false;
 }
@@ -66,6 +69,24 @@ void TechZoneDispState::Ctrl()
 {
 	if (!data)
 		return;
+
+	if (scene == 0 || layer_name.empty())
+	{
+		// TODO: Implement song default / match UI modes (although for the latter one we first
+		//       need to actually add FT and M39 tech zone skins)
+		constexpr uint32_t scene_ids[3] = { 14010081, 14010082, 14010083 };
+		int32_t scene_index = nc::GetSharedData().tech_zone_style;
+
+		switch (nc::GetSharedData().tech_zone_style)
+		{
+		case TechZoneStyle_F:
+		case TechZoneStyle_F2nd:
+		case TechZoneStyle_X:
+			layer_name = "bonus_zone";
+			scene = scene_ids[nc::GetSharedData().tech_zone_style];
+			break;
+		}
+	}
 
 	std::shared_ptr<AetElement>& tz = ::state.ui.GetLayer(LayerUI_BonusZone);
 	std::shared_ptr<AetElement>& txt = ::state.ui.GetLayer(LayerUI_BonusZoneText);
@@ -78,6 +99,7 @@ void TechZoneDispState::Ctrl()
 		if (data)
 		{
 			tz->SetLayer(layer_name, prio, 14, AetAction_InOnce);
+			txt->SetVisible(true);
 			txt->SetLayer("bonus_start_txt", prio, 14, AetAction_None);
 			fail_in = false;
 			state = TechZoneAction_InWait;
@@ -108,11 +130,13 @@ void TechZoneDispState::Ctrl()
 			if (data->failed)
 			{
 				tz->SetMarkers("st_fail_out", "ed_fail_out", false);
+				txt->SetVisible(true);
 				txt->SetLayer("bonus_end_txt", prio, 14, AetAction_None);
 			}
 			else if (data->IsSuccessful())
 			{
 				tz->SetMarkers("st_clear", "ed_clear", false);
+				txt->SetVisible(true);
 				txt->SetLayer("bonus_complete_txt", prio, 14, AetAction_None);
 			}
 			else
@@ -131,6 +155,9 @@ void TechZoneDispState::Ctrl()
 
 		break;
 	}
+
+	if (txt->Ended())
+		txt->SetVisible(false);
 }
 
 static int32_t GetMaxNumber(int32_t max_digits)

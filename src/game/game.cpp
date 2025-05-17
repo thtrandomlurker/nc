@@ -442,8 +442,6 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 			if (state.tech_zone_index < state.tech_zones.size())
 			{
 				state.tz_disp.data = &state.tech_zones[state.tech_zone_index];
-				state.tz_disp.scene = 14010081;
-				state.tz_disp.layer_name = "bonus_zone";
 				state.tz_disp.end = false;
 			}
 
