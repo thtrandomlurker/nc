@@ -10,71 +10,107 @@ static void UpdateLongNoteKiseki(PVGameArcade* data, TargetStateEx* ex, float dt
 static void DrawLongNoteKiseki(TargetStateEx* ex);
 static void DrawBalloonEffect(TargetStateEx* ex);
 
-static const NoteSprite nc_target_layers[] = {
-	{ "target_sankaku_bal",   nullptr, nullptr }, // 0x19 - Triangle Rush
-	{ "target_maru_bal",      nullptr, nullptr }, // 0x1A - Circle Rush
-	{ "target_batsu_bal",     nullptr, nullptr }, // 0x1B - Cross Rush
-	{ "target_shikaku_bal",   nullptr, nullptr }, // 0x1C - Square Rush
-	{ "target_up_w",          nullptr, nullptr }, // 0x1D - Triangle W
-	{ "target_right_w",       nullptr, nullptr }, // 0x1E - Circle W
-	{ "target_down_w",        nullptr, nullptr }, // 0x1F - Cross W
-	{ "target_left_w",        nullptr, nullptr }, // 0x20 - Square W
-	{ "target_sankaku_long",  nullptr, nullptr }, // 0x21 - Triangle Long
-	{ "target_maru_long",     nullptr, nullptr }, // 0x22 - Circle Long
-	{ "target_batsu_long",    nullptr, nullptr }, // 0x23 - Cross Long
-	{ "target_shikaku_long",  nullptr, nullptr }, // 0x24 - Square Long
-	{ "target_touch",         nullptr, nullptr }, // 0x25 - Star
-	{ nullptr,                nullptr, nullptr }, // 0x26 - Star Long
-	{ "target_touch_w",       nullptr, nullptr }, // 0x27 - Star W
-	{ "target_touch_ch_miss", nullptr, nullptr }, // 0x28 - Chance Star
-	{ "target_link",          nullptr, nullptr }, // 0x29 - Link Star
-	{ "target_link",          nullptr, nullptr }, // 0x2A - Link Star End
-	{ "target_touch_bal",     nullptr, nullptr }, // 0x2B - Star Rush
+static constexpr const char* ButtonBaseNames[12] = {
+	"sankaku_bal",  "maru_bal",  "batsu_bal", "shikaku_bal",
+	"up_w",         "right_w",   "down_w",     "left_w",
+	"sankaku_long", "maru_long", "batsu_long", "shikaku_long"
 };
 
-static const NoteSprite nc_button_layers[] = {
-	{ "button_sankaku_bal",   nullptr, nullptr }, // 0x19 - Triangle Rush
-	{ "button_maru_bal",      nullptr, nullptr }, // 0x1A - Circle Rush
-	{ "button_batsu_bal",     nullptr, nullptr }, // 0x1B - Cross Rush
-	{ "button_shikaku_bal",   nullptr, nullptr }, // 0x1C - Square Rush
-	{ "button_up_w",          nullptr, nullptr }, // 0x1D - Triangle W
-	{ "button_right_w",       nullptr, nullptr }, // 0x1E - Circle W
-	{ "button_down_w",        nullptr, nullptr }, // 0x1F - Cross W
-	{ "button_left_w",        nullptr, nullptr }, // 0x20 - Square W
-	{ "button_sankaku_long",  nullptr, nullptr }, // 0x21 - Triangle Long
-	{ "button_maru_long",     nullptr, nullptr }, // 0x22 - Circle Long
-	{ "button_batsu_long",    nullptr, nullptr }, // 0x23 - Cross Long
-	{ "button_shikaku_long",  nullptr, nullptr }, // 0x24 - Square Long
-	{ "button_touch",         nullptr, nullptr }, // 0x25 - Star
-	{ nullptr,                nullptr, nullptr }, // 0x26 - Star Long
-	{ "button_touch_w",       nullptr, nullptr }, // 0x27 - Star W
-	{ "button_touch_ch_miss", nullptr, nullptr }, // 0x28 - Chance Star
-	{ "button_link",          nullptr, nullptr }, // 0x29 - Link Star
-	{ "button_link",          nullptr, nullptr }, // 0x2A - Link Star End
-	{ "button_touch_bal",     nullptr, nullptr }, // 0x2B - Star Rush
+static constexpr bool ArrowSpriteLookup[13][4] = {
+	{ false, false, false, false }, // T S X O (PS)
+	{ true,  true,  false, false }, // 
+	{ false, true,  true,  false }, // 
+	{ true,  false, false, true  }, // 
+	{ true,  true,  true,  true  }, // 
+	{ false, false, false, false }, // X Y B A (NSW)
+	{ true,  true,  false, false }, // 
+	{ false, true,  true,  false }, // 
+	{ true,  false, false, true  }, // 
+	{ false, false, false, false }, // Y X A B (XBOX)
+	{ true,  true,  false, false }, // 
+	{ false, true,  true,  false }, // 
+	{ true,  false, false, true  }  // 
 };
 
-static const char* GetProperLayerName(const NoteSprite* spr)
+static bool CheckNoteUsesArrowSprite(int32_t index, int32_t type)
 {
-	// TODO: Add style logic
-	if (spr->ft != nullptr)
-		return spr->ft;
+	int32_t base_type = -1;
 
-	return "target_sankaku";
+	switch (type)
+	{
+	case TargetType_TriangleLong:
+	case TargetType_CircleLong:
+	case TargetType_CrossLong:
+	case TargetType_SquareLong:
+		base_type = type - TargetType_TriangleLong;
+		break;
+	case TargetType_TriangleRush:
+	case TargetType_CircleRush:
+	case TargetType_CrossRush:
+	case TargetType_SquareRush:
+		base_type = type - TargetType_TriangleRush;
+		break;
+	}
+
+	if (base_type > -1)
+		return ArrowSpriteLookup[index][base_type == 1 ? 3 : base_type == 3 ? 1 : base_type];
+	return false;
 }
 
-const char* GetTargetLayer(int32_t target_type)
+static std::string GetNoteLayerName(int32_t type, int32_t kind)
 {
-	if (target_type >= TargetType_Custom && target_type < TargetType_Max)
-		return GetProperLayerName(&nc_target_layers[target_type - TargetType_Custom]);
-	return nullptr;
-}
+	int32_t index = *reinterpret_cast<const int32_t*>(0x141133D30);
+	std::string kind_name = kind == 1 ? "button_" : "target_";
+	std::string base_name = "";
+	std::string prefix = "";
+	std::string suffix = "";
+	int32_t base_type = 0;
 
-const char* GetButtonLayer(int32_t target_type)
-{
-	if (target_type >= TargetType_Custom && target_type < TargetType_Max)
-		return GetProperLayerName(&nc_button_layers[target_type - TargetType_Custom]);
-	return nullptr;
+	switch (type)
+	{
+	case TargetType_Star:
+		base_name = "touch";
+		break;
+	case TargetType_StarW:
+		base_name = "touch_w";
+		break;
+	case TargetType_ChanceStar:
+		base_name = "touch_ch_miss";
+		break;
+	case TargetType_LinkStar:
+	case TargetType_LinkStarEnd:
+		base_name = "link";
+		break;
+	case TargetType_StarRush:
+		base_name = "star_bal";
+		break;
+	}
+
+	if (type >= TargetType_TriangleRush && type <= TargetType_SquareLong)
+	{
+		base_name = ButtonBaseNames[type - TargetType_TriangleRush];
+
+		if (CheckNoteUsesArrowSprite(index, type))
+			suffix = "_01";
+
+		switch (index)
+		{
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+			prefix = "nsw_";
+			break;
+		case 9:
+		case 10:
+		case 11:
+		case 12:
+			prefix = "xbox_";
+			break;
+		}
+	}
+
+	return prefix + kind_name + base_name + suffix;
 }
 
 HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
@@ -100,8 +136,8 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 	aet::Stop(&target->target_eff_aet);
 	aet::Stop(&target->dword78);
 
-	const char* target_layer = GetTargetLayer(target->target_type);
-	const char* button_layer = GetButtonLayer(target->target_type);
+	std::string target_layer = GetNoteLayerName(target->target_type, 0);
+	std::string button_layer = GetNoteLayerName(target->target_type, 1);
 
 	diva::vec2 target_pos = GetScaledPosition(target->target_pos);
 	diva::vec2 button_pos = GetScaledPosition(target->button_pos);
@@ -110,7 +146,7 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 		AetSceneID,
 		8,
 		0x20000,
-		target_layer,
+		target_layer.c_str(),
 		&target_pos,
 		0,
 		nullptr,
@@ -125,7 +161,7 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 		AetSceneID,
 		9,
 		0x20000,
-		button_layer,
+		button_layer.c_str(),
 		&button_pos,
 		0,
 		nullptr,
@@ -149,9 +185,9 @@ HOOK(void, __fastcall, CreateTargetAetLayers, 0x14026F910, PvGameTarget* target)
 
 	if (ex->IsRushNote())
 	{
-		ex->bal_time = aet::GetMarkerTime(AetSceneID, button_layer, "bal");
-		ex->bal_start_time = aet::GetMarkerTime(AetSceneID, button_layer, "bal_start");
-		ex->bal_end_time = aet::GetMarkerTime(AetSceneID, button_layer, "bal_end");
+		ex->bal_time = aet::GetMarkerTime(AetSceneID, button_layer.c_str(), "bal");
+		ex->bal_start_time = aet::GetMarkerTime(AetSceneID, button_layer.c_str(), "bal_start");
+		ex->bal_end_time = aet::GetMarkerTime(AetSceneID, button_layer.c_str(), "bal_end");
 		ex->bal_effect_aet = aet::PlayLayer(AetSceneID, 12, 0x10000, "target_balloon_eff", nullptr, 0, nullptr, nullptr, -1.0f, -1.0f, 0, nullptr);
 		aet::SetPlay(ex->bal_effect_aet, false);
 	}
