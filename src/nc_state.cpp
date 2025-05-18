@@ -1,6 +1,7 @@
 #include "save_data.h"
 #include "sound_db.h"
 #include "shared.h"
+#include "game/hit_state.h"
 #include "nc_state.h"
 
 void TargetStateEx::ResetPlayState()
@@ -47,11 +48,11 @@ void TargetStateEx::ResetAetData()
 
 bool TargetStateEx::IsChainSucessful()
 {
-	bool cond = true;
 	for (TargetStateEx* ex = this; ex != nullptr; ex = ex->next)
-		cond = cond && (ex->hit_state >= HitState_Cool && ex->hit_state <= HitState_Sad);
+		if (!nc::IsHitGreat(ex->hit_state))
+			return false;
 
-	return cond;
+	return true;
 }
 
 void TargetStateEx::StopAet(bool button, bool target, bool kiseki)
