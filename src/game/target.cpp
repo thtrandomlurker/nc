@@ -82,7 +82,7 @@ static std::string GetNoteLayerName(int32_t type, int32_t kind)
 		base_name = "link";
 		break;
 	case TargetType_StarRush:
-		base_name = "star_bal";
+		base_name = "touch_bal";
 		break;
 	}
 
