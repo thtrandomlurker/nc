@@ -34,6 +34,18 @@ static constexpr bool ArrowSpriteLookup[13][4] = {
 	{ true,  false, false, true  }  // 
 };
 
+static constexpr uint32_t ButtonSpriteIDs[3][5] = {
+	{ 0x000000B6, 0x000000B7, 0x000000B4, 0x000000B5, 0x0FD08752 }, // T S X O (PS) (SPR_GAM_CMN)
+	{ 0x89D6BC5D, 0x3688928E, 0xD3B2C230, 0x4EC68397, 0x0FD08752 }, // X Y B A (NSW)
+	{ 0x367EBA07, 0x89D6BC5D, 0xA87BA497, 0x3E02AA52, 0x0FD08752 }  // Y X A B (XBOX)
+};
+
+static constexpr uint32_t ArrowSpriteIDs[3][5] = {
+	{ 0x147EBFD4, 0xC27B4CA3, 0x06014095, 0x22CE0158, 0x00000000 },
+	{ 0x93F28B09, 0xEC80CF72, 0xE5393DAA, 0x06F66090, 0x00000000 },
+	{ 0x369BEB4D, 0x06F36B82, 0xCC908494, 0x06F66090, 0x00000000 }
+};
+
 static constexpr uint8_t KisekiColorLookup[3][4] = {
 	// 0 - Green   1 - Pink   2 - Blue   3 - Red   4 - Yellow   5 - Orange
 	{ 0, 1, 2, 3 },
@@ -626,24 +638,9 @@ static void DrawLongNoteKiseki(TargetStateEx* ex)
 
 static uint32_t GetBalloonSpriteId(const TargetStateEx* ex)
 {
-	constexpr uint32_t PlaystationStyle[4] = { 182, 181, 180, 183 };
-
-	switch (ex->target_type)
-	{
-	case TargetType_TriangleRush:
-	case TargetType_CircleRush:
-	case TargetType_CrossRush:
-	case TargetType_SquareRush:
-	{
-		// TODO: Add style logic
-		int32_t base_id = ex->target_type - TargetType_TriangleRush;
-		return PlaystationStyle[base_id];
-	}
-	case TargetType_StarRush:
-		return 265324370;
-	}
-
-	return 0;
+	if (CheckNoteUsesArrowSprite(GetMelodyIconStyle(), ex->target_type))
+		return ArrowSpriteIDs[GetMelodyIconPlatform()][GetTargetButtonKind(ex->target_type)];
+	return ButtonSpriteIDs[GetMelodyIconPlatform()][GetTargetButtonKind(ex->target_type)];
 }
 
 static void DrawBalloonEffectNote(uint32_t id, const diva::vec2& pos, const diva::vec2& scale, float opacity)
