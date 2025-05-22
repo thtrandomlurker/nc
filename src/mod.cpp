@@ -475,19 +475,6 @@ HOOK(int32_t, __fastcall, ParseTargets, 0x140245C50, PVGameData* pv_game)
 		score::CalculateScoreReference(&state.score, pv_game);
 	}
 
-	for (TargetStateEx& ex : state.target_ex)
-	{
-		if (ex.next == nullptr && ex.prev == nullptr)
-			continue;
-
-		nc::Print("TARGET %03d/%03d:  %02d  %d:%.3f  <%d-%d-%d>\n", ex.target_index, ex.sub_index, ex.target_type, ex.long_end, ex.length, ex.link_start, ex.link_step, ex.link_end);
-	}
-
-	for (TechZoneState& tz : state.tech_zones)
-	{
-		nc::Print("TECHNICAL ZONE: %d -> %d  (%d)\n", tz.first_target_index, tz.last_target_index, tz.GetTargetCount());
-	}
-
 	return pv_game->reference_score;
 }
 
