@@ -158,6 +158,9 @@ namespace pvsel
 			}
 		}
 
+		// NOTE: TEMPORARY PATCH!! This disabled mixed songs from being selectable in the PV selector.
+		song_counts[GameStyle_Mixed] = 0;
+
 		return song_counts;
 	}
 
