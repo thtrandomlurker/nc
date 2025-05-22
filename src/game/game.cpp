@@ -435,7 +435,11 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 			break;
 		case ModeSelect_ChanceEnd:
 			if (state.chance_time.successful)
-				pv_data->pv_game->score += score::GetChanceTimeSuccessBonus();
+			{
+				if (state.GetScoreMode() != ScoreMode_Arcade)
+					pv_data->pv_game->score += score::GetChanceTimeSuccessBonus();
+			}
+
 			SetChanceTimeMode(&pv_data->pv_game->ui, ModeSelect_ChanceEnd);
 			break;
 		case ModeSelect_TechZoneStart:
@@ -452,7 +456,10 @@ HOOK(void, __fastcall, ExecuteModeSelect, 0x1503B04A0, PVGamePvData* pv_data, in
 				if (TechZoneState& tz = state.tech_zones[state.tech_zone_index]; tz.IsValid())
 				{
 					if (tz.IsSuccessful())
-						pv_data->pv_game->score += score::GetTechZoneSuccessBonus();
+					{
+						if (state.GetScoreMode() != ScoreMode_Arcade)
+							pv_data->pv_game->score += score::GetTechZoneSuccessBonus();
+					}
 				}
 				
 				state.tz_disp.end = true;
