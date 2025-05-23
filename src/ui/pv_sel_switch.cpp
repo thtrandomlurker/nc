@@ -65,6 +65,7 @@ static void SetGlobalStateSelectedData(const PVSelectorSwitch* sel)
 	}
 }
 
+static FUNCTION_PTR(bool, __fastcall, IsPlaylistMode, 0x1406D8D50);
 static FUNCTION_PTR(void, __fastcall, PVListSetSelectedIndex, 0x140217500, pvsel::SelPvList* a1, int32_t a2, int32_t a3);
 static FUNCTION_PTR(void, __fastcall, PVSelectorSwitchChangeSortFilter, 0x1406F2F40, PVSelectorSwitch* a1, int32_t a2);
 static FUNCTION_PTR(bool, __fastcall, CheckSongPertains, 0x1406F3D40, PVSelectorSwitch* sel, const pvsel::PvData* pv, int32_t, int32_t);
@@ -79,8 +80,8 @@ static int32_t GetSelectedIndex(PVSelectorSwitch* sel)
 
 HOOK(bool, __fastcall, PVSelectorSwitchCreateSortedPVList, 0x1406F3100, PVSelectorSwitch* sel)
 {
-	if (!originalPVSelectorSwitchCreateSortedPVList(sel))
-		return false;
+	if (bool ret = originalPVSelectorSwitchCreateSortedPVList(sel); !ret || IsPlaylistMode())
+		return ret;
 
 	auto song_counts = pvsel::GetSongCountPerStyle(sel);
 	if (pvsel::gs_win && pvsel::gs_win->SetAvailableOptions(song_counts))
@@ -107,13 +108,15 @@ HOOK(bool, __fastcall, PVSelectorSwitchCreateSortedPVList, 0x1406F3100, PVSelect
 HOOK(bool, __fastcall, PVSelectorSwitchInit, 0x1406ED9D0, uint64_t a1)
 {
 	pvsel::RequestAssetsLoad();
-	if (!pvsel::gs_win)
-		pvsel::gs_win = std::make_unique<pvsel::GSWindow>();
-
 	state.nc_song_entry.reset();
 	state.nc_chart_entry.reset();
 
-	pvsel::gs_win->SetPreferredStyle(nc::GetSharedData().pv_sel_selected_style);
+	if (!pvsel::gs_win && !IsPlaylistMode())
+	{
+		pvsel::gs_win = std::make_unique<pvsel::GSWindow>();
+		pvsel::gs_win->SetPreferredStyle(nc::GetSharedData().pv_sel_selected_style);
+	}
+
 	return originalPVSelectorSwitchInit(a1);
 }
 
@@ -127,7 +130,7 @@ HOOK(bool, __fastcall, PVSelectorSwitchCtrl, 0x1406EDC40, PVSelectorSwitch* sel)
 
 	bool ret = originalPVSelectorSwitchCtrl(sel);
 
-	if (sel->state == 6)
+	if (sel->state == 6 && pvsel::gs_win)
 	{
 		if (pvsel::gs_win->Ctrl())
 		{

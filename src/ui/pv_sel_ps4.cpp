@@ -41,6 +41,7 @@ struct PVselPS4
 
 static bool style_dirty = false;
 
+static FUNCTION_PTR(bool, __fastcall, IsPlaylistMode, 0x14022A7F0);
 static FUNCTION_PTR(bool, __fastcall, IsSurvivalMode, 0x14023B6A0);
 static FUNCTION_PTR(void, __fastcall, PVListSetSelectedIndex, 0x140217500, pvsel::SelPvList* a1, int32_t a2, int32_t a3);
 static FUNCTION_PTR(void, __fastcall, PVselPS4ChangeSortFilter, 0x1402078D0, PVselPS4* sel, int32_t dir);
@@ -88,7 +89,7 @@ static int32_t GetSelectedIndex(PVselPS4* sel)
 HOOK(void, __fastcall, PVselPS4CreateSortedPVList, 0x140206C30, PVselPS4* sel)
 {
 	originalPVselPS4CreateSortedPVList(sel);
-	if (IsSurvivalMode())
+	if (IsSurvivalMode() || IsPlaylistMode())
 		return;
 
 	auto song_counts = pvsel::GetSongCountPerStyle(sel);
@@ -116,7 +117,7 @@ HOOK(void, __fastcall, PVselPS4CreateSortedPVList, 0x140206C30, PVselPS4* sel)
 HOOK(bool, __fastcall, PVselPS4Init, 0x140202D50, PVselPS4* sel)
 {
 	pvsel::RequestAssetsLoad();
-	if (!pvsel::gs_win && !IsSurvivalMode())
+	if (!pvsel::gs_win && !IsSurvivalMode() && !IsPlaylistMode())
 	{
 		pvsel::gs_win = std::make_unique<pvsel::GSWindow>();
 		pvsel::gs_win->SetPreferredStyle(nc::GetSharedData().pv_sel_selected_style);
@@ -138,10 +139,11 @@ HOOK(bool, __fastcall, PVselPS4Ctrl, 0x1402033C0, PVselPS4* sel)
 
 	bool ret = originalPVselPS4Ctrl(sel);
 
-	if (!IsSurvivalMode())
+	if (!IsSurvivalMode() && !IsPlaylistMode())
 	{
 		if (sel->state == 6)
 		{
+			pvsel::gs_win->SetVisible(true);
 			if (pvsel::gs_win->Ctrl())
 			{
 				PVselPS4ChangeSortFilter(sel, 0);
@@ -153,6 +155,11 @@ HOOK(bool, __fastcall, PVselPS4Ctrl, 0x1402033C0, PVselPS4* sel)
 
 		SetGlobalStateSelectedData(sel);
 		nc::GetSharedData().pv_sel_selected_style = pvsel::GetSelectedStyleOrDefault();
+	}
+	else if (IsSurvivalMode())
+	{
+		if (pvsel::gs_win)
+			pvsel::gs_win->SetVisible(false);
 	}
 
 	return ret;
@@ -168,7 +175,7 @@ HOOK(bool, __fastcall, PVselPS4Dest, 0x140204DA0, uint64_t a1)
 HOOK(void, __fastcall, PVselPS4Disp, 0x140204EB0, uint64_t a1)
 {
 	originalPVselPS4Disp(a1);
-	if (!IsSurvivalMode() && pvsel::gs_win)
+	if (pvsel::gs_win)
 		pvsel::gs_win->Disp();
 }
 
