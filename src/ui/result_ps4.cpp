@@ -81,13 +81,6 @@ public:
 			style_txt.SetScene(results::AetSceneID);
 			style_txt.SetLayer(GetStyleLayerName(), 3, 14, AetAction_InLoop);
 		}
-
-		if (auto layout = GetLayout("p_style_loc_c"); layout.has_value())
-		{
-			diva::vec3 center = diva::vec3(layout.value().width / 2.0f, layout.value().height / 2.0f, 0.0f);
-			diva::vec3 offset = layout.value().anchor - center;
-			style_txt.SetPosition(layout.value().position - offset);
-		}
 	}
 };
 
