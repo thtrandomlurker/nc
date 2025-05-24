@@ -141,6 +141,22 @@ int32_t aet::PlayLayer(uint32_t scene_id, int32_t prio, const char* layer, int32
 	return PlayLayerAetArgs(&args, 0);
 }
 
+int32_t game::GetGlobalPvID()
+{
+	int32_t pv_id = game::GetGlobalPVInfo()->pv_id;
+	int32_t prev = pv_id;
+	if (pv_id == -2)
+	{
+		int32_t param_index = game::GetPVLoadParam()->data[0].int8;
+		if (param_index < 4)
+			pv_id = game::GetPVLoadParam()->data[param_index].pv_id;
+	}
+
+	if (pv_id < 0)
+		return 1;
+	return pv_id;
+}
+
 // NOTE: InputState implementation
 static FUNCTION_PTR(float, __fastcall, IS_GetPosition, 0x1402AB2C0, diva::InputState* t, int32_t index);
 static FUNCTION_PTR(int32_t, __fastcall, IS_GetDeviceVendor, 0x1402AAF20, diva::InputState* t);

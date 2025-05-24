@@ -138,7 +138,7 @@ std::string sound_effects::GetGameSoundEffect(int32_t kind)
 	if (kind < 0 || kind >= 6)
 		return "";
 
-	int32_t pv_id = game::GetGlobalPVInfo()->pv_id;
+	int32_t pv_id = game::GetGlobalPvID();
 	int32_t difficulty = util::Clamp(game::GetGlobalPVInfo()->difficulty, 0, 3);
 
 	if (auto* data = static_cast<int32_t*>(game::GetConfigSet(game::GetSaveData(), pv_id, false)); data != nullptr)

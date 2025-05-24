@@ -1113,6 +1113,21 @@ namespace game
 		int32_t pv_id;
 	};
 
+	struct PVLoadParam
+	{
+		struct Data
+		{
+			int32_t difficulty;
+			int32_t edition;
+			int32_t int8;
+			uint8_t gap0[0x50];
+			int32_t pv_id;
+			uint8_t gap60[0x648];
+		};
+
+		Data data[4];
+	};
+
 	struct NoteSE
 	{
 		int32_t id;
@@ -1129,11 +1144,14 @@ namespace game
 	inline FUNCTION_PTR(bool, __fastcall, IsCustomizeSelTaskReady, 0x1401DE790);
 
 	inline FUNCTION_PTR(GlobalPVInfo*, __fastcall, GetGlobalPVInfo, 0x1401D6520);
+	inline FUNCTION_PTR(PVLoadParam*, __fastcall, GetPVLoadParam, 0x14040B2A0);
 
 	inline FUNCTION_PTR(char*, __fastcall, GetSaveData, 0x1401D6510);
 	inline FUNCTION_PTR(void*, __fastcall, GetConfigSet, 0x1401D5F40, void* save_data, int32_t pv, bool a3);
 
 	inline FUNCTION_PTR(NoteSE*, __fastcall, GetButtonSE, 0x1403F7540, int32_t id);
+
+	int32_t GetGlobalPvID();
 }
 
 namespace pv_db

@@ -77,7 +77,7 @@ namespace nc
 	int32_t GetConfigSetID()
 	{
 		int32_t set = *reinterpret_cast<int32_t*>(game::GetSaveData() + 0x169410);
-		return set < 3 ? -(set + 1) : game::GetGlobalPVInfo()->pv_id;
+		return set < 3 ? -(set + 1) : game::GetGlobalPvID();
 	}
 
 	ConfigSet* GetConfigSet() { return FindConfigSet(GetConfigSetID(), true); }
