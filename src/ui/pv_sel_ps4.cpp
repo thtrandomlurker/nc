@@ -93,6 +93,7 @@ HOOK(void, __fastcall, PVselPS4CreateSortedPVList, 0x140206C30, PVselPS4* sel)
 		return;
 
 	auto song_counts = pvsel::GetSongCountPerStyle(sel);
+
 	if (pvsel::gs_win && pvsel::gs_win->SetAvailableOptions(song_counts))
 		style_dirty = true;
 
@@ -102,7 +103,7 @@ HOOK(void, __fastcall, PVselPS4CreateSortedPVList, 0x140206C30, PVselPS4* sel)
 		if (song_counts[style % 3] > 0)
 		{
 			auto songs = pvsel::SortWithStyle(sel->sel_pv_list, sel->difficulty, sel->edition, style % 3);
-			*sel->sel_pv_list.pv_data = std::move(songs);
+			*sel->sel_pv_list.pv_data = songs;
 			sel->song_counts[*sel->cur_sort_index] = song_counts[style % 3];
 			pvsel::CalculateAllSongCount(sel, CheckSongPertains);
 			PVListSetSelectedIndex(&sel->sel_pv_list, GetSelectedIndex(sel), 0);

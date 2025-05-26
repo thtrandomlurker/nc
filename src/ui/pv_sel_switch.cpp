@@ -93,7 +93,7 @@ HOOK(bool, __fastcall, PVSelectorSwitchCreateSortedPVList, 0x1406F3100, PVSelect
 		if (song_counts[style % 3] > 0)
 		{
 			auto songs = pvsel::SortWithStyle(sel->sel_pv_list, sel->difficulty, sel->edition, style % 3);
-			*sel->sel_pv_list.pv_data = std::move(songs);
+			*sel->sel_pv_list.pv_data = songs;
 			PVListSetSelectedIndex(&sel->sel_pv_list, GetSelectedIndex(sel), 0);
 			pvsel::CalculateAllSongCount(sel, CheckSongPertains);
 			return true;
