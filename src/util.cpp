@@ -50,6 +50,14 @@ bool util::EndsWith(std::string_view str, std::string_view suffix)
 	return strncmp(str.substr(str.size() - suffix.size()).data(), suffix.data(), suffix.size()) == 0;
 }
 
+bool util::Compare(std::string_view str, std::string_view str2)
+{
+	if (str.size() != str2.size())
+		return false;
+
+	return memcmp(str.data(), str2.data(), str.size()) == 0;
+}
+
 bool util::Contains(std::string_view str, std::string_view substr)
 {
 	if (substr.size() > str.size() || str.size() == 0 || substr.size() == 0)
