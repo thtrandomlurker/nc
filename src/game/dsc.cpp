@@ -132,55 +132,11 @@ static int32_t IsVanillaFormat(const int32_t* data)
 	return GetDscFormat(data) == DscFormat_AC || GetDscFormat(data) == DscFormat_FT;
 }
 
-static int32_t ConvertTargetType(int32_t type)
-{
-	switch (type)
-	{
-	case 0: // Normal notes
-	case 1:
-	case 2:
-	case 3:
-		return type;
-	case 4: // W notes
-	case 5:
-	case 6:
-	case 7:
-		return type + TargetType_UpW - 4;
-	case 8: // Long notes
-	case 9:
-	case 10:
-	case 11:
-		return type + TargetType_TriangleLong - 8;
-	case 12:
-		return TargetType_Star;
-	case 13:
-		return TargetType_StarLong;
-	case 14:
-		return TargetType_StarW;
-	case 15:
-	case 16:
-		return TargetType_ChanceStar;
-	case 17:
-		return TargetType_StarRush;
-	case 22:
-		return TargetType_LinkStar;
-	case 23:
-		return TargetType_LinkStarEnd;
-	case 25:
-	case 26:
-	case 27:
-	case 28:
-		return type;
-	}
-
-	return 0;
-}
-
 static void ConvertTargetParams(int32_t format, const int32_t* data, int32_t* output, float* length, bool* end)
 {
 	if (format == DscFormat_F || format == DscFormat_NC || format == DscFormat_F2)
 	{
-		output[0] = (format != DscFormat_NC) ? ConvertTargetType(data[0]) : data[0];
+		output[0] = data[0];
 		*length   = data[1] / 100000.0f;
 		*end      = data[2] == 1;
 		output[1] = data[3]; // X
