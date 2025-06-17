@@ -144,7 +144,7 @@ static void ConvertTargetParams(int32_t format, const int32_t* data, int32_t* ou
 		output[3] = data[5]; // Angle
 		output[4] = data[7]; // Distance
 		output[5] = data[8]; // Amplitude
-		output[6] = data[6];
+		output[6] = data[6]; // Frequency
 		return;
 	}
 	
@@ -427,11 +427,9 @@ HOOK(bool, __fastcall, LoadDscCtrl, 0x14024E270, PVGamePvData& pv_data, prj::str
 	{
 		MergeDscs(pv_data);
 		if (dsc_state == DscState_Ready)
-		{
 			FileFree(&file_handler);
-			dsc_state = DscState_Idle;
-		}
 
+		dsc_state = DscState_Idle;
 		return true;
 	}
 
