@@ -237,12 +237,6 @@ static bool ParseDsc(const int32_t* data, std::map<int32_t, DscFrame>& output, i
 
 			int32_t diff = length > 1 ? readNext() : -1;
 			int32_t mode = readNext();
-
-			if (format == DscFormat_F || format == DscFormat_F2)
-			{
-				if      (mode == 1) mode = 4;
-				else if (mode == 3) mode = 5;
-			}
 			
 			if (diff > -1)
 				list.push_back(DscFrame::DscCommand(DscOp_ModeSelect, { diff, mode }));
