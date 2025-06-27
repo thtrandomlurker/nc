@@ -189,6 +189,7 @@ static void PushTargetExtraInfo(int32_t index, int32_t sub_index, float length, 
 	ex.sub_index = sub_index;
 	ex.length = length;
 	ex.long_end = end;
+	ex.ResetPlayState();
 }
 
 static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscFrame>& output, int32_t flags)
