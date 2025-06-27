@@ -109,12 +109,12 @@ static int32_t GetOpcodeLength(int32_t format, int32_t op)
 	return 0;
 }
 
-static int32_t GetDscFormat(const int32_t* data)
+static int32_t GetDscFormat(int32_t signature)
 {
-	if (*data < 0x10000000 || *data < 0x10101514)
+	if (signature < 0x10000000 || signature < 0x10101514)
 		return DscFormat_AC;
 
-	switch (*data)
+	switch (signature)
 	{
 	case 0x43535650:
 		return DscFormat_F2;
@@ -127,9 +127,31 @@ static int32_t GetDscFormat(const int32_t* data)
 	return DscFormat_FT;
 }
 
-static int32_t IsVanillaFormat(const int32_t* data)
+static int32_t GetDscFileFormat(int32_t index)
 {
-	return GetDscFormat(data) == DscFormat_AC || GetDscFormat(data) == DscFormat_FT;
+	if ((index != 0 && index != 1) || !dsc_ready[index])
+		return DscFormat_FT;
+
+	// DSC at index 0 is always the one defined in PV_DB
+	if (index == 0)
+	{
+		auto& param = game::GetPVLoadParam()->data[game::GetPVLoadParam()->data[0].int8];
+		if (void* entry = pv_db::FindPVEntry(param.pv_id); entry)
+		{
+			if (pv_db::PvDBDifficulty* diff = pv_db::FindDifficulty(entry, param.difficulty, param.edition); diff)
+				return GetDscFormat(diff->script_format);
+		}
+	}
+
+	if (dsc_data[index])
+		return GetDscFormat(*dsc_data[index]);
+	return DscFormat_FT;
+}
+
+static int32_t IsVanillaFormat(int32_t file_index)
+{
+	int32_t format = GetDscFileFormat(file_index);
+	return format == DscFormat_AC || format == DscFormat_FT;
 }
 
 static void ConvertTargetParams(int32_t format, const int32_t* data, int32_t* output, float* length, bool* end)
@@ -169,9 +191,8 @@ static void PushTargetExtraInfo(int32_t index, int32_t sub_index, float length, 
 	ex.long_end = end;
 }
 
-static bool ParseDsc(const int32_t* data, std::map<int32_t, DscFrame>& output, int32_t flags)
+static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscFrame>& output, int32_t flags)
 {
-	int32_t format = GetDscFormat(data);
 	int32_t branch_mode = 0;
 	int32_t time = 0;
 	int32_t flying_time = 0;
@@ -376,15 +397,15 @@ static bool CompileDsc(PVGamePvData& pv_data, const std::map<int32_t, DscFrame>&
 static bool MergeDscs(PVGamePvData& pv_data)
 {
 	// NOTE: Return early if the base DSC is FT format and there's no secondary DSC
-	if (dsc_data[0] && IsVanillaFormat(dsc_data[0]) && !dsc_data[1])
+	if (dsc_data[0] && IsVanillaFormat(0) && !dsc_data[1])
 		return true;
 
 	std::map<int32_t, DscFrame> data;
 	if (dsc_data[0])
-		ParseDsc(dsc_data[0], data, dsc_data[1] ? MergeFlags_IgnoreChart : MergeFlags_None);
+		ParseDsc(dsc_data[0], GetDscFileFormat(0), data, dsc_data[1] ? MergeFlags_IgnoreChart : MergeFlags_None);
 
 	if (dsc_data[1])
-		ParseDsc(dsc_data[1], data, MergeFlags_IgnorePV);
+		ParseDsc(dsc_data[1], GetDscFileFormat(1), data, MergeFlags_IgnorePV);
 
 	CompileDsc(pv_data, data);
 	return true;

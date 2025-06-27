@@ -1159,20 +1159,25 @@ namespace pv_db
 	struct PvDBDifficulty
 	{
 		int32_t difficulty;
-		int32_t gap04;
 		int32_t edition;
-		int32_t gap0C[5];
-		prj::string script_file_name;
+		int32_t extra;
+		int32_t dwordC;
+		int64_t attributes;
+		int32_t gap18[2];
+		std::string script_file_name;
 		int32_t level;
-		prj::string button_se;
-		prj::string success_se;
-		prj::string slide_se;
-		prj::string slidechain_start_se;
-		prj::string slidechain_se;
-		prj::string slidechain_success_se;
-		prj::string slidechain_failure_se;
-		prj::string slide_touch_se;
-		uint8_t gap[1000];
+		int32_t level_sort_index;
+		std::string button_se;
+		std::string success_se;
+		std::string slide_se;
+		std::string slidechain_start_se;
+		std::string slidechain_se;
+		std::string slidechain_success_se;
+		std::string slidechain_failure_se;
+		std::string slide_touch_se;
+		uint8_t gap148[932];
+		int32_t script_format;
+		uint8_t gap4F0[64];
 	};
 
 	struct PvDBEntry
