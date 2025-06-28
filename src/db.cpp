@@ -12,6 +12,9 @@
 // REFERENCED FROM: https://github.com/BroGamer4256/scale/blob/master/src/mod.cpp
 //
 
+// TODO: Make nc_db stackable (one mod can add mixed and another can add console charts)
+//       but for that I have to figure out how to properly handle the default arcade entry
+
 constexpr size_t MaxFilePerRom = 10;
 constexpr std::array<std::string_view, GameStyle_Max> styles_names_internal = { "ARCADE", "CONSOLE", "MIXED" };
 constexpr std::array<std::string_view, 21> pv_lv_names_internal = {
@@ -99,8 +102,8 @@ static bool ParsePVEntry(toml::table& node, db::SongEntry* entry)
 				auto& difficulty_entry = entry->difficulties[i + MaxDifficultyCount * ed];
 				if (difficulty_entry.has_value())
 				{
-					if (ParseDifficultyEntry(*diff, difficulty_entry.value()))
-						entry->difficulties[i + MaxDifficultyCount * ed] = difficulty_entry;
+					difficulty_entry.value().charts.clear();
+					ParseDifficultyEntry(*diff, difficulty_entry.value());
 				}
 			}
 		}
