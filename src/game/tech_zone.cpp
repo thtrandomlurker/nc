@@ -72,19 +72,34 @@ void TechZoneDispState::Ctrl()
 
 	if (scene == 0 || layer_name.empty())
 	{
-		// TODO: Implement song default / match UI modes (although for the latter one we first
-		//       need to actually add FT and M39 tech zone skins)
-		constexpr uint32_t scene_ids[3] = { 14010081, 14010082, 14010083 };
-		int32_t scene_index = nc::GetSharedData().tech_zone_style;
+		// TODO: Implement song's default style (?)
+		//       Detect BricOOtaku's X UI mode and set the style accordingly in 'Match' mode
+		int32_t style = nc::GetSharedData().tech_zone_style;
 
-		switch (nc::GetSharedData().tech_zone_style)
+		if (style == TechZoneStyle_Match)
+			style = game::IsFutureToneMode() ? TechZoneStyle_FT : TechZoneStyle_M39;
+
+		switch (style)
 		{
 		case TechZoneStyle_F:
+			layer_name = "bonus_zone";
+			scene = 14010081;
+			break;
 		case TechZoneStyle_F2nd:
+			layer_name = "bonus_zone";
+			scene = 14010082;
+			break;
 		case TechZoneStyle_X:
 			layer_name = "bonus_zone";
-			scene = scene_ids[nc::GetSharedData().tech_zone_style];
+			scene = 14010083;
 			break;
+		case TechZoneStyle_FT:
+			layer_name = "bonus_zone";
+			scene = 14010084;
+			break;
+		case TechZoneStyle_M39:
+			layer_name = "bonus_zone";
+			scene = 14010085;
 		}
 	}
 
@@ -173,17 +188,25 @@ static int32_t GetMaxNumber(int32_t max_digits)
 	return num;
 }
 
-static void DrawNumberWithF2ndFont(int32_t value, int32_t max_digits, diva::vec3 pos, int32_t prio, bool fail)
+struct NumberDrawArgs
 {
-	constexpr uint32_t sprite_id = 776507282;
-	const diva::vec2 glyph_size = { 60.0f, 64.0f };
-	const diva::vec2 size = { 45.0f, 48.0f };
-	const int32_t color = fail ? 0xFF7F7F7F : 0xFFFFFFFF;
+	int32_t value = 0;
+	int32_t max_digits = 3;
+	int32_t priority = 11;
+	int32_t color = 0xFFFFFFFF;
+	uint32_t sprite_id = 0;
+	diva::vec2 glyph_size = {};
+	diva::vec2 size = {};
+	diva::vec3 pos = {};
+};
 
-	if (int32_t max = GetMaxNumber(max_digits); value > max)
+static void DrawNumberWithSpriteFont(const NumberDrawArgs& args)
+{
+	int32_t value = args.value;
+	if (int32_t max = GetMaxNumber(args.max_digits); value > max)
 		value = max;
 
-	for (int i = 0; i < max_digits; i++)
+	for (int i = 0; i < args.max_digits; i++)
 	{
 		int32_t digit = value - value / 10 * 10;
 		value /= 10;
@@ -193,17 +216,17 @@ static void DrawNumberWithF2ndFont(int32_t value, int32_t max_digits, diva::vec3
 			break;
 
 		SprArgs spr_args = { };
-		spr_args.id = sprite_id;
+		spr_args.id = args.sprite_id;
 		spr_args.resolution_mode_screen = 14;
 		spr_args.resolution_mode_sprite = 14;
-		spr_args.priority = prio;
+		spr_args.priority = args.priority;
 		spr_args.attr = 0x100000; // SPR_ATTR_CTR_RT
-		memcpy(spr_args.color, &color, 4);
-		spr_args.trans = { pos.x - size.x * i, pos.y, 0.0f };
+		memcpy(spr_args.color, &args.color, 4);
+		spr_args.trans = { args.pos.x - args.size.x * i, args.pos.y, 0.0f };
 		spr_args.flags = 0x03;
-		spr_args.texture_pos = { glyph_size.x * digit, 0.0f };
-		spr_args.texture_size = { glyph_size.x, glyph_size.y };
-		spr_args.sprite_size = { size.x, size.y };
+		spr_args.texture_pos = { args.glyph_size.x * digit, 0.0f };
+		spr_args.texture_size = { args.glyph_size.x, args.glyph_size.y };
+		spr_args.sprite_size = { args.size.x, args.size.y };
 		spr::DrawSprite(&spr_args);
 	}
 }
@@ -214,6 +237,33 @@ void TechZoneDispState::Disp() const
 		return;
 
 	std::shared_ptr<AetElement>& tz = ::state.ui.GetLayer(LayerUI_BonusZone);
+
+	NumberDrawArgs args = {};
+	args.value = data->GetRemainingCount();
+	args.color = data->failed ? 0xFF7F7F7F : 0xFFFFFFFF;
+	args.priority = prio + 1;
+
 	if (auto layout = tz->GetLayout("p_notes_num_rt"); layout.has_value())
-		DrawNumberWithF2ndFont(data->GetRemainingCount(), 3, layout.value().position, prio + 1, data->failed);
+	{
+		args.sprite_id = 0x2E488F92;
+		args.glyph_size = diva::vec2(60.0f, 64.0f);
+		args.size = diva::vec2(45.0f, 48.0f);
+		args.pos = layout.value().position;
+	}
+	else if (auto layout = tz->GetLayout("p_notes_num_ft_rt"); layout.has_value())
+	{
+		args.sprite_id = 0x4B60732B;
+		args.glyph_size = diva::vec2(33.0f, 42.0f);
+		args.size = diva::vec2(33.0f, layout.value().height);
+		args.pos = layout.value().position;
+	}
+	else if (auto layout = tz->GetLayout("p_notes_num_mm_rt"); layout.has_value())
+	{
+		args.sprite_id = 0x3F4C00A5;
+		args.glyph_size = diva::vec2(37.0f, 41.0f);
+		args.size = diva::vec2(37.0f, layout.value().height);
+		args.pos = layout.value().position;
+	}
+
+	DrawNumberWithSpriteFont(args);
 }

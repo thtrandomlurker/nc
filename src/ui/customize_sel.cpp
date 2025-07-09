@@ -8,6 +8,7 @@
 #include <input.h>
 #include <util.h>
 #include <game/sound_effects.h>
+#include <game/tech_zone.h>
 #include "common.h"
 #include "customize_sel.h"
 
@@ -422,8 +423,50 @@ public:
 			tz->values.push_back("F");
 			tz->values.push_back("F 2nd");
 			tz->values.push_back("X");
-			tz->selected_index = nc::GetSharedData().tech_zone_style;
-			tz->SetOnChangeNotifier([this](int32_t index) { nc::GetSharedData().tech_zone_style = index; });
+			tz->values.push_back("Future Tone");
+			tz->values.push_back("Mega Mix+");
+			tz->values.push_back("Match UI");
+
+			int32_t tz_style = nc::GetSharedData().tech_zone_style;
+			switch (tz_style)
+			{
+			case TechZoneStyle_F:
+			case TechZoneStyle_F2nd:
+			case TechZoneStyle_X:
+				tz->selected_index = tz_style;
+				break;
+			case TechZoneStyle_FT:
+				tz->selected_index = 3;
+				break;
+			case TechZoneStyle_M39:
+				tz->selected_index = 4;
+				break;
+			case TechZoneStyle_Match:
+				tz->selected_index = 5;
+				break;
+			}
+
+			tz->SetOnChangeNotifier([this](int32_t index)
+			{
+				int32_t& tz_style = nc::GetSharedData().tech_zone_style;
+				switch (index)
+				{
+				case 0:
+				case 1:
+				case 2:
+					tz_style = index;
+					break;
+				case 3:
+					tz_style = TechZoneStyle_FT;
+					break;
+				case 4:
+					tz_style = TechZoneStyle_M39;
+					break;
+				case 5:
+					tz_style = TechZoneStyle_Match;
+					break;
+				}
+			});
 
 			auto* snd = CreateOptionElement<HorizontalSelectorMulti, HorizontalSelectorMulti::Notifier>(9, 4);
 			snd->values.push_back("Disabled");
