@@ -291,7 +291,7 @@ extern "C" {
 		return nullptr;
 	}
 
-	__declspec(dllexport) bool db::Ready() {
+	__declspec(dllexport) bool db::DbReady() {
 		return nc_db.ready;
 	}
 }

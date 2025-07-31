@@ -60,7 +60,7 @@ namespace db
 		const __declspec(dllexport) SongEntry* FindSongEntry(int32_t pv);
 		const __declspec(dllexport) DifficultyEntry* FindDifficultyEntry(int32_t pv, int32_t difficulty, int32_t edition);
 		const __declspec(dllexport) ChartEntry* FindChart(int32_t pv, int32_t difficulty, int32_t edition, int32_t style);
-		__declspec(dllexport) bool db::Ready();
+		__declspec(dllexport) bool DbReady();
 	}
 }
 
