@@ -213,16 +213,18 @@ namespace pvsel
 		return GameStyle_Arcade;
 	}
 
-	bool CheckSongHasStyleAvailable(int32_t pv, int32_t difficulty, int32_t edition, int32_t style)
-	{
-		const db::SongEntry* song = db::FindSongEntry(pv);
-		if (!song)
+	extern "C" {
+		__declspec(dllexport) bool CheckSongHasStyleAvailable(int32_t pv, int32_t difficulty, int32_t edition, int32_t style)
 		{
-			// NOTE: Assume the song only has ARCADE style if it doesn't have an nc_db entry
-			return style == GameStyle_Arcade;
-		}
+			const db::SongEntry* song = db::FindSongEntry(pv);
+			if (!song)
+			{
+				// NOTE: Assume the song only has ARCADE style if it doesn't have an nc_db entry
+				return style == GameStyle_Arcade;
+			}
 
-		return song->FindChart(difficulty, edition, style) != nullptr;
+			return song->FindChart(difficulty, edition, style) != nullptr;
+		}
 	}
 
 	int32_t CalculateSongStyleCount(int32_t pv, int32_t difficulty, int32_t edition)

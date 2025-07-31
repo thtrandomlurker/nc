@@ -319,3 +319,10 @@ TargetStateEx* GetTargetStateEx(const PvGameTarget* org)
 
 	return GetTargetStateEx(org->target_index, sub_index);
 }
+
+extern "C" {
+	__declspec(dllexport) StateEx* GetState()
+	{
+		return &state;
+	}
+}

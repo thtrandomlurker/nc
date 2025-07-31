@@ -333,3 +333,7 @@ inline SoundEffectManager se_mgr = { };
 // NOTE: Helper functions
 TargetStateEx* GetTargetStateEx(int32_t index, int32_t sub_index);
 TargetStateEx* GetTargetStateEx(const PvGameTarget* org);
+
+extern "C" {
+	__declspec(dllexport) StateEx* GetState();
+}
