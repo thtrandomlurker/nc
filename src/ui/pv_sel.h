@@ -107,7 +107,9 @@ namespace pvsel
 
 	int32_t GetSelectedStyleOrDefault();
 	int32_t GetPreferredStyleOrDefault();
-	bool CheckSongHasStyleAvailable(int32_t pv, int32_t difficulty, int32_t edition, int32_t style);
+	extern "C" {
+		__declspec(dllexport) bool CheckSongHasStyleAvailable(int32_t pv, int32_t difficulty, int32_t edition, int32_t style);
+	}
 	int32_t CalculateSongStyleCount(int32_t pv, int32_t difficulty, int32_t edition);
 
 	template <typename T>

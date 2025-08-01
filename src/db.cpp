@@ -254,40 +254,46 @@ const db::ChartEntry* db::SongEntry::FindChart(int32_t difficulty, int32_t editi
 	return nullptr;
 }
 
-const db::SongEntry* db::FindSongEntry(int32_t pv)
-{
-	if (auto it = nc_db.entries.find(pv); it != nc_db.entries.end())
-		return &it->second;
-	return nullptr;
-}
-
-const db::DifficultyEntry* db::FindDifficultyEntry(int32_t pv, int32_t difficulty, int32_t edition)
-{
-	if (difficulty < 0 || difficulty > MaxDifficultyCount || (edition != 0 && edition != 1))
-		return nullptr;
-
-	if (auto* song = FindSongEntry(pv); song != nullptr)
+extern "C" {
+	const __declspec(dllexport) db::SongEntry* db::FindSongEntry(int32_t pv)
 	{
-		if (const auto& entry = song->difficulties[MaxDifficultyCount * edition + difficulty]; entry.has_value())
-			return &entry.value();
+		if (auto it = nc_db.entries.find(pv); it != nc_db.entries.end())
+			return &it->second;
+		return nullptr;
 	}
 
-	return nullptr;
-}
-
-const db::ChartEntry* db::FindChart(int32_t pv, int32_t difficulty, int32_t edition, int32_t style)
-{
-	if (style < 0 || style >= GameStyle_Max)
-		return nullptr;
-
-	if (auto* entry = FindDifficultyEntry(pv, difficulty, edition); entry != nullptr)
+	const __declspec(dllexport) db::DifficultyEntry* db::FindDifficultyEntry(int32_t pv, int32_t difficulty, int32_t edition)
 	{
-		for (auto& chart : entry->charts)
-			if (chart.style == style)
-				return &chart;
+		if (difficulty < 0 || difficulty > MaxDifficultyCount || (edition != 0 && edition != 1))
+			return nullptr;
+
+		if (auto* song = FindSongEntry(pv); song != nullptr)
+		{
+			if (const auto& entry = song->difficulties[MaxDifficultyCount * edition + difficulty]; entry.has_value())
+				return &entry.value();
+		}
+
+		return nullptr;
 	}
-	
-	return nullptr;
+
+	const __declspec(dllexport) db::ChartEntry* db::FindChart(int32_t pv, int32_t difficulty, int32_t edition, int32_t style)
+	{
+		if (style < 0 || style >= GameStyle_Max)
+			return nullptr;
+
+		if (auto* entry = FindDifficultyEntry(pv, difficulty, edition); entry != nullptr)
+		{
+			for (auto& chart : entry->charts)
+				if (chart.style == style)
+					return &chart;
+		}
+
+		return nullptr;
+	}
+
+	__declspec(dllexport) bool db::DbReady() {
+		return nc_db.ready;
+	}
 }
 
 void InstallDatabaseHooks()

@@ -56,9 +56,12 @@ namespace db
 		const ChartEntry* FindChart(int32_t difficulty, int32_t edition, int32_t style) const;
 	};
 
-	const SongEntry* FindSongEntry(int32_t pv);
-	const DifficultyEntry* FindDifficultyEntry(int32_t pv, int32_t difficulty, int32_t edition);
-	const ChartEntry* FindChart(int32_t pv, int32_t difficulty, int32_t edition, int32_t style);
+	extern "C" {
+		const __declspec(dllexport) SongEntry* FindSongEntry(int32_t pv);
+		const __declspec(dllexport) DifficultyEntry* FindDifficultyEntry(int32_t pv, int32_t difficulty, int32_t edition);
+		const __declspec(dllexport) ChartEntry* FindChart(int32_t pv, int32_t difficulty, int32_t edition, int32_t style);
+		__declspec(dllexport) bool DbReady();
+	}
 }
 
 void InstallDatabaseHooks();
