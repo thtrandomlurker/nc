@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <chrono>
 #include <unordered_map>
 #include <bitset>
 #include <array>
@@ -93,20 +95,42 @@ static FUNCTION_PTR(int64_t, __fastcall, GetPvKeyStateDown, 0x140274930, void* h
 static FUNCTION_PTR(int64_t, __fastcall, GetPvKeyStateTapped, 0x140274960, void* handler, int32_t key);
 static FUNCTION_PTR(bool, __fastcall, PollRepeatTapInput, 0x1402AA650, RepeatTapMemory* a1, float a2, bool is_down);
 
+ButtonState::StateData& ButtonState::Push(const std::chrono::steady_clock::time_point& time)
+{
+	// Erase data older than 500ms.
+	if (!data.empty()) 
+	{
+		// Find the first outdated state. Since the list is in descending order, we can remove the rest in one go.
+		auto searchResult = std::lower_bound(
+			data.begin(), 
+			data.end(),
+			(time - std::chrono::milliseconds(500)), 
+			[](auto& lhs, auto& rhs) { return lhs.time > rhs; });
+
+		data.erase(searchResult, data.end());
+	}
+	
+	// Push new state to the front, make sure there are at least 2.
+	do 
+	{
+		data.insert(data.begin(), StateData{false, false, false, false, time});
+	} while (data.size() < 2);
+
+	return data[0];
+}
+
 bool ButtonState::IsTappedInNearFrames() const
 {
-	int32_t lookup_count = NearFramesBaseCount * (game::GetFramerate() / NearFramesBaseRate);
-	bool mask = false;
-
-	for (int32_t i = 0; i < lookup_count; i++)
+	for (auto& state : data)
 	{
-		if (i >= MaxKeepStates)
-			break;
+		if (std::chrono::duration_cast<std::chrono::milliseconds>(data[0].time - state.time).count() > 50)
+			return false;
 
-		mask = mask || data[i].tapped;
+		if (state.tapped)
+			return true;
 	}
 
-	return mask;
+	return false;
 }
 
 static void UpdateButtonState(ButtonState* state, const int64_t* buffer, int32_t index, int32_t mask)
@@ -123,9 +147,11 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 	diva::InputState* diva_input = diva::GetInputState(player_index);
 	device = diva_input->GetDevice();
 
+	auto time = std::chrono::steady_clock::now();
+
 	// NOTE: Update buttons
 	for (int32_t i = 0; i < Button_Max; i++)
-		buttons[i].Push();
+		buttons[i].Push(time);
 
 	int64_t key_states[8];
 	for (int i = 0; i < 8; i++)
@@ -154,11 +180,11 @@ bool MacroState::Update(void* internal_handler, int32_t player_index)
 		buttons[i].data[0].released = buttons[i].data[0].up && buttons[i].data[1].down;
 	}
 
-	UpdateSticks(diva_input);
+	UpdateSticks(diva_input, time);
 	return true;
 }
 
-void MacroState::UpdateSticks(diva::InputState* input_state)
+void MacroState::UpdateSticks(diva::InputState* input_state, const std::chrono::steady_clock::time_point& time)
 {
 	auto checkDeadzoned = [&](const diva::vec2& pos)
 	{
@@ -201,6 +227,7 @@ void MacroState::UpdateSticks(diva::InputState* input_state)
 		button.up = !button.down;
 		button.tapped = state->flicked;
 		// button.released = !button.tapped;
+		button.time = time;
 	};
 
 	updateStick(Stick_L);
