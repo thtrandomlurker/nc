@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <stdint.h>
 #include "diva.h"
 
@@ -44,24 +45,18 @@ enum Stick : int32_t
 
 struct ButtonState
 {
-	static constexpr size_t MaxKeepStates = 32;
-
 	struct StateData
 	{
-		bool down;
-		bool up;
-		bool tapped;
-		bool released;
-	} data[MaxKeepStates];
+		bool down{};
+		bool up{};
+		bool tapped{};
+		bool released{};
+		std::chrono::steady_clock::time_point time;
+	};
 
-	inline StateData& Push()
-	{
-		for (int32_t i = MaxKeepStates - 2; i >= 0; i--)
-			data[i + 1] = data[i];
+	std::vector<StateData> data;
 
-		memset(&data[0], 0, sizeof(StateData));
-		return data[0];
-	}
+	StateData& Push(const std::chrono::steady_clock::time_point& time);
 	
 	inline bool IsDown() const { return data[0].down; }
 	inline bool IsTapped() const { return data[0].tapped; }
@@ -99,7 +94,7 @@ struct MacroState
 	}
 
 	bool Update(void* internal_handler, int32_t player_index);
-	void UpdateSticks(diva::InputState* input_state);
+	void UpdateSticks(diva::InputState* input_state, const std::chrono::steady_clock::time_point& time);
 	bool GetStarHit() const;
 	bool GetDoubleStarHit() const;
 	bool GetStarHitCancel() const;
