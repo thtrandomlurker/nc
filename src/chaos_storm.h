@@ -1,0 +1,1 @@
+extern bool cs_enabled;

@@ -6,6 +6,8 @@
 #include <nc_log.h>
 #include <nc_state.h>
 #include <util.h>
+#include <randomgen.h>
+#include <chaos_storm.h>
 #include "dsc.h"
 
 enum DscState : int32_t
@@ -70,6 +72,11 @@ static bool dsc_ready[2] = { false, false };
 static int32_t* dsc_data[2] = { nullptr, nullptr };
 static int32_t dsc_state = DscState_Idle;
 static FileHandler file_handler = nullptr;
+
+static int prev_long_angle = 0;
+static int prev_long_distance = 0;
+static int prev_long_amplitude = 0;
+static int prev_long_frequency = 0;
 
 static bool RequestLoadDsc(const prj::string& original_path)
 {
@@ -156,21 +163,57 @@ static int32_t IsVanillaFormat(int32_t file_index)
 
 static void ConvertTargetParams(int32_t format, const int32_t* data, int32_t* output, float* length, bool* end)
 {
-	if (format == DscFormat_F || format == DscFormat_NC || format == DscFormat_F2)
-	{
-		output[0] = data[0];
-		*length   = data[1] / 100000.0f;
-		*end      = data[2] == 1;
-		output[1] = data[3]; // X
-		output[2] = data[4]; // Y
-		output[3] = data[5]; // Angle
-		output[4] = data[7]; // Distance
-		output[5] = data[8]; // Amplitude
-		output[6] = data[6]; // Frequency
-		return;
+	output[0] = data[0];
+	if (format > DscFormat_AC) {
+		*length = data[1] / 100000.0f;
+		*end = data[2] == 1;
+		output[1] = data[3];
+		output[2] = data[4];
 	}
-	
-	memcpy_s(output, sizeof(int32_t) * 7, data, sizeof(int32_t) * 7);
+	else {
+		output[1] = data[1];
+		output[2] = data[2];
+	}
+	if (cs_enabled) {
+		if (data[0] >= TargetType_TriangleLong && data[0] <= TargetType_SquareLong) {
+			if (data[2] == 1) {
+				output[3] = prev_long_angle;
+				output[4] = prev_long_distance;
+				output[5] = prev_long_amplitude;
+				output[6] = prev_long_frequency;
+			}
+			else {
+				output[3] = get_random_angle(); // Angle
+				output[4] = get_random_distance(); // Distance
+				output[5] = get_random_amplitude(); // Amplitude
+				output[6] = get_random_frequency(); // Frequency
+			}
+		}
+		else {
+			output[3] = get_random_angle(); // Angle
+			output[4] = get_random_distance(); // Distance
+			output[5] = get_random_amplitude(); // Amplitude
+			output[6] = get_random_frequency(); // Frequency
+		}
+		if (data[0] >= TargetType_TriangleLong && data[0] <= TargetType_SquareLong) {
+			prev_long_angle = output[3];
+			prev_long_distance = output[4];
+			prev_long_amplitude = output[5];
+			prev_long_frequency = output[6];
+		}
+	}
+	else if (format > DscFormat_AC) {
+		output[3] = data[5];
+		output[4] = data[7];
+		output[5] = data[8];
+		output[6] = data[6];
+	}
+	else {
+		output[3] = data[3];
+		output[4] = data[4];
+		output[5] = data[5];
+		output[6] = data[6];
+	}
 }
 
 static void PushTargetExtraInfo(int32_t index, int32_t sub_index, float length, bool end)
@@ -397,10 +440,6 @@ static bool CompileDsc(PVGamePvData& pv_data, const std::map<int32_t, DscFrame>&
 
 static bool MergeDscs(PVGamePvData& pv_data)
 {
-	// NOTE: Return early if the base DSC is FT format and there's no secondary DSC
-	if (dsc_data[0] && IsVanillaFormat(0) && !dsc_data[1])
-		return true;
-
 	std::map<int32_t, DscFrame> data;
 	if (dsc_data[0])
 		ParseDsc(dsc_data[0], GetDscFileFormat(0), data, dsc_data[1] ? MergeFlags_IgnoreChart : MergeFlags_None);

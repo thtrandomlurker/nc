@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <vector>
 #include <thirdparty/lazycsv.hpp>
+#include <thirdparty/toml.h>
 #include "hooks.h"
 #include "game/hit_state.h"
 #include "game/target.h"
@@ -20,6 +21,7 @@
 #include "save_data.h"
 #include "util.h"
 #include "game/dsc.h"
+#include "chaos_storm.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -371,6 +373,10 @@ extern "C"
 
 		// NOTE: Patch target type check in PVGameTarget::CreateAet (0x150D54750)
 		WRITE_MEMORY(0x150D54766, uint8_t, TargetType_Max - 12);
+
+		auto config = toml::parse_file("config.toml");
+
+		cs_enabled = config["chaos_storm_enabled"].value_or(false);
 
 		// NOTE: Install hooks
 		INSTALL_HOOK(TaskPvGameInit);

@@ -163,13 +163,14 @@
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(TargetPath)" "$(ProjectDir)assets\New Classics\NewClassics.dll"
-copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DIVA Mega Mix Plus\mods\New Classics\NewClassics.dll"</Command>
+copy /y "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Hatsune Miku Project DIVA Mega Mix Plus\mods\New Classics\NewClassics.dll"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Copy output DLL</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\chaos_storm.cpp" />
     <ClCompile Include="src\db.cpp" />
     <ClCompile Include="src\diva.cpp" />
     <ClCompile Include="src\game\chance_time.cpp" />
@@ -186,6 +187,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClCompile Include="src\nc_log.cpp" />
     <ClCompile Include="src\nc_state.cpp" />
     <ClCompile Include="src\nc_time.cpp" />
+    <ClCompile Include="src\randomgen.cpp" />
     <ClCompile Include="src\save_data.cpp" />
     <ClCompile Include="src\sound_db.cpp" />
     <ClCompile Include="src\thirdparty\toml.cpp" />
@@ -200,6 +202,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClCompile Include="src\util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\chaos_storm.h" />
     <ClInclude Include="src\db.h" />
     <ClInclude Include="src\game\dsc.h" />
     <ClInclude Include="src\game\score.h" />
@@ -216,6 +219,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClInclude Include="src\input.h" />
     <ClInclude Include="src\nc_log.h" />
     <ClInclude Include="src\nc_time.h" />
+    <ClInclude Include="src\randomgen.h" />
     <ClInclude Include="src\save_data.h" />
     <ClInclude Include="src\shared.h" />
     <ClInclude Include="src\sound_db.h" />
