@@ -163,7 +163,7 @@
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(TargetPath)" "$(ProjectDir)assets\New Classics\NewClassics.dll"
-copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DIVA Mega Mix Plus\mods\New Classics\NewClassics.dll"</Command>
+copy /y "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Hatsune Miku Project DIVA Mega Mix Plus\mods\New Classics\NewClassics.dll"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Copy output DLL</Message>
@@ -188,6 +188,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClCompile Include="src\nc_time.cpp" />
     <ClCompile Include="src\save_data.cpp" />
     <ClCompile Include="src\sound_db.cpp" />
+    <ClCompile Include="src\target_hit_effect.cpp" />
     <ClCompile Include="src\thirdparty\toml.cpp" />
     <ClCompile Include="src\ui\common.cpp" />
     <ClCompile Include="src\ui\customize_sel.cpp" />
@@ -219,6 +220,7 @@ copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DI
     <ClInclude Include="src\save_data.h" />
     <ClInclude Include="src\shared.h" />
     <ClInclude Include="src\sound_db.h" />
+    <ClInclude Include="src\target_hit_effect.h" />
     <ClInclude Include="src\thirdparty\lazycsv.hpp" />
     <ClInclude Include="src\thirdparty\toml++\toml.hpp" />
     <ClInclude Include="src\thirdparty\toml.h" />

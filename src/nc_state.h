@@ -156,6 +156,8 @@ struct TargetStateEx
 	float bal_end_time = -1.0f;
 	float bal_scale = 0.0f;
 
+	int32_t target_hit_effect_id = -1; // NOTE: Index of the composition within the root composition of the HIT scene to play
+
 	void ResetPlayState();
 	void ResetAetData();
 	bool IsChainSucessful();

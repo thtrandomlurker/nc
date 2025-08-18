@@ -7,6 +7,7 @@
 #include <nc_state.h>
 #include <util.h>
 #include "dsc.h"
+#include "target_hit_effect.h"
 
 enum DscState : int32_t
 {
@@ -103,6 +104,10 @@ static int32_t GetOpcodeLength(int32_t format, int32_t op)
 		else if (format == DscFormat_NC) return 11;
 		else if (format == DscFormat_F2) return 12;
 	}
+
+	/*if (op == DscOp_TargetEffect) {
+		return 11;
+	}*/
 	
 	if (const dsc::OpcodeInfo* info = dsc::GetOpcodeInfo(op); info != nullptr)
 		return format == DscFormat_AC ? info->length_old : info->length;
@@ -154,7 +159,7 @@ static int32_t IsVanillaFormat(int32_t file_index)
 	return format == DscFormat_AC || format == DscFormat_FT;
 }
 
-static void ConvertTargetParams(int32_t format, const int32_t* data, int32_t* output, float* length, bool* end)
+static void ConvertTargetParams(int32_t format, const int32_t* data, int32_t* output, float* length, bool* end, int32_t* target_hit_effect)
 {
 	if (format == DscFormat_F || format == DscFormat_NC || format == DscFormat_F2)
 	{
@@ -167,13 +172,16 @@ static void ConvertTargetParams(int32_t format, const int32_t* data, int32_t* ou
 		output[4] = data[7]; // Distance
 		output[5] = data[8]; // Amplitude
 		output[6] = data[6]; // Frequency
+		if (format == DscFormat_F2) {
+			*target_hit_effect = data[11];
+		}
 		return;
 	}
 	
 	memcpy_s(output, sizeof(int32_t) * 7, data, sizeof(int32_t) * 7);
 }
 
-static void PushTargetExtraInfo(int32_t index, int32_t sub_index, float length, bool end)
+static void PushTargetExtraInfo(int32_t index, int32_t sub_index, float length, bool end, int32_t target_hit_effect)
 {
 	if (TargetStateEx* ex = GetTargetStateEx(index, sub_index); ex != nullptr)
 	{
@@ -181,6 +189,7 @@ static void PushTargetExtraInfo(int32_t index, int32_t sub_index, float length, 
 		ex->sub_index = sub_index;
 		ex->length = length;
 		ex->long_end = end;
+		ex->target_hit_effect_id = target_hit_effect;
 		return;
 	}
 
@@ -189,6 +198,7 @@ static void PushTargetExtraInfo(int32_t index, int32_t sub_index, float length, 
 	ex.sub_index = sub_index;
 	ex.length = length;
 	ex.long_end = end;
+	ex.target_hit_effect_id = target_hit_effect;
 	ex.ResetPlayState();
 }
 
@@ -315,8 +325,9 @@ static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscF
 			int32_t ft_params[7] = {};
 			float length = -1.0f;
 			bool is_end = false;
-			ConvertTargetParams(format, params, ft_params, &length, &is_end);
-			PushTargetExtraInfo(target_index, multi_index, length, is_end);
+			int32_t target_hit_effect;
+			ConvertTargetParams(format, params, ft_params, &length, &is_end, &target_hit_effect);
+			PushTargetExtraInfo(target_index, multi_index, length, is_end, target_hit_effect);
 
 			list.push_back(DscFrame::DscCommand(DscOp_Target, std::initializer_list<int32_t>(ft_params, ft_params + 7)));
 			had_target = true;
@@ -326,6 +337,18 @@ static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscF
 		case DscOp_PVBranchMode:
 			branch_mode = readNext();
 			break;
+		/*case DscOp_TargetEffect: {
+			int32_t eff_id = readNext();
+			int32_t eff_flag_0 = readNext();
+			int32_t eff_flag_1 = readNext();
+			std::string layer_name((char*)data);
+
+			//hiteff::target_effect_map.emplace(eff_id, layer_name);
+			nc::Print("Added %s as effect %d", layer_name.c_str(), eff_id);
+			data += 8;
+			break;
+		}*/
+
 		default:
 		{
 			if (flags & MergeFlags_IgnorePV)

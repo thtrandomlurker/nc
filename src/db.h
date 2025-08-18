@@ -1,4 +1,4 @@
-#pragma once
+#pragma once 
 
 #include <array>
 #include <string>
@@ -50,6 +50,9 @@ namespace db
 		std::string star_long_se_name = DefaultStarSound;
 		std::string star_w_se_name    = DefaultStarSound;
 		std::string link_se_name      = DefaultStarSound;
+		uint32_t target_hit_effect_aetset_id = 0xFFFFFFFF;
+		uint32_t target_hit_effect_scene_id = 0xFFFFFFFF;
+		uint32_t target_hit_effect_sprset_id = 0xFFFFFFFF;
 		std::array<std::optional<DifficultyEntry>, MaxDifficultyCount * MaxEditionCount> difficulties;
 
 		ChartEntry& FindOrCreateChart(int32_t difficulty, int32_t edition, int32_t style);
