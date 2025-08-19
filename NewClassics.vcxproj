@@ -163,7 +163,15 @@
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(TargetPath)" "$(ProjectDir)assets\New Classics\NewClassics.dll"
-copy /y "$(TargetPath)" "D:\Games\Steam\steamapps\common\Hatsune Miku Project DIVA Mega Mix Plus\mods\New Classics\NewClassics.dll"</Command>
+
+
+IF EXIST "$(ProjectDir)postbuild.bat" (
+echo "Post-build script was found. Running..."
+call "$(ProjectDir)postbuild.bat"
+) ELSE (
+echo "Post-build script was not found."
+)
+</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Copy output DLL</Message>
