@@ -118,7 +118,7 @@ HOOK(void, __fastcall, PVselPS4CreateSortedPVList, 0x140206C30, PVselPS4* sel)
 HOOK(bool, __fastcall, PVselPS4Init, 0x140202D50, PVselPS4* sel)
 {
 	pvsel::RequestAssetsLoad();
-	if (!pvsel::gs_win && !IsSurvivalMode() && !IsPlaylistMode())
+	if (!pvsel::gs_win && !IsPlaylistMode())
 	{
 		pvsel::gs_win = std::make_unique<pvsel::GSWindow>();
 		pvsel::gs_win->SetPreferredStyle(nc::GetSharedData().pv_sel_selected_style);
@@ -157,7 +157,7 @@ HOOK(bool, __fastcall, PVselPS4Ctrl, 0x1402033C0, PVselPS4* sel)
 		SetGlobalStateSelectedData(sel);
 		nc::GetSharedData().pv_sel_selected_style = pvsel::GetSelectedStyleOrDefault();
 	}
-	else if (IsSurvivalMode())
+	else
 	{
 		if (pvsel::gs_win)
 			pvsel::gs_win->SetVisible(false);
