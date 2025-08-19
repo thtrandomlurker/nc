@@ -44,6 +44,7 @@ enum DscOp : int32_t
 	DscOp_BarTimeSet = 28,
 	DscOp_TargetFlyingTime = 58,
 	DscOp_PVBranchMode = 65,
+	DscOp_TargetEffect = 91,
 };
 
 struct DscFrame
@@ -105,9 +106,9 @@ static int32_t GetOpcodeLength(int32_t format, int32_t op)
 		else if (format == DscFormat_F2) return 12;
 	}
 
-	/*if (op == DscOp_TargetEffect) {
+	if (op == DscOp_TargetEffect) {
 		return 11;
-	}*/
+	}
 	
 	if (const dsc::OpcodeInfo* info = dsc::GetOpcodeInfo(op); info != nullptr)
 		return format == DscFormat_AC ? info->length_old : info->length;
@@ -216,7 +217,7 @@ static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscF
 	{
 		int32_t value = *data;
 		if (is_big_endian)
-			value = ((value & 0xFF) >> 24) | ((value & 0xFF00) >> 8) | ((value & 0xFF0000) << 8) | ((value & 0xFF000000) << 24);
+			value = ((value & 0x000000FF) << 24) | ((value & 0x0000FF00) << 8) | ((value & 0x00FF0000) >> 8) | ((value & 0xFF000000) >> 24);
 		data++;
 		return value;
 	};
@@ -224,6 +225,9 @@ static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscF
 	if (format == DscFormat_F2)
 	{
 		is_big_endian = (*(data + 3) & 0x08000000) != 0;
+		nc::Print("is big%d\n", is_big_endian);
+		nc::Print("signature %d\n", readNext());
+		data--;
 		// NOTE: Skip header
 		data += *(data + 2) / sizeof(int32_t);
 		// NOTE: Read information
@@ -337,17 +341,40 @@ static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscF
 		case DscOp_PVBranchMode:
 			branch_mode = readNext();
 			break;
-		/*case DscOp_TargetEffect: {
-			int32_t eff_id = readNext();
-			int32_t eff_flag_0 = readNext();
-			int32_t eff_flag_1 = readNext();
-			std::string layer_name((char*)data);
+		case DscOp_TargetEffect: {
+			if (format == DscFormat_F2) {
+				int32_t eff_id = readNext();
+				int32_t eff_flag_0 = readNext();
+				int32_t eff_flag_1 = readNext();
+				std::string layer_name((char*)data);
 
-			//hiteff::target_effect_map.emplace(eff_id, layer_name);
-			nc::Print("Added %s as effect %d", layer_name.c_str(), eff_id);
-			data += 8;
+				switch (branch_mode) {
+					case (0): {
+						hiteff::fail_target_effect_map.emplace(eff_id, layer_name);
+						hiteff::success_target_effect_map.emplace(eff_id, layer_name);
+						nc::Print("Added %s as effect %d on both success and fail branches.", layer_name.c_str(), eff_id);
+						break;
+					}
+					case (1): {
+						hiteff::fail_target_effect_map.emplace(eff_id, layer_name);
+						hiteff::success_target_effect_map.emplace(eff_id, "");
+						nc::Print("Added %s as effect %d on fail branch.", layer_name.c_str(), eff_id);
+						break;
+					}
+					case (2): {
+						hiteff::success_target_effect_map.emplace(eff_id, layer_name);
+						hiteff::fail_target_effect_map.emplace(eff_id, "");
+						nc::Print("Added %s as effect %d on success branch.", layer_name.c_str(), eff_id);
+						break;
+					}
+				}
+				data += 8;
+			}
+			else {
+				data += length;
+			}
 			break;
-		}*/
+		}
 
 		default:
 		{

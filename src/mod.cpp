@@ -93,7 +93,8 @@ HOOK(bool, __fastcall, TaskPvGameDest, 0x1405DA0A0, uint64_t a1)
 			spr::UnloadSprSet(hiteff::cur_hit_eff_sprset_id);
 			hiteff::cur_hit_eff_aetset_id = 0xFFFFFFFF;
 			hiteff::cur_hit_eff_sprset_id = 0xFFFFFFFF;
-			//hiteff::target_effect_map.clear();
+			hiteff::fail_target_effect_map.clear();
+			hiteff::success_target_effect_map.clear();
 		}
 		sound::UnloadFarc("rom/sound/se_nc.farc");
 		state.files_loaded = false;
