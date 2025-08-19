@@ -16,6 +16,9 @@
 # Mono auto generated files
 mono_crash.*
 
+# Build scripts
+postbuild.bat
+
 # Build results
 assets/New Classics/NewClassics.dll
 [Dd]ebug/
