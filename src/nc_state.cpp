@@ -157,6 +157,27 @@ std::shared_ptr<AetElement>& UIState::GetLayer(int32_t id)
 	return elements[id];
 }
 
+std::shared_ptr<AetElement> UIState::PushHitEffect()
+{
+	if (!GetState()->nc_song_entry.has_value() || !GetState()->nc_song_entry->IsHitEffectsValid())
+		return nullptr;
+
+	std::shared_ptr<AetElement> ptr = nullptr;
+	for (int32_t i = 0; i < 64; i++)
+	{
+		auto& data = hit_effect_buffer[(hit_effect_index + i) % 64];
+		if (!data || data->Ended())
+		{
+			data = std::make_shared<AetElement>(GetState()->nc_song_entry->target_hit_effect_scene_id);
+			ptr = data;
+			hit_effect_index = (hit_effect_index + i) % 64;
+			break;
+		}
+	}
+
+	return ptr;
+}
+
 void UIState::ResetAllLayers()
 {
 	for (int i = 0; i < LayerUI_Max; i++)
@@ -165,6 +186,10 @@ void UIState::ResetAllLayers()
 		elements[i].reset();
 		aet_visibility[i] = false;
 	}
+
+	for (int i = 0; i < 64; i++)
+		hit_effect_buffer[i].reset();
+	hit_effect_index = 0;
 }
 
 void StateEx::ResetPlayState()

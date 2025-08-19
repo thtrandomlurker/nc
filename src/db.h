@@ -57,6 +57,13 @@ namespace db
 
 		ChartEntry& FindOrCreateChart(int32_t difficulty, int32_t edition, int32_t style);
 		const ChartEntry* FindChart(int32_t difficulty, int32_t edition, int32_t style) const;
+
+		inline bool IsHitEffectsValid() const
+		{
+			return target_hit_effect_aetset_id != 0xFFFFFFFF &&
+				target_hit_effect_scene_id != 0xFFFFFFFF &&
+				target_hit_effect_sprset_id != 0xFFFFFFFF;
+		}
 	};
 
 	extern "C" {

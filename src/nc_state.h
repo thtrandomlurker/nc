@@ -275,14 +275,19 @@ struct UIState
 	std::shared_ptr<AetElement> elements[LayerUI_Max];
 	bool aet_visibility[LayerUI_Max];
 
+	std::shared_ptr<AetElement> hit_effect_buffer[64];
+	int32_t hit_effect_index;
+
 	UIState()
 	{
 		memset(aet_list, 0, sizeof(aet_list));
 		memset(aet_visibility, 0, sizeof(aet_visibility));
+		hit_effect_index = 0;
 	}
 
 	void SetLayer(int32_t index, bool visible, const char* name, int32_t prio, int32_t flags);
 	std::shared_ptr<AetElement>& GetLayer(int32_t id);
+	std::shared_ptr<AetElement> PushHitEffect();
 	void ResetAllLayers();
 };
 

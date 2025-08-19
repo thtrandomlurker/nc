@@ -104,13 +104,12 @@ static int32_t GetOpcodeLength(int32_t format, int32_t op)
 		else if (format == DscFormat_NC) return 11;
 		else if (format == DscFormat_F2) return 12;
 	}
-
-	if (op == DscOp_TargetEffect) {
+	else if (op == DscOp_TargetEffect && format == DscFormat_F2)
 		return 11;
-	}
 	
 	if (const dsc::OpcodeInfo* info = dsc::GetOpcodeInfo(op); info != nullptr)
 		return format == DscFormat_AC ? info->length_old : info->length;
+
 	return 0;
 }
 
@@ -172,9 +171,8 @@ static void ConvertTargetParams(int32_t format, const int32_t* data, int32_t* ou
 		output[4] = data[7]; // Distance
 		output[5] = data[8]; // Amplitude
 		output[6] = data[6]; // Frequency
-		if (format == DscFormat_F2) {
+		if (format == DscFormat_F2)
 			*target_hit_effect = data[11];
-		}
 		return;
 	}
 	
@@ -219,6 +217,16 @@ static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscF
 			value = ((value & 0x000000FF) << 24) | ((value & 0x0000FF00) << 8) | ((value & 0x00FF0000) >> 8) | ((value & 0xFF000000) >> 24);
 		data++;
 		return value;
+	};
+
+	auto pushCurrentCmd = [&](int32_t opcode, std::vector<DscFrame::DscCommand>& list)
+	{
+		DscFrame::DscCommand& cmd = list.emplace_back();
+		cmd.opcode = opcode;
+		cmd.length = GetOpcodeLength(format, opcode);
+
+		for (int32_t i = 0; i < cmd.length; i++)
+			cmd.data[i] = readNext();
 	};
 
 	if (format == DscFormat_F2)
@@ -337,55 +345,36 @@ static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscF
 		case DscOp_PVBranchMode:
 			branch_mode = readNext();
 			break;
-		case DscOp_TargetEffect: {
-			if (format == DscFormat_F2) {
-				int32_t eff_id = readNext();
-				int32_t eff_flag_0 = readNext();
-				int32_t eff_flag_1 = readNext();
-				std::string layer_name((char*)data);
+		case DscOp_TargetEffect:
+		{
+			// NOTE: Opcode 0x5B (91) is not unique to F 2nd; it corresponds to EDIT_MOTION_F in FT.
+			if (format != DscFormat_F2)
+			{
+				pushCurrentCmd(opcode, list);
+				break;
+			}
 
-				switch (branch_mode) {
-					case (0): {
-						state.fail_target_effect_map.emplace(eff_id, layer_name);
-						state.success_target_effect_map.emplace(eff_id, layer_name);
-						break;
-					}
-					case (1): {
-						state.fail_target_effect_map.emplace(eff_id, layer_name);
-						state.success_target_effect_map.emplace(eff_id, "");
-						break;
-					}
-					case (2): {
-						state.success_target_effect_map.emplace(eff_id, layer_name);
-						state.fail_target_effect_map.emplace(eff_id, "");
-						break;
-					}
-				}
-				data += 8;
-			}
-			else {
-				data += length;
-			}
+			int32_t eff_id = readNext();
+			// NOTE: The effect name string in DSC may not always be null-terminated so we need to make sure
+			//       we aren't copying garbage data into our string.
+			char effect_name[33] = { };
+			memcpy_s(effect_name, 33, reinterpret_cast<const char*>(data + 2), 32);
+
+			state.fail_target_effect_map[eff_id]    = branch_mode == 0 || branch_mode == 1 ? effect_name : "";
+			state.success_target_effect_map[eff_id] = branch_mode == 0 || branch_mode == 2 ? effect_name : "";
+
+			data += 10;
 			break;
 		}
-
 		default:
-		{
 			if (flags & MergeFlags_IgnorePV)
 			{
 				data += GetOpcodeLength(format, opcode);
 				break;
 			}
 
-			DscFrame::DscCommand& cmd = list.emplace_back();
-			cmd.opcode = opcode;
-			cmd.length = GetOpcodeLength(format, opcode);
-
-			for (int32_t i = 0; i < cmd.length; i++)
-				cmd.data[i] = readNext();
-
+			pushCurrentCmd(opcode, list);
 			break;
-		}
 		}
 	}
 
