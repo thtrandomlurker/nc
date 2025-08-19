@@ -7,7 +7,6 @@
 #include <nc_state.h>
 #include <util.h>
 #include "dsc.h"
-#include "target_hit_effect.h"
 
 enum DscState : int32_t
 {
@@ -225,9 +224,6 @@ static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscF
 	if (format == DscFormat_F2)
 	{
 		is_big_endian = (*(data + 3) & 0x08000000) != 0;
-		nc::Print("is big%d\n", is_big_endian);
-		nc::Print("signature %d\n", readNext());
-		data--;
 		// NOTE: Skip header
 		data += *(data + 2) / sizeof(int32_t);
 		// NOTE: Read information
@@ -350,21 +346,18 @@ static bool ParseDsc(const int32_t* data, int32_t format, std::map<int32_t, DscF
 
 				switch (branch_mode) {
 					case (0): {
-						hiteff::fail_target_effect_map.emplace(eff_id, layer_name);
-						hiteff::success_target_effect_map.emplace(eff_id, layer_name);
-						nc::Print("Added %s as effect %d on both success and fail branches.", layer_name.c_str(), eff_id);
+						state.fail_target_effect_map.emplace(eff_id, layer_name);
+						state.success_target_effect_map.emplace(eff_id, layer_name);
 						break;
 					}
 					case (1): {
-						hiteff::fail_target_effect_map.emplace(eff_id, layer_name);
-						hiteff::success_target_effect_map.emplace(eff_id, "");
-						nc::Print("Added %s as effect %d on fail branch.", layer_name.c_str(), eff_id);
+						state.fail_target_effect_map.emplace(eff_id, layer_name);
+						state.success_target_effect_map.emplace(eff_id, "");
 						break;
 					}
 					case (2): {
-						hiteff::success_target_effect_map.emplace(eff_id, layer_name);
-						hiteff::fail_target_effect_map.emplace(eff_id, "");
-						nc::Print("Added %s as effect %d on success branch.", layer_name.c_str(), eff_id);
+						state.success_target_effect_map.emplace(eff_id, layer_name);
+						state.fail_target_effect_map.emplace(eff_id, "");
 						break;
 					}
 				}

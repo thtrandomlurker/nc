@@ -10,7 +10,6 @@
 #include "chance_time.h"
 #include "hit_state.h"
 #include "score.h"
-#include "target_hit_effect.h"
 
 HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 	PVGameArcade* game,
@@ -366,9 +365,9 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 				// play the aet.
 				diva::vec2 scaled_pos(ex->target_pos * 4);
 				bool success_eff = GetPVGameData()->is_success_branch;
-				std::string effect_name = success_eff ? hiteff::success_target_effect_map[ex->target_hit_effect_id] : hiteff::fail_target_effect_map[ex->target_hit_effect_id];
+				std::string effect_name = success_eff ? state.success_target_effect_map[ex->target_hit_effect_id] : state.fail_target_effect_map[ex->target_hit_effect_id];
 				if (!effect_name.empty()) {
-					aet::PlayLayer(hiteff::cur_hit_eff_scene_id, 0, 0, effect_name.c_str(), &scaled_pos, "", "");
+					aet::PlayLayer(state.nc_song_entry->target_hit_effect_scene_id, 0, 0, effect_name.c_str(), &scaled_pos, "", "");
 				}
 			}
 		}

@@ -188,7 +188,6 @@ copy /y "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Hatsune M
     <ClCompile Include="src\nc_time.cpp" />
     <ClCompile Include="src\save_data.cpp" />
     <ClCompile Include="src\sound_db.cpp" />
-    <ClCompile Include="src\target_hit_effect.cpp" />
     <ClCompile Include="src\thirdparty\toml.cpp" />
     <ClCompile Include="src\ui\common.cpp" />
     <ClCompile Include="src\ui\customize_sel.cpp" />
@@ -220,7 +219,6 @@ copy /y "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Hatsune M
     <ClInclude Include="src\save_data.h" />
     <ClInclude Include="src\shared.h" />
     <ClInclude Include="src\sound_db.h" />
-    <ClInclude Include="src\target_hit_effect.h" />
     <ClInclude Include="src\thirdparty\lazycsv.hpp" />
     <ClInclude Include="src\thirdparty\toml++\toml.hpp" />
     <ClInclude Include="src\thirdparty\toml.h" />

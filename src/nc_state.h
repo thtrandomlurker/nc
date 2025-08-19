@@ -305,6 +305,8 @@ struct StateEx
 	int32_t effect_index = 0;
 	std::optional<db::SongEntry> nc_song_entry;
 	std::optional<db::ChartEntry> nc_chart_entry;
+	std::map<int32_t, std::string> fail_target_effect_map;
+	std::map<int32_t, std::string> success_target_effect_map;
 	ScoreState score;
 
 	void ResetPlayState();
