@@ -346,7 +346,7 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 		}
 	}
 	
-	// NOTE: Calculate bonus score
+	// NOTE: Calculate bonus score and play hit effect
 	if (nc::IsHitCorrect(final_hit_state))
 	{
 		for (int i = 0; i < group_count; i++)
@@ -360,6 +360,16 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 
 			if (ex->IsLongNoteEnd())
 				state.score.sustain_bonus += ex->prev->score_bonus;
+
+			if (ex->target_hit_effect_id != -1) {
+				// play the aet.
+				diva::vec2 scaled_pos(ex->target_pos * 4);
+				bool success_eff = GetPVGameData()->is_success_branch;
+				std::string effect_name = success_eff ? state.success_target_effect_map[ex->target_hit_effect_id] : state.fail_target_effect_map[ex->target_hit_effect_id];
+				if (!effect_name.empty()) {
+					aet::PlayLayer(state.nc_song_entry->target_hit_effect_scene_id, 0, 0, effect_name.c_str(), &scaled_pos, "", "");
+				}
+			}
 		}
 	}
 

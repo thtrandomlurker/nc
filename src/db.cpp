@@ -115,6 +115,9 @@ static bool ParsePVEntry(toml::table& node, db::SongEntry* entry)
 	entry->star_w_se_name = node["star_w_se_name"].value_or(DefaultStarSound);
 	entry->star_long_se_name = node["star_long_se_name"].value_or(DefaultStarSound);
 	entry->link_se_name = node["link_se_name"].value_or(DefaultStarSound);
+	entry->target_hit_effect_aetset_id = node["target_hit_effect_aetset_id"].value_or(0xFFFFFFFF);
+	entry->target_hit_effect_scene_id = node["target_hit_effect_scene_id"].value_or(0xFFFFFFFF);
+	entry->target_hit_effect_sprset_id = node["target_hit_effect_sprset_id"].value_or(0xFFFFFFFF);
 	return true;
 }
 

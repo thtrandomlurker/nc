@@ -33,12 +33,19 @@ HOOK(bool, __fastcall, TaskPvGameInit, 0x1405DA040, uint64_t a1)
 	state.dsc_loaded = false;
 	state.file_state = 0;
 
+	int32_t pv = game::GetGlobalPvID();
+
 	prj::string str;
 	prj::string_view strv;
 	aet::LoadAetSet(AetSetID, &str);
 	spr::LoadSprSet(SprSetID, &strv);
 	aet::LoadAetSet(14010080, &str); // AET_NCGAM_TZ
 	spr::LoadSprSet(14020080, &strv); // SPR_NCGAM_TZ
+	
+	if (state.nc_song_entry->target_hit_effect_aetset_id != 0xFFFFFFFF && state.nc_song_entry->target_hit_effect_sprset_id != 0xFFFFFFFF) {
+		aet::LoadAetSet(state.nc_song_entry->target_hit_effect_aetset_id, &str);
+		spr::LoadSprSet(state.nc_song_entry->target_hit_effect_sprset_id, &strv);
+	}
 	if (!sound::RequestFarcLoad("rom/sound/se_nc.farc"))
 		nc::Print("Failed to load se_nc.farc\n");
 
@@ -57,6 +64,8 @@ HOOK(bool, __fastcall, TaskPvGameCtrl, 0x1405DA060, uint64_t a1)
 			!spr::CheckSprSetLoading(SprSetID) &&
 			!aet::CheckAetSetLoading(14010080) &&
 			!spr::CheckSprSetLoading(14020080) &&
+			!(state.nc_song_entry->target_hit_effect_aetset_id == 0xFFFFFFFF ? false : aet::CheckAetSetLoading(state.nc_song_entry->target_hit_effect_aetset_id)) &&
+			!(state.nc_song_entry->target_hit_effect_sprset_id == 0xFFFFFFFF ? false : spr::CheckSprSetLoading(state.nc_song_entry->target_hit_effect_sprset_id)) &&
 			!sound::IsFarcLoading("rom/sound/se_nc.farc");
 	}
 
@@ -74,6 +83,12 @@ HOOK(bool, __fastcall, TaskPvGameDest, 0x1405DA0A0, uint64_t a1)
 		spr::UnloadSprSet(SprSetID);
 		aet::UnloadAetSet(14010080);
 		spr::UnloadSprSet(14020080);
+		if (state.nc_song_entry->target_hit_effect_aetset_id != 0xFFFFFFFF && state.nc_song_entry->target_hit_effect_sprset_id != 0xFFFFFFFF) {
+			aet::UnloadAetSet(state.nc_song_entry->target_hit_effect_aetset_id);
+			spr::UnloadSprSet(state.nc_song_entry->target_hit_effect_sprset_id);
+			state.fail_target_effect_map.clear();
+			state.success_target_effect_map.clear();
+		}
 		sound::UnloadFarc("rom/sound/se_nc.farc");
 		state.files_loaded = false;
 	}
