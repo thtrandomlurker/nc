@@ -345,4 +345,6 @@ TargetStateEx* GetTargetStateEx(const PvGameTarget* org);
 
 extern "C" {
 	__declspec(dllexport) StateEx* GetState();
+	__declspec(dllexport) bool SetStateSong(int32_t pv, int32_t difficulty, int32_t edition, int32_t style);
+	__declspec(dllexport) void ResetStateSong();
 }
