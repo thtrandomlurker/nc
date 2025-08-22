@@ -220,6 +220,7 @@ struct ChanceState
 	int32_t targets_hit = 0;
 	bool enabled = false;
 	bool successful = false;
+	float chance_star_hit_time = 0.0;
 
 	inline bool IsValid() const { return first_target_index != -1 && last_target_index != -1; }
 
