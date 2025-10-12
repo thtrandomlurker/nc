@@ -101,22 +101,22 @@ HOOK(bool, __fastcall, TaskPvGameDest, 0x1405DA0A0, uint64_t a1)
 	return originalTaskPvGameDest(a1);
 }
 
-HOOK(void, __fastcall, PVGameReset, 0x1402436F0, void* pv_game)
+// NOTE: Resets gameplay state.
+HOOK(void, __fastcall, PVGameReset, 0x1402436F0, PVGameData* pv_game)
 {
-	nc::Print("PVGameReset()\n");
-
 	state.ResetPlayState();
-	state.ui.ResetAllLayers();
 	originalPVGameReset(pv_game);
 }
 
-HOOK(void, __fastcall, PVGameLoaderResetPrePlayScript, 0x140262430, PVGameData** pv_game)
+// NOTE: Last step of the PVGameLoader loop. Reset the game state to prevent dangling
+//       note AETs when the game starts.
+HOOK(bool, __fastcall, PVGameLoaderFinishUp, 0x140262730, void* a1)
 {
 	state.ResetPlayState();
-	state.ui.ResetAllLayers();
-	originalPVGameLoaderResetPrePlayScript(pv_game);
+	return originalPVGameLoaderFinishUp(a1);
 }
 
+// NOTE: Specifically stops the gameplay AETs from playing; Doesn't reset gameplay state.
 HOOK(void, __fastcall, PVGameArcadeReset, 0x14026AE80, PVGameArcade* game)
 {
 	state.ResetAetData();
@@ -397,7 +397,7 @@ extern "C"
 		INSTALL_HOOK(TaskPvGameCtrl);
 		INSTALL_HOOK(TaskPvGameDest);
 		INSTALL_HOOK(PVGameReset);
-		INSTALL_HOOK(PVGameLoaderResetPrePlayScript);
+		INSTALL_HOOK(PVGameLoaderFinishUp);
 		INSTALL_HOOK(PVGameArcadeReset);
 		INSTALL_HOOK(ParseTargets);
 		// INSTALL_HOOK(LoadDscCtrl);
