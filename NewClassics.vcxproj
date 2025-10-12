@@ -227,7 +227,6 @@ echo "Post-build script was not found."
     <ClInclude Include="src\save_data.h" />
     <ClInclude Include="src\shared.h" />
     <ClInclude Include="src\sound_db.h" />
-    <ClInclude Include="src\thirdparty\lazycsv.hpp" />
     <ClInclude Include="src\thirdparty\toml++\toml.hpp" />
     <ClInclude Include="src\thirdparty\toml.h" />
     <ClInclude Include="src\ui\common.h" />

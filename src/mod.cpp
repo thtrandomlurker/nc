@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <vector>
-#include <thirdparty/lazycsv.hpp>
 #include "hooks.h"
 #include "game/hit_state.h"
 #include "game/target.h"
