@@ -241,13 +241,15 @@ bool StateEx::PushTarget(TargetStateEx* ex)
 
 bool StateEx::PopTarget(TargetStateEx* ex)
 {
-	for (auto it = target_references.begin(); it != target_references.end(); it++)
+	for (auto it = target_references.begin(); it != target_references.end();)
 	{
 		if (*it == ex)
 		{
-			target_references.erase(it);
-			return true;
+			it = target_references.erase(it);
+			continue;
 		}
+
+		it++;
 	}
 
 	return false;

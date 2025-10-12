@@ -39,8 +39,10 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 
 	if (ShouldUpdateTargets())
 	{
-		for (TargetStateEx* tgt : state.target_references)
+		for (auto it = state.target_references.begin(); it != state.target_references.end();)
 		{
+			TargetStateEx* tgt = *it;
+
 			// NOTE: Poll input for ongoing long notes
 			if (tgt->IsLongNoteStart() && tgt->holding)
 			{
@@ -64,9 +66,10 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					tgt->next->force_hit_state = HitState_Worst;
 					tgt->StopAet();
 					tgt->holding = false;
-					state.PopTarget(tgt);
+					it = state.target_references.erase(it);
 					se_mgr.EndLongSE(true);
 					GetPVGameData()->ui.RemoveBonusText();
+					continue;
 				}
 			}
 			// NOTE: Poll input for ongoing rush notes
@@ -86,6 +89,8 @@ HOOK(int32_t, __fastcall, GetHitState, 0x14026BF60,
 					}
 				}
 			}
+
+			it++;
 		}
 	}
 
